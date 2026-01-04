@@ -121,14 +121,239 @@ export default function Builder() {
 
   const handleGenerate = (prompt: string) => {
     setIsGenerating(true);
-    // Simulate AI generation delay
+    
+    // Simulate generation with different templates based on keywords
     setTimeout(() => {
+      let newHtml = INITIAL_HTML;
+      let newCss = INITIAL_CSS;
+      
+      const lowercasePrompt = prompt.toLowerCase();
+      
+      if (lowercasePrompt.includes("coffee") || lowercasePrompt.includes("cafe")) {
+        newHtml = `
+          <div class="hero">
+            <h1>Artisan Coffee Roasters</h1>
+            <p>Experience the perfect brew, roasted daily in small batches.</p>
+            <button class="cta-button">Order Online</button>
+          </div>
+          <div class="features">
+            <div class="feature-card">
+              <h3>Ethically Sourced</h3>
+              <p>Direct trade relationships with farmers.</p>
+            </div>
+            <div class="feature-card">
+              <h3>Expertly Roasted</h3>
+              <p>Master roasters ensuring peak flavor.</p>
+            </div>
+            <div class="feature-card">
+              <h3>Delivered Fresh</h3>
+              <p>From our roastery to your doorstep.</p>
+            </div>
+          </div>`;
+        newCss = `
+          :root {
+            --primary: #78350f;
+            --text: #292524;
+            --bg: #fff7ed;
+            --card-bg: #ffffff;
+            --radius: 4px;
+          }
+          body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            line-height: 1.6;
+            font-family: 'Lora', serif;
+          }
+          .hero { text-align: center; padding: 6rem 0; }
+          h1 { 
+            font-size: 4rem; 
+            margin-bottom: 1rem; 
+            color: var(--primary);
+            font-weight: 700;
+          }
+          p { font-size: 1.25rem; color: #57534e; margin-bottom: 2rem; }
+          .cta-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border-radius: var(--radius);
+            font-family: sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+            margin-top: 4rem;
+          }
+          .feature-card {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            text-align: center;
+          }
+          h3 { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--primary); }
+        `;
+      } else if (lowercasePrompt.includes("portfolio")) {
+        newHtml = `
+          <div class="hero">
+            <h1>Alex Designer</h1>
+            <p>Crafting digital experiences that matter.</p>
+            <button class="cta-button">View Work</button>
+          </div>
+          <div class="features">
+            <div class="feature-card">
+              <h3>UI Design</h3>
+              <p>Pixel perfect interfaces.</p>
+            </div>
+            <div class="feature-card">
+              <h3>UX Research</h3>
+              <p>User-centered design process.</p>
+            </div>
+            <div class="feature-card">
+              <h3>Development</h3>
+              <p>Bringing designs to life.</p>
+            </div>
+          </div>`;
+        newCss = `
+          :root {
+            --primary: #000000;
+            --text: #1a1a1a;
+            --bg: #ffffff;
+            --card-bg: #f5f5f5;
+            --radius: 0px;
+          }
+          body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            line-height: 1.4;
+            font-family: 'Inter', sans-serif;
+          }
+          .hero { text-align: left; padding: 8rem 0; }
+          h1 { 
+            font-size: 5rem; 
+            margin-bottom: 1rem; 
+            line-height: 0.9;
+            letter-spacing: -2px;
+          }
+          p { font-size: 1.5rem; color: #666; margin-bottom: 3rem; }
+          .cta-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: var(--radius);
+          }
+          .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 4rem;
+          }
+          .feature-card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--radius);
+          }
+          h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+        `;
+      } else if (lowercasePrompt.includes("blog")) {
+        newHtml = `
+          <div class="hero">
+            <h1>The Daily Tech</h1>
+            <p>Insights into the future of technology and design.</p>
+            <button class="cta-button">Subscribe</button>
+          </div>
+          <div class="features">
+            <div class="feature-card">
+              <h3>Latest News</h3>
+              <p>Breaking stories from the tech world.</p>
+            </div>
+            <div class="feature-card">
+              <h3>Tutorials</h3>
+              <p>Learn how to build modern apps.</p>
+            </div>
+            <div class="feature-card">
+              <h3>Opinion</h3>
+              <p>Deep dives into industry trends.</p>
+            </div>
+          </div>`;
+        newCss = `
+          :root {
+            --primary: #2563eb;
+            --text: #334155;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --radius: 12px;
+          }
+          body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.8;
+            font-family: 'Merriweather', serif;
+          }
+          .hero { text-align: center; padding: 5rem 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 4rem; }
+          h1 { 
+            font-size: 3rem; 
+            margin-bottom: 1rem; 
+            color: #0f172a;
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+          }
+          p { font-size: 1.25rem; color: #64748b; margin-bottom: 2rem; font-style: italic; }
+          .cta-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+          }
+          .features {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+          }
+          .feature-card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          h3 { font-size: 1.25rem; margin: 0; font-family: 'Inter', sans-serif; font-weight: 700; }
+          .feature-card p { margin: 0; font-size: 1rem; font-style: normal; }
+        `;
+      }
+
+      setHtml(newHtml);
+      setCss(newCss);
       setIsGenerating(false);
       toast({
         title: "Website Generated",
         description: "Your new design is ready to preview.",
       });
-      // In a real app, this would call an API
     }, 2000);
   };
 
