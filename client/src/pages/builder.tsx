@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { PromptInput } from "@/components/builder/prompt-input";
@@ -6,7 +6,7 @@ import { PreviewFrame } from "@/components/builder/preview-frame";
 import { DesignControls } from "@/components/builder/design-controls";
 import { BillingModal } from "@/components/settings/billing-modal";
 import { EnvironmentSwitch } from "@/components/settings/environment-switch";
-import { Cpu, ChevronLeft, Download, Rocket, Share2, Gem } from "lucide-react";
+import { Cpu, ChevronLeft, Download, Rocket, Gem, Save, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock template for initial state
@@ -115,9 +115,74 @@ export default function Builder() {
   const [html, setHtml] = useState(INITIAL_HTML);
   const [css, setCss] = useState(INITIAL_CSS);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState("Untitled Project");
+  const [lastPrompt, setLastPrompt] = useState<string | null>(null);
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [showBilling, setShowBilling] = useState(false);
   const { toast } = useToast();
+
+  // Save project
+  const saveProject = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      if (projectId) {
+        // Update existing project
+        await fetch(`/api/projects/${projectId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ html, css, name: projectName }),
+        });
+      } else {
+        // Create new project
+        const response = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ html, css, name: projectName, prompt: lastPrompt }),
+        });
+        const project = await response.json();
+        setProjectId(project.id);
+      }
+      toast({ title: "Project Saved", description: "Your changes have been saved." });
+    } catch (error) {
+      toast({ title: "Save Failed", description: "Could not save project.", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [html, css, projectId, projectName, lastPrompt, toast]);
+
+  // Export project as HTML file
+  const handleExport = useCallback(() => {
+    const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${projectName}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    ${css}
+  </style>
+</head>
+<body>
+  ${html}
+</body>
+</html>`;
+
+    const blob = new Blob([fullHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${projectName.replace(/[^a-z0-9]/gi, "_")}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Exported", description: "Your website has been downloaded." });
+  }, [html, css, projectName, toast]);
 
   const handleGenerate = async (prompt: string) => {
     setIsGenerating(true);
@@ -140,6 +205,7 @@ export default function Builder() {
 
       setHtml(result.html);
       setCss(result.css);
+      setLastPrompt(prompt);
       toast({
         title: "Website Generated",
         description: "Your AI-powered design is ready to preview.",
@@ -192,10 +258,14 @@ export default function Builder() {
             <Gem className="h-4 w-4" /> Upgrade
           </Button>
           <div className="h-4 w-px bg-border mx-2" />
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={saveProject} disabled={isSaving}>
+            {isSaving ? <Save className="h-4 w-4 animate-pulse" /> : <Check className="h-4 w-4" />}
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" /> Export
           </Button>
-          <Button variant="default" size="sm" className="gap-2">
+          <Button variant="default" size="sm" className="gap-2 bg-gradient-to-r from-primary to-indigo-500 hover:from-primary/90 hover:to-indigo-500/90">
             <Rocket className="h-4 w-4" /> Publish
           </Button>
         </div>

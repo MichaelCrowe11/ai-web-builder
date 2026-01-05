@@ -138,3 +138,56 @@
     @apply font-heading font-semibold tracking-tight;
   }
 }
+
+/* Glassmorphism utilities */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/30;
+  }
+
+  .glass-card {
+    @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/30 dark:border-gray-700/40 shadow-xl shadow-black/5;
+  }
+
+  .glass-hover {
+    @apply transition-all duration-300 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:shadow-2xl hover:shadow-primary/10;
+  }
+
+  .gradient-border {
+    @apply relative;
+  }
+
+  .gradient-border::before {
+    content: '';
+    @apply absolute inset-0 rounded-[inherit] p-[1px];
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(250 85% 75%));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .shimmer {
+    @apply relative overflow-hidden;
+  }
+
+  .shimmer::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .glow {
+    @apply shadow-lg shadow-primary/25;
+  }
+
+  .glow-hover {
+    @apply transition-shadow duration-300 hover:shadow-xl hover:shadow-primary/30;
+  }
+}
