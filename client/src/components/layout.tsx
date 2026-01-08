@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Cpu, LayoutTemplate, CreditCard, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -40,6 +41,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
             <div className="h-4 w-px bg-border mx-2" />
+            <ThemeToggle />
             <Button variant="ghost" size="sm">Log in</Button>
             <Button size="sm">Get Started</Button>
           </nav>

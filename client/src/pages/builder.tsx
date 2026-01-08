@@ -6,8 +6,15 @@ import { PreviewFrame } from "@/components/builder/preview-frame";
 import { DesignControls } from "@/components/builder/design-controls";
 import { BillingModal } from "@/components/settings/billing-modal";
 import { EnvironmentSwitch } from "@/components/settings/environment-switch";
-import { Cpu, ChevronLeft, Download, Rocket, Gem, Save, Check } from "lucide-react";
+import { TemplateGallery } from "@/components/builder/template-gallery";
+import { CodeView } from "@/components/builder/code-view";
+import { KeyboardShortcuts } from "@/components/builder/keyboard-shortcuts";
+import { AIThinkingAnimation } from "@/components/builder/ai-thinking-animation";
+import { VersionHistory, type VersionSnapshot } from "@/components/builder/version-history";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Cpu, ChevronLeft, Download, Rocket, Gem, Save, Check, Code2, LayoutGrid, Clock, Keyboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Mock template for initial state
 const INITIAL_HTML = `
@@ -121,7 +128,59 @@ export default function Builder() {
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [showBilling, setShowBilling] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [versions, setVersions] = useState<VersionSnapshot[]>([]);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(0);
   const { toast } = useToast();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + S: Save
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        saveProject();
+      }
+      // Ctrl/Cmd + E: Export
+      if ((e.ctrlKey || e.metaKey) && e.key === "e") {
+        e.preventDefault();
+        handleExport();
+      }
+      // Ctrl/Cmd + `: Toggle code view
+      if ((e.ctrlKey || e.metaKey) && e.key === "`") {
+        e.preventDefault();
+        setShowCode(prev => !prev);
+      }
+      // Ctrl/Cmd + T: Template gallery
+      if ((e.ctrlKey || e.metaKey) && e.key === "t") {
+        e.preventDefault();
+        setShowTemplates(prev => !prev);
+      }
+      // ?: Show keyboard shortcuts
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        setShowKeyboardShortcuts(true);
+      }
+      // Ctrl/Cmd + 1/2/3: Device switching
+      if ((e.ctrlKey || e.metaKey) && e.key === "1") {
+        e.preventDefault();
+        setDevice("desktop");
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "2") {
+        e.preventDefault();
+        setDevice("tablet");
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "3") {
+        e.preventDefault();
+        setDevice("mobile");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Save project
   const saveProject = useCallback(async () => {
@@ -206,6 +265,19 @@ export default function Builder() {
       setHtml(result.html);
       setCss(result.css);
       setLastPrompt(prompt);
+      
+      // Add to version history
+      const newVersion: VersionSnapshot = {
+        id: crypto.randomUUID(),
+        html: result.html,
+        css: result.css,
+        prompt,
+        timestamp: new Date(),
+        label: prompt.length > 30 ? prompt.substring(0, 30) + "..." : prompt,
+      };
+      setVersions(prev => [newVersion, ...prev]);
+      setCurrentVersionIndex(0);
+      
       toast({
         title: "Website Generated",
         description: "Your AI-powered design is ready to preview.",
@@ -232,6 +304,18 @@ export default function Builder() {
     }
   };
 
+  const handleTemplateSelect = (prompt: string) => {
+    handleGenerate(prompt);
+  };
+
+  const handleVersionRestore = (version: VersionSnapshot) => {
+    setHtml(version.html);
+    setCss(version.css);
+    const index = versions.findIndex(v => v.id === version.id);
+    setCurrentVersionIndex(index);
+    toast({ title: "Version Restored", description: "Previous version has been restored." });
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background font-sans overflow-hidden">
       {/* Top Bar */}
@@ -254,7 +338,47 @@ export default function Builder() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="gap-2 text-amber-500 hover:text-amber-600 hover:bg-amber-50" onClick={() => setShowBilling(true)}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowTemplates(true)}>
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Templates</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowCode(true)}>
+                <Code2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>View Code</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowVersionHistory(prev => !prev)}>
+                <Clock className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Version History</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowKeyboardShortcuts(true)}>
+                <Keyboard className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Keyboard Shortcuts</TooltipContent>
+          </Tooltip>
+          
+          <ThemeToggle />
+          
+          <div className="h-4 w-px bg-border mx-1" />
+          
+          <Button variant="ghost" size="sm" className="gap-2 text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950" onClick={() => setShowBilling(true)}>
             <Gem className="h-4 w-4" /> Upgrade
           </Button>
           <div className="h-4 w-px bg-border mx-2" />
@@ -272,7 +396,7 @@ export default function Builder() {
       </header>
       
       {/* Main Workspace */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Preview Area (Center) */}
         <div className="flex-1 flex flex-col relative">
           <PreviewFrame 
@@ -280,6 +404,24 @@ export default function Builder() {
             css={css} 
             device={device} 
             onDeviceChange={setDevice} 
+          />
+          
+          {/* AI Thinking Animation Overlay */}
+          <AIThinkingAnimation isVisible={isGenerating} />
+          
+          {/* Template Gallery Overlay */}
+          <TemplateGallery 
+            isOpen={showTemplates} 
+            onClose={() => setShowTemplates(false)} 
+            onSelect={handleTemplateSelect}
+          />
+          
+          {/* Code View Overlay */}
+          <CodeView 
+            html={html} 
+            css={css} 
+            isOpen={showCode} 
+            onClose={() => setShowCode(false)} 
           />
           
           {/* Floating Prompt Input */}
@@ -290,11 +432,21 @@ export default function Builder() {
           </div>
         </div>
         
+        {/* Version History Panel */}
+        <VersionHistory
+          versions={versions}
+          currentIndex={currentVersionIndex}
+          onRestore={handleVersionRestore}
+          isOpen={showVersionHistory}
+          onClose={() => setShowVersionHistory(false)}
+        />
+        
         {/* Right Sidebar (Design) */}
         <DesignControls config={{}} onChange={handleDesignChange} />
       </div>
 
       <BillingModal open={showBilling} onOpenChange={setShowBilling} />
+      <KeyboardShortcuts open={showKeyboardShortcuts} onOpenChange={setShowKeyboardShortcuts} />
     </div>
   );
 }
