@@ -267,8 +267,16 @@ export default function Builder() {
       setLastPrompt(prompt);
       
       // Add to version history
+      // Use crypto.randomUUID if available, otherwise fallback to timestamp-based ID
+      const generateId = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return crypto.randomUUID();
+        }
+        return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      };
+      
       const newVersion: VersionSnapshot = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         html: result.html,
         css: result.css,
         prompt,

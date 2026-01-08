@@ -9,14 +9,15 @@ import {
   Camera, 
   Utensils,
   Sparkles,
-  X
+  X,
+  LucideIcon
 } from "lucide-react";
 
 interface Template {
   id: string;
   name: string;
   description: string;
-  icon: any;
+  icon: LucideIcon;
   prompt: string;
   category: string;
 }
