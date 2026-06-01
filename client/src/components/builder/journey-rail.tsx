@@ -28,17 +28,17 @@ export function JourneyRail({ current }: { current: JourneyStep }) {
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.7rem] font-semibold transition-colors ${
                   state === "done"
-                    ? "bg-[hsl(16,78%,50%)] text-white"
+                    ? "bg-[#bfa669] text-white"
                     : state === "current"
-                    ? "border-2 border-[hsl(16,78%,50%)] text-[hsl(16,78%,46%)]"
-                    : "border border-[hsl(32,16%,80%)] text-[hsl(28,8%,55%)]"
+                    ? "border-2 border-[#bfa669] text-[#bfa669]"
+                    : "border border-[rgba(191,166,105,0.25)] text-[rgba(232,226,207,0.5)]"
                 }`}
               >
                 {state === "done" ? <Check className="h-3.5 w-3.5" /> : i + 1}
               </span>
               <span
                 className={`hidden text-sm font-medium sm:inline ${
-                  state === "current" ? "text-[hsl(24,14%,14%)]" : "text-[hsl(28,8%,50%)]"
+                  state === "current" ? "text-[#e8e2cf]" : "text-[rgba(232,226,207,0.5)]"
                 }`}
               >
                 {step.label}
@@ -47,7 +47,7 @@ export function JourneyRail({ current }: { current: JourneyStep }) {
             {i < STEPS.length - 1 && (
               <span
                 className={`mx-2 h-px w-6 ${
-                  idx < currentIdx ? "bg-[hsl(16,78%,50%)]" : "bg-[hsl(32,16%,82%)]"
+                  idx < currentIdx ? "bg-[#bfa669]" : "bg-[rgba(191,166,105,0.18)]"
                 }`}
               />
             )}
@@ -67,6 +67,6 @@ export function JourneyNudge({ current }: { current: JourneyStep }) {
     done: "🎉 Your site is live. Copy the link and share it with the world.",
   };
   return (
-    <p className="text-center text-sm text-[hsl(28,8%,42%)]">{messages[current]}</p>
+    <p className="text-center text-sm text-[rgba(232,226,207,0.6)]">{messages[current]}</p>
   );
 }

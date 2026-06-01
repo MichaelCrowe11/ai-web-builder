@@ -15,7 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 // On-brand empty state (shown before first generation).
 const INITIAL_HTML = `<div class="stage"><p class="kicker">A blank canvas</p><h1>Your website<br/><em>starts with a sentence.</em></h1><p class="sub">Describe your business in the box below — or tap a starter — and watch it come to life right here.</p></div>`;
-const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Instrument+Sans:wght@400..600&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:center;background:hsl(40,38%,96%);color:hsl(24,14%,12%);font-family:'Instrument Sans',sans-serif;padding:3rem;text-align:center}.stage{max-width:40rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.25em;text-transform:uppercase;color:hsl(16,78%,48%);margin-bottom:1.5rem}h1{font-family:'Fraunces',serif;font-weight:300;font-size:clamp(2.2rem,6vw,4rem);line-height:1}h1 em{color:hsl(16,78%,52%);font-style:italic}.sub{margin-top:1.5rem;font-size:1.05rem;line-height:1.6;color:hsl(28,8%,40%);max-width:28rem;margin-left:auto;margin-right:auto}`;
+const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:center;background:#0b0b0c;color:#e8e2cf;font-family:'Inter',sans-serif;padding:3rem;text-align:center;background-image:radial-gradient(40rem 30rem at 50% -10%,rgba(191,166,105,0.10),transparent 60%)}.stage{max-width:40rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.25em;text-transform:uppercase;color:#bfa669;margin-bottom:1.5rem}h1{font-family:'Inter',sans-serif;font-weight:600;font-size:clamp(2.2rem,6vw,4rem);line-height:1.05;letter-spacing:-0.03em}h1 em{color:#bfa669;font-style:normal}.sub{margin-top:1.5rem;font-size:1.05rem;line-height:1.6;color:rgba(232,226,207,0.6);max-width:28rem;margin-left:auto;margin-right:auto}`;
 
 interface RefineIntent { label: string; instruction: string; }
 
@@ -187,18 +187,18 @@ export default function Builder() {
   const hasGenerated = doc !== null;
 
   return (
-    <div className="h-screen flex flex-col bg-[hsl(40,38%,96%)] font-sans overflow-hidden text-[hsl(24,14%,12%)]">
+    <div className="h-screen flex flex-col bg-[#0b0b0c] font-sans overflow-hidden text-[#e8e2cf]">
       {/* Top bar */}
-      <header className="h-16 border-b border-[hsl(32,16%,86%)] flex items-center justify-between px-5 bg-[hsl(40,38%,97%)] z-10">
+      <header className="h-16 border-b border-[rgba(191,166,105,0.18)] flex items-center justify-between px-5 bg-[#15151a] z-10">
         <div className="flex items-center gap-4">
           <Link href="/">
-            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-[hsl(32,16%,84%)] text-[hsl(24,14%,30%)] transition-colors hover:bg-[hsl(36,22%,90%)]">
+            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(191,166,105,0.18)] text-[rgba(232,226,207,0.7)] transition-colors hover:bg-[#15151a]">
               <ArrowLeft className="h-4 w-4" />
             </button>
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[hsl(24,14%,12%)] font-heading text-base italic leading-none text-[hsl(40,38%,96%)]">a</div>
-            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-40 bg-transparent font-heading text-base outline-none focus:border-b focus:border-[hsl(16,78%,50%)]" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e8e2cf] font-heading text-base italic leading-none text-[#0b0b0c]">a</div>
+            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-40 bg-transparent font-heading text-base outline-none focus:border-b focus:border-[#bfa669]" />
           </div>
         </div>
 
@@ -207,21 +207,21 @@ export default function Builder() {
 
         <div className="flex items-center gap-2">
           {user ? (
-            <span className="mr-1 font-mono text-xs text-[hsl(28,8%,45%)]">{user.username}{user.plan === "pro" && <span className="ml-1 font-semibold text-[hsl(16,78%,48%)]">· PRO</span>}</span>
+            <span className="mr-1 font-mono text-xs text-[rgba(232,226,207,0.55)]">{user.username}{user.plan === "pro" && <span className="ml-1 font-semibold text-[#bfa669]">· PRO</span>}</span>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => setShowAuth(true)}>Sign in</Button>
           )}
           {user?.plan !== "pro" && (
-            <button onClick={() => setShowBilling(true)} className="rounded-full border border-[hsl(16,78%,50%)] px-3 py-1.5 text-sm font-semibold text-[hsl(16,78%,46%)] transition-colors hover:bg-[hsl(16,70%,94%)]">Upgrade</button>
+            <button onClick={() => setShowBilling(true)} className="rounded-full border border-[#bfa669] px-3 py-1.5 text-sm font-semibold text-[#bfa669] transition-colors hover:bg-[rgba(191,166,105,0.12)]">Upgrade</button>
           )}
-          <div className="mx-1 h-5 w-px bg-[hsl(32,16%,84%)]" />
-          <Button variant="ghost" size="sm" className="gap-1.5 text-[hsl(24,14%,25%)]" onClick={saveProject} disabled={isSaving || !hasGenerated}>
+          <div className="mx-1 h-5 w-px bg-[rgba(191,166,105,0.18)]" />
+          <Button variant="ghost" size="sm" className="gap-1.5 text-[rgba(232,226,207,0.8)]" onClick={saveProject} disabled={isSaving || !hasGenerated}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save
           </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-[hsl(24,14%,25%)]" onClick={handleExport} disabled={!hasGenerated}>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-[rgba(232,226,207,0.8)]" onClick={handleExport} disabled={!hasGenerated}>
             <Download className="h-4 w-4" />Export
           </Button>
-          <Button size="sm" className="gap-1.5 rounded-full bg-[hsl(24,14%,12%)] px-5 font-semibold text-[hsl(40,38%,96%)] hover:bg-[hsl(24,14%,20%)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
+          <Button size="sm" className="gap-1.5 rounded-full bg-[#e8e2cf] px-5 font-semibold text-[#0b0b0c] hover:bg-[#d4be84]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>
         </div>
@@ -229,18 +229,18 @@ export default function Builder() {
 
       {/* Published banner */}
       {publishedUrl && (
-        <div className="flex items-center justify-between border-b border-[hsl(16,60%,80%)] bg-[hsl(16,70%,94%)] px-5 py-2.5 text-sm">
-          <div className="flex min-w-0 items-center gap-2 text-[hsl(16,78%,32%)]">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(16,78%,50%)]" />
+        <div className="flex items-center justify-between border-b border-[rgba(191,166,105,0.3)] bg-[rgba(191,166,105,0.12)] px-5 py-2.5 text-sm">
+          <div className="flex min-w-0 items-center gap-2 text-[#bfa669]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#bfa669]" />
             <span className="shrink-0 font-medium">Live at</span>
             <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer" className="truncate font-mono hover:underline">{publishedUrl}</a>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[hsl(16,78%,32%)]" onClick={() => { navigator.clipboard?.writeText(publishedUrl); toast({ title: "Copied" }); }}>
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[#bfa669]" onClick={() => { navigator.clipboard?.writeText(publishedUrl); toast({ title: "Copied" }); }}>
               <Copy className="h-3.5 w-3.5" /> Copy
             </Button>
             <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer">
-              <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[hsl(16,78%,32%)]"><ExternalLink className="h-3.5 w-3.5" /> Visit</Button>
+              <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[#bfa669]"><ExternalLink className="h-3.5 w-3.5" /> Visit</Button>
             </a>
           </div>
         </div>
@@ -251,10 +251,10 @@ export default function Builder() {
         <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
 
         {isGenerating && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[hsl(40,38%,96%)]/70 backdrop-blur-sm">
-            <div className="flex items-center gap-3 rounded-full border border-[hsl(32,16%,84%)] bg-white px-5 py-3 shadow-xl">
-              <Sparkles className="h-4 w-4 animate-pulse text-[hsl(16,78%,50%)]" />
-              <span className="font-mono text-sm text-[hsl(24,14%,25%)]">{hasGenerated ? "Applying your change…" : "Designing your site…"}</span>
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#0b0b0c]/70 backdrop-blur-sm">
+            <div className="flex items-center gap-3 rounded-full border border-[rgba(191,166,105,0.18)] bg-[#15151a] px-5 py-3 shadow-xl">
+              <Sparkles className="h-4 w-4 animate-pulse text-[#bfa669]" />
+              <span className="font-mono text-sm text-[rgba(232,226,207,0.8)]">{hasGenerated ? "Applying your change…" : "Designing your site…"}</span>
             </div>
           </div>
         )}
@@ -267,20 +267,20 @@ export default function Builder() {
             {!hasGenerated ? (
               <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
             ) : (
-              <div className="rounded-2xl border border-[hsl(32,16%,82%)] bg-white/95 p-3 shadow-[0_20px_50px_-15px_rgba(40,30,20,0.35)] backdrop-blur-lg">
+              <div className="rounded-2xl border border-[rgba(191,166,105,0.18)] bg-[#15151a]/95 p-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)] backdrop-blur-lg">
                 <div className="mb-2 flex items-center gap-2 px-1">
-                  <Wand2 className="h-3.5 w-3.5 text-[hsl(16,78%,50%)]" />
-                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[hsl(28,8%,45%)]">Refine — tap to apply</span>
+                  <Wand2 className="h-3.5 w-3.5 text-[#bfa669]" />
+                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[rgba(232,226,207,0.55)]">Refine — tap to apply</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {refineIntents.map((r) => (
                     <button key={r.label} onClick={() => handleRefine(r.instruction)} disabled={isGenerating}
-                      className="rounded-full border border-[hsl(32,16%,82%)] bg-[hsl(40,38%,97%)] px-3 py-1.5 text-sm font-medium text-[hsl(24,14%,28%)] transition-colors hover:border-[hsl(16,78%,55%)] hover:text-[hsl(16,78%,46%)] disabled:opacity-50">
+                      className="rounded-full border border-[rgba(191,166,105,0.18)] bg-[#15151a] px-3 py-1.5 text-sm font-medium text-[rgba(232,226,207,0.85)] transition-colors hover:border-[#d4be84] hover:text-[#bfa669] disabled:opacity-50">
                       {r.label}
                     </button>
                   ))}
                   <button onClick={() => { setDoc(null); setHtml(INITIAL_HTML); setCss(INITIAL_CSS); setStep("describe"); }}
-                    className="rounded-full px-3 py-1.5 text-sm font-medium text-[hsl(28,8%,50%)] hover:text-[hsl(24,14%,25%)]">
+                    className="rounded-full px-3 py-1.5 text-sm font-medium text-[rgba(232,226,207,0.5)] hover:text-[rgba(232,226,207,0.8)]">
                     Start over
                   </button>
                 </div>

@@ -68,7 +68,7 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
     <div className="mx-auto w-full max-w-2xl">
       {/* starter chips, above the bar */}
       <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        <span className="shrink-0 pr-1 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[hsl(28,8%,45%)]">
+        <span className="shrink-0 pr-1 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[rgba(232,226,207,0.55)]">
           Start with
         </span>
         {STARTER_TEMPLATES.map((t) => (
@@ -76,21 +76,21 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
             key={t.label}
             onClick={() => setPrompt(t.prompt)}
             title={t.prompt}
-            className="shrink-0 whitespace-nowrap rounded-full border border-[hsl(32,16%,82%)] bg-[hsl(40,38%,97%)]/90 px-3 py-1 text-xs font-medium text-[hsl(24,14%,30%)] backdrop-blur transition-colors hover:border-[hsl(16,78%,55%)] hover:text-[hsl(16,78%,46%)]"
+            className="shrink-0 whitespace-nowrap rounded-full border border-[rgba(191,166,105,0.18)] bg-[#15151a]/90 px-3 py-1 text-xs font-medium text-[rgba(232,226,207,0.7)] backdrop-blur transition-colors hover:border-[#d4be84] hover:text-[#bfa669]"
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      <div className="flex items-end gap-2 rounded-2xl border border-[hsl(32,16%,82%)] bg-white/95 p-2.5 pl-4 shadow-[0_20px_50px_-15px_rgba(40,30,20,0.35)] backdrop-blur-lg transition-all focus-within:border-[hsl(16,78%,55%)] focus-within:shadow-[0_24px_60px_-15px_hsla(16,78%,50%,0.4)]">
+      <div className="flex items-end gap-2 rounded-2xl border border-[rgba(191,166,105,0.25)] bg-[#15151a]/95 p-2.5 pl-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)] backdrop-blur-lg transition-all focus-within:border-[#bfa669] focus-within:shadow-[0_0_40px_-10px_rgba(191,166,105,0.4)]">
         <Textarea
           ref={textareaRef}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Describe your business — e.g. 'a cozy coffee shop in Tucson with online reservations'"
-          className="max-h-[180px] min-h-[44px] w-full resize-none border-none bg-transparent p-0 py-2.5 text-base shadow-none placeholder:text-[hsl(28,8%,52%)] focus-visible:ring-0"
+          className="max-h-[180px] min-h-[44px] w-full resize-none border-none bg-transparent p-0 py-2.5 text-base shadow-none placeholder:text-[rgba(232,226,207,0.5)] focus-visible:ring-0"
           rows={1}
         />
         <Button
@@ -99,8 +99,8 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
           disabled={!prompt.trim() || isGenerating}
           className={`h-10 w-10 shrink-0 rounded-xl transition-all ${
             prompt.trim() && !isGenerating
-              ? "bg-[hsl(16,78%,50%)] text-white hover:bg-[hsl(16,78%,45%)]"
-              : "bg-[hsl(36,20%,90%)] text-[hsl(28,8%,55%)]"
+              ? "bg-[#bfa669] text-[#0b0b0c] hover:bg-[#d4be84]"
+              : "bg-[#0b0b0c] text-[rgba(232,226,207,0.4)]"
           }`}
         >
           {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}

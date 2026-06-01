@@ -38,43 +38,56 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
-  --font-sans: 'Instrument Sans', 'Inter', sans-serif;
-  --font-heading: 'Fraunces', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --radius: 0.5rem;
 }
 
+/* ===== Crowe Logic brand tokens (app chrome only) ===== */
+/* Source of truth: ~/BRAND.md — gold on graphite, parchment text. */
 :root {
-  /* Editorial Atelier — warm cream paper, ink, single ember accent */
-  --background: 40 38% 96%;        /* warm cream paper */
-  --foreground: 24 14% 12%;        /* near-black warm ink */
+  --crowe-gold: #bfa669;
+  --crowe-gold-hi: #d4be84;
+  --crowe-gold-dim: #8a7850;
+  --crowe-graphite: #0b0b0c;
+  --crowe-graphite-soft: #15151a;
+  --crowe-parchment: #e8e2cf;
+  --crowe-parchment-dim: rgba(232, 226, 207, 0.6);
+  --crowe-error: #d97356;
+}
 
-  --card: 40 33% 98%;
-  --card-foreground: 24 14% 12%;
+:root {
+  /* Crowe Logic — gold on graphite, parchment text (app chrome). ~/BRAND.md */
+  --background: 240 4% 4%;          /* graphite #0b0b0c */
+  --foreground: 44 30% 86%;         /* parchment #e8e2cf */
 
-  --popover: 40 33% 98%;
-  --popover-foreground: 24 14% 12%;
+  --card: 240 11% 9%;              /* graphite-soft #15151a */
+  --card-foreground: 44 30% 86%;
 
-  /* Primary: ember / burnt orange */
-  --primary: 16 78% 48%;
-  --primary-foreground: 40 38% 97%;
+  --popover: 240 11% 9%;
+  --popover-foreground: 44 30% 86%;
 
-  --secondary: 36 22% 90%;
-  --secondary-foreground: 24 14% 16%;
+  /* Primary: Crowe gold #bfa669 */
+  --primary: 43 39% 58%;
+  --primary-foreground: 240 4% 4%;
 
-  --muted: 36 20% 91%;
-  --muted-foreground: 28 8% 40%;
+  --secondary: 240 8% 14%;
+  --secondary-foreground: 44 30% 86%;
 
-  --accent: 16 70% 94%;
-  --accent-foreground: 16 78% 30%;
+  --muted: 240 8% 14%;
+  --muted-foreground: 44 12% 62%;
 
-  --destructive: 0 72% 48%;
+  --accent: 43 39% 58%;
+  --accent-foreground: 240 4% 4%;
+
+  --destructive: 13 62% 59%;        /* crowe error #d97356 */
   --destructive-foreground: 0 0% 98%;
 
-  --border: 32 16% 84%;
-  --input: 32 16% 84%;
-  --ring: 16 78% 48%;
+  --border: 43 39% 58%;             /* gold hairlines (used at low alpha) */
+  --input: 240 8% 18%;
+  --ring: 43 39% 58%;
 
   --radius: 0.5rem;
 
@@ -130,7 +143,8 @@
 
 @layer base {
   * {
-    @apply border-border;
+    /* gold hairline at low alpha — the brand's border treatment */
+    border-color: rgba(191, 166, 105, 0.18);
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
