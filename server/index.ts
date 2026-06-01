@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { setupSession } from "./auth";
+import { handleStripeWebhook } from "./billing";
 import { createServer } from "http";
 
 const app = express();
@@ -12,6 +13,14 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+// Stripe webhook MUST receive the raw body for signature verification, so it
+// is registered with express.raw() BEFORE the global JSON parser below.
+app.post(
+  "/api/billing/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook,
+);
 
 app.use(
   express.json({

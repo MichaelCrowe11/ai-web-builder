@@ -5,6 +5,7 @@ import { generate, generateStream, parseSite, MODEL } from "./ai";
 import { enforceQuota, consumeGeneration } from "./quota";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
+import { registerBillingRoutes } from "./billing";
 import { log } from "./index";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
@@ -12,6 +13,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Billing routes (Stripe checkout + portal)
+  registerBillingRoutes(app);
+
   // AI Generation endpoint
   app.post("/api/generate", enforceQuota, async (req: Request, res: Response) => {
     try {
