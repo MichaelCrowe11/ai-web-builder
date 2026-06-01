@@ -52,9 +52,11 @@ export class MemStorage implements IStorage {
       ...insertUser,
       id,
       email: insertUser.email || null,
-      plan: "starter",
+      plan: "free",
       generationsUsed: 0,
-      generationsLimit: 5,
+      generationsResetAt: new Date(),
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
       createdAt: new Date()
     };
     this.users.set(id, user);
@@ -88,7 +90,8 @@ export class MemStorage implements IStorage {
       html: insertProject.html,
       css: insertProject.css,
       prompt: insertProject.prompt || null,
-      isPublished: "false",
+      slug: null,
+      isPublished: false,
       publishedUrl: null,
       createdAt: new Date(),
       updatedAt: new Date(),

@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generate, generateStream, parseSite, MODEL } from "./ai";
 import { rateLimitGenerate } from "./ratelimit";
+import { publicUser } from "./plan";
 import { log } from "./index";
 import { createHash } from "crypto";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
@@ -106,14 +107,7 @@ export async function registerRoutes(
       });
 
       log(`User registered: ${username}`);
-      return res.status(201).json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        plan: user.plan,
-        generationsUsed: user.generationsUsed,
-        generationsLimit: user.generationsLimit,
-      });
+      return res.status(201).json(publicUser(user));
     } catch (error: any) {
       log(`Registration error: ${error.message}`);
       return res.status(500).json({ error: "Registration failed" });
@@ -135,14 +129,7 @@ export async function registerRoutes(
       }
 
       log(`User logged in: ${username}`);
-      return res.json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        plan: user.plan,
-        generationsUsed: user.generationsUsed,
-        generationsLimit: user.generationsLimit,
-      });
+      return res.json(publicUser(user));
     } catch (error: any) {
       log(`Login error: ${error.message}`);
       return res.status(500).json({ error: "Login failed" });
@@ -157,14 +144,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
 
-      return res.json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        plan: user.plan,
-        generationsUsed: user.generationsUsed,
-        generationsLimit: user.generationsLimit,
-      });
+      return res.json(publicUser(user));
     } catch (error: any) {
       return res.status(500).json({ error: "Failed to get user" });
     }
@@ -228,7 +208,7 @@ export async function registerRoutes(
         ...(name && { name }),
         ...(html && { html }),
         ...(css && { css }),
-        ...(isPublished !== undefined && { isPublished: String(isPublished) }),
+        ...(isPublished !== undefined && { isPublished: Boolean(isPublished) }),
       });
 
       if (!project) {
