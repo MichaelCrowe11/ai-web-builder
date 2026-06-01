@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generate, generateStream, parseSite, MODEL } from "./ai";
-import { rateLimitGenerate } from "./ratelimit";
+import { enforceQuota, consumeGeneration } from "./quota";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { log } from "./index";
@@ -13,7 +13,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   // AI Generation endpoint
-  app.post("/api/generate", rateLimitGenerate, async (req: Request, res: Response) => {
+  app.post("/api/generate", enforceQuota, async (req: Request, res: Response) => {
     try {
       const { prompt } = req.body;
 
@@ -26,10 +26,14 @@ export async function registerRoutes(
       const text = await generate(prompt);
       const result = parseSite(text);
 
+      // Count this generation against the user's quota only on success.
+      const quota = await consumeGeneration(req);
+
       log("Website generated successfully");
       return res.json({
         html: result.html,
         css: result.css,
+        quota,
       });
     } catch (error: any) {
       log(`Generation error: ${error.message}`);
@@ -41,7 +45,7 @@ export async function registerRoutes(
   });
 
   // Streaming generation endpoint for real-time feedback
-  app.post("/api/generate/stream", rateLimitGenerate, async (req: Request, res: Response) => {
+  app.post("/api/generate/stream", enforceQuota, async (req: Request, res: Response) => {
     try {
       const { prompt } = req.body;
 
@@ -62,7 +66,8 @@ export async function registerRoutes(
       // Parse final result
       try {
         const result = parseSite(fullText);
-        res.write(`data: ${JSON.stringify({ type: "complete", html: result.html, css: result.css })}\n\n`);
+        const quota = await consumeGeneration(req);
+        res.write(`data: ${JSON.stringify({ type: "complete", html: result.html, css: result.css, quota })}\n\n`);
       } catch (parseError) {
         res.write(`data: ${JSON.stringify({ type: "error", message: "Failed to parse response" })}\n\n`);
       }

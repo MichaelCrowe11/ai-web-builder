@@ -15,11 +15,14 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserGenerations(id: string, count: number): Promise<void>;
+  updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
 
   // Project operations
   getProject(id: string): Promise<Project | undefined>;
+  getProjectBySlug(slug: string): Promise<Project | undefined>;
   getProjectsByUser(userId: string): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, data: Partial<Project>): Promise<Project | undefined>;
@@ -43,6 +46,12 @@ export class MemStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
       (user) => user.username === username,
+    );
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.stripeCustomerId === stripeCustomerId,
     );
   }
 
@@ -71,8 +80,20 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    const updated = { ...user, ...data };
+    this.users.set(id, updated);
+    return updated;
+  }
+
   async getProject(id: string): Promise<Project | undefined> {
     return this.projectsMap.get(id);
+  }
+
+  async getProjectBySlug(slug: string): Promise<Project | undefined> {
+    return Array.from(this.projectsMap.values()).find((p) => p.slug === slug);
   }
 
   async getProjectsByUser(userId: string): Promise<Project[]> {
@@ -133,6 +154,14 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.stripeCustomerId, stripeCustomerId));
+    return result[0];
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const result = await this.db.insert(users).values(insertUser).returning();
     return result[0];
@@ -142,8 +171,18 @@ export class PostgresStorage implements IStorage {
     await this.db.update(users).set({ generationsUsed: count }).where(eq(users.id, id));
   }
 
+  async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
+    const result = await this.db.update(users).set(data).where(eq(users.id, id)).returning();
+    return result[0];
+  }
+
   async getProject(id: string): Promise<Project | undefined> {
     const result = await this.db.select().from(projects).where(eq(projects.id, id));
+    return result[0];
+  }
+
+  async getProjectBySlug(slug: string): Promise<Project | undefined> {
+    const result = await this.db.select().from(projects).where(eq(projects.slug, slug));
     return result[0];
   }
 
