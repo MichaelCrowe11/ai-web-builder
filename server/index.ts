@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { setupSession } from "./auth";
 import { handleStripeWebhook } from "./billing";
+import { publishedSiteMiddleware } from "./publish";
 import { createServer } from "http";
 
 const app = express();
@@ -71,6 +72,15 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Serve published sites on <slug>.ai-webbuilder.com BEFORE the app routes /
+// SPA catch-all, so a published subdomain never falls through to the app.
+// The app's own hosts are excluded so the builder UI keeps working.
+const APP_HOSTS = (process.env.APP_HOSTS ?? "")
+  .split(",")
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+app.use(publishedSiteMiddleware(APP_HOSTS));
 
 (async () => {
   await registerRoutes(httpServer, app);

@@ -6,8 +6,9 @@ import { PreviewFrame } from "@/components/builder/preview-frame";
 import { DesignControls } from "@/components/builder/design-controls";
 import { BillingModal } from "@/components/settings/billing-modal";
 import { EnvironmentSwitch } from "@/components/settings/environment-switch";
-import { Cpu, ChevronLeft, Download, Rocket, Gem, Save, Check } from "lucide-react";
+import { Cpu, ChevronLeft, Download, Rocket, Gem, Save, Check, ExternalLink, Copy, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 // Mock template for initial state
 const INITIAL_HTML = `
@@ -121,6 +122,9 @@ export default function Builder() {
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [showBilling, setShowBilling] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Save project
@@ -183,6 +187,49 @@ export default function Builder() {
 
     toast({ title: "Exported", description: "Your website has been downloaded." });
   }, [html, css, projectName, toast]);
+
+  // Publish: save the project (if needed) then make it live at a public URL.
+  const handlePublish = useCallback(async () => {
+    setIsPublishing(true);
+    try {
+      // Ensure the project is saved so the server has a row to publish.
+      let id = projectId;
+      if (!id) {
+        const res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ html, css, name: projectName, prompt: lastPrompt }),
+        });
+        const project = await res.json();
+        id = project.id;
+        setProjectId(id);
+      } else {
+        await fetch(`/api/projects/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ html, css, name: projectName }),
+        });
+      }
+
+      const res = await apiRequest("POST", `/api/projects/${id}/publish`);
+      const data = await res.json();
+      setPublishedUrl(data.publishedUrl);
+      setPreviewUrl(data.previewUrl);
+      toast({
+        title: "Your site is live! 🎉",
+        description: data.publishedUrl,
+      });
+    } catch (error: any) {
+      const msg = error?.message?.includes("401")
+        ? "Please sign in to publish your site."
+        : "Could not publish. Please try again.";
+      toast({ title: "Publish failed", description: msg, variant: "destructive" });
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [projectId, html, css, projectName, lastPrompt, toast]);
 
   const handleGenerate = async (prompt: string) => {
     setIsGenerating(true);
@@ -265,12 +312,55 @@ export default function Builder() {
           <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" /> Export
           </Button>
-          <Button variant="default" size="sm" className="gap-2 bg-gradient-to-r from-primary to-indigo-500 hover:from-primary/90 hover:to-indigo-500/90">
-            <Rocket className="h-4 w-4" /> Publish
+          <Button
+            variant="default"
+            size="sm"
+            className="gap-2 bg-gradient-to-r from-primary to-indigo-500 hover:from-primary/90 hover:to-indigo-500/90"
+            onClick={handlePublish}
+            disabled={isPublishing}
+          >
+            {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+            {isPublishing ? "Publishing..." : "Publish"}
           </Button>
         </div>
       </header>
       
+      {/* Published banner */}
+      {publishedUrl && (
+        <div className="bg-green-500/10 border-b border-green-500/30 px-4 py-2 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2 text-green-700 dark:text-green-400 min-w-0">
+            <Rocket className="h-4 w-4 shrink-0" />
+            <span className="font-medium shrink-0">Live at</span>
+            <a
+              href={previewUrl ?? publishedUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono truncate hover:underline"
+            >
+              {publishedUrl}
+            </a>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 h-7"
+              onClick={() => {
+                navigator.clipboard?.writeText(publishedUrl);
+                toast({ title: "Copied", description: "URL copied to clipboard." });
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" /> Copy
+            </Button>
+            <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer">
+              <Button variant="ghost" size="sm" className="gap-1.5 h-7">
+                <ExternalLink className="h-3.5 w-3.5" /> Visit
+              </Button>
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Main Workspace */}
       <div className="flex-1 flex overflow-hidden">
         {/* Preview Area (Center) */}

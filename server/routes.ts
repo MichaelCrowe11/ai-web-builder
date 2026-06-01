@@ -6,6 +6,7 @@ import { enforceQuota, consumeGeneration } from "./quota";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { registerBillingRoutes } from "./billing";
+import { registerPublishRoutes, renderFullHtml } from "./publish";
 import { log } from "./index";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
@@ -15,6 +16,9 @@ export async function registerRoutes(
 ): Promise<Server> {
   // Billing routes (Stripe checkout + portal)
   registerBillingRoutes(app);
+
+  // Publishing routes (publish/unpublish + /s/:slug serving)
+  registerPublishRoutes(app);
 
   // AI Generation endpoint
   app.post("/api/generate", enforceQuota, async (req: Request, res: Response) => {
@@ -259,22 +263,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${project.name}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    ${project.css}
-  </style>
-</head>
-<body>
-  ${project.html}
-</body>
-</html>`;
+      const fullHtml = renderFullHtml(project);
 
       res.setHeader("Content-Type", "text/html");
       res.setHeader("Content-Disposition", `attachment; filename="${project.name.replace(/[^a-z0-9]/gi, '_')}.html"`);
