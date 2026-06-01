@@ -2,6 +2,9 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generate, generateStream, parseSite, MODEL } from "./ai";
+import { generateDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
+import { renderDocumentBody, renderDocumentCss } from "./renderer";
+import { siteDocumentSchema } from "@shared/site-document";
 import { enforceQuota, consumeGeneration } from "./quota";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
@@ -20,7 +23,62 @@ export async function registerRoutes(
   // Publishing routes (publish/unpublish + /s/:slug serving)
   registerPublishRoutes(app);
 
-  // AI Generation endpoint
+  // List of tappable refine intents for the UI.
+  app.get("/api/refine/intents", (_req: Request, res: Response) => {
+    return res.json({ intents: REFINE_INTENTS });
+  });
+
+  // STRUCTURED generation: prompt -> validated Site Document -> rendered HTML/CSS.
+  // The AI never writes markup, so output can't be broken or unsafe.
+  app.post("/api/generate/document", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      log(`Generating document (${MODEL}) for: ${prompt.substring(0, 50)}...`);
+      const document = await generateDocument(prompt);
+      const quota = await consumeGeneration(req);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+        quota,
+      });
+    } catch (error: any) {
+      log(`Document generation error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to generate site", details: error.message });
+    }
+  });
+
+  // SCOPED refine: apply an instruction to an existing document. Counts as a
+  // generation against quota (it's an Azure call), but it's targeted + cheap.
+  app.post("/api/refine", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { document, instruction } = req.body;
+      if (!instruction || typeof instruction !== "string") {
+        return res.status(400).json({ error: "Instruction is required" });
+      }
+      const parsed = siteDocumentSchema.safeParse(document);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid document is required" });
+      }
+      log(`Refining document: ${instruction.substring(0, 50)}...`);
+      const updated = await refineDocument(parsed.data, instruction);
+      const quota = await consumeGeneration(req);
+      return res.json({
+        document: updated,
+        html: renderDocumentBody(updated),
+        css: renderDocumentCss(updated),
+        quota,
+      });
+    } catch (error: any) {
+      log(`Refine error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to refine site", details: error.message });
+    }
+  });
+
+  // AI Generation endpoint (legacy raw HTML/CSS — kept during transition)
   app.post("/api/generate", enforceQuota, async (req: Request, res: Response) => {
     try {
       const { prompt } = req.body;
