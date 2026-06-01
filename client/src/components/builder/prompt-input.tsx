@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Sparkles, Loader2, Paperclip } from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
 
 interface PromptInputProps {
   onGenerate: (prompt: string) => void;
@@ -65,51 +65,46 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
   }, [prompt]);
 
   return (
-    <div className="bg-background/80 backdrop-blur-lg border border-border/50 rounded-xl shadow-2xl p-4 w-full max-w-3xl mx-auto transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/20">
-      <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Describe your website... (e.g. 'A landing page for a coffee shop with a dark theme')"
-          className="min-h-[60px] max-h-[200px] w-full resize-none bg-transparent border-none focus-visible:ring-0 p-0 text-base shadow-none pr-12"
-          rows={1}
-        />
-        
-        <div className="absolute right-0 bottom-0 flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-             <Paperclip className="h-4 w-4" />
-          </Button>
-          <Button 
-            size="icon" 
-            onClick={handleSubmit} 
-            disabled={!prompt.trim() || isGenerating}
-            className={`h-8 w-8 transition-all ${prompt.trim() ? "bg-primary" : "bg-muted text-muted-foreground"}`}
-          >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-      
-      <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0 pr-1">
-          Start with:
+    <div className="mx-auto w-full max-w-2xl">
+      {/* starter chips, above the bar */}
+      <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <span className="shrink-0 pr-1 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[hsl(28,8%,45%)]">
+          Start with
         </span>
         {STARTER_TEMPLATES.map((t) => (
           <button
             key={t.label}
             onClick={() => setPrompt(t.prompt)}
             title={t.prompt}
-            className="text-xs px-2.5 py-1 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap border border-border/50 shrink-0"
+            className="shrink-0 whitespace-nowrap rounded-full border border-[hsl(32,16%,82%)] bg-[hsl(40,38%,97%)]/90 px-3 py-1 text-xs font-medium text-[hsl(24,14%,30%)] backdrop-blur transition-colors hover:border-[hsl(16,78%,55%)] hover:text-[hsl(16,78%,46%)]"
           >
             {t.label}
           </button>
         ))}
+      </div>
+
+      <div className="flex items-end gap-2 rounded-2xl border border-[hsl(32,16%,82%)] bg-white/95 p-2.5 pl-4 shadow-[0_20px_50px_-15px_rgba(40,30,20,0.35)] backdrop-blur-lg transition-all focus-within:border-[hsl(16,78%,55%)] focus-within:shadow-[0_24px_60px_-15px_hsla(16,78%,50%,0.4)]">
+        <Textarea
+          ref={textareaRef}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Describe your business — e.g. 'a cozy coffee shop in Tucson with online reservations'"
+          className="max-h-[180px] min-h-[44px] w-full resize-none border-none bg-transparent p-0 py-2.5 text-base shadow-none placeholder:text-[hsl(28,8%,52%)] focus-visible:ring-0"
+          rows={1}
+        />
+        <Button
+          size="icon"
+          onClick={handleSubmit}
+          disabled={!prompt.trim() || isGenerating}
+          className={`h-10 w-10 shrink-0 rounded-xl transition-all ${
+            prompt.trim() && !isGenerating
+              ? "bg-[hsl(16,78%,50%)] text-white hover:bg-[hsl(16,78%,45%)]"
+              : "bg-[hsl(36,20%,90%)] text-[hsl(28,8%,55%)]"
+          }`}
+        >
+          {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+        </Button>
       </div>
     </div>
   );

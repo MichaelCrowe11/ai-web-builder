@@ -1,162 +1,111 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { PromptInput } from "@/components/builder/prompt-input";
 import { PreviewFrame } from "@/components/builder/preview-frame";
-import { DesignControls } from "@/components/builder/design-controls";
 import { BillingModal } from "@/components/settings/billing-modal";
-import { EnvironmentSwitch } from "@/components/settings/environment-switch";
-import { Cpu, ChevronLeft, Download, Rocket, Gem, Save, Check, ExternalLink, Copy, Loader2 } from "lucide-react";
+import { AuthModal } from "@/components/auth/auth-modal";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  ArrowLeft,
+  Download,
+  Rocket,
+  Save,
+  Check,
+  ExternalLink,
+  Copy,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-// Friendly placeholder shown before the user generates anything.
+// Empty-state placeholder, on-brand (warm ink, ember, Fraunces serif).
 const INITIAL_HTML = `
-  <div class="hero">
-    <h1>Your website starts here</h1>
-    <p>Describe your business in the box below, or pick a starter — we'll build it for you in seconds.</p>
-    <button class="cta-button">✨ Try a prompt below</button>
-  </div>
-  <div class="features">
-    <div class="feature-card">
-      <h3>1. Describe it</h3>
-      <p>Tell us what your business does in a sentence.</p>
-    </div>
-    <div class="feature-card">
-      <h3>2. Watch it build</h3>
-      <p>A polished website appears in seconds.</p>
-    </div>
-    <div class="feature-card">
-      <h3>3. Publish</h3>
-      <p>Go live with one click — hosting included.</p>
-    </div>
+  <div class="stage">
+    <p class="kicker">A blank canvas</p>
+    <h1>Your website<br/><em>starts with a sentence.</em></h1>
+    <p class="sub">Describe your business in the box below — or tap a starter — and watch it come to life right here.</p>
   </div>
 `;
 
 const INITIAL_CSS = `
-  :root {
-    --primary: #4F46E5;
-    --text: #1F2937;
-    --bg: #F9FAFB;
-    --card-bg: #FFFFFF;
-    --radius: 8px;
-  }
-  
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Instrument+Sans:wght@400..600&family=JetBrains+Mono:wght@500&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    background-color: var(--bg);
-    color: var(--text);
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    line-height: 1.5;
-  }
-  
-  .hero {
-    text-align: center;
-    padding: 4rem 0;
-  }
-  
-  h1 {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 3.5rem;
-    font-weight: 800;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, var(--primary), #818CF8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  
-  p {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.25rem;
-    color: #6B7280;
-    margin-bottom: 2rem;
-  }
-  
-  .cta-button {
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 1rem 2rem;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: var(--radius);
-    cursor: pointer;
-    transition: transform 0.2s;
-  }
-  
-  .cta-button:hover {
-    transform: translateY(-2px);
-  }
-  
-  .features {
+    min-height: 100vh;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    margin-top: 4rem;
+    place-items: center;
+    background: hsl(40,38%,96%);
+    color: hsl(24,14%,12%);
+    font-family: 'Instrument Sans', sans-serif;
+    padding: 3rem;
+    text-align: center;
   }
-  
-  .feature-card {
-    background-color: var(--card-bg);
-    padding: 2rem;
-    border-radius: var(--radius);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0,0,0,0.05);
+  .stage { max-width: 40rem; }
+  .kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase;
+    color: hsl(16,78%,48%); margin-bottom: 1.5rem;
   }
-  
-  h3 {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
+  h1 {
+    font-family: 'Fraunces', serif; font-weight: 300;
+    font-size: clamp(2.2rem, 6vw, 4rem); line-height: 1.0;
+    letter-spacing: -0.02em;
+  }
+  h1 em { color: hsl(16,78%,52%); font-style: italic; }
+  .sub {
+    margin-top: 1.5rem; font-size: 1.05rem; line-height: 1.6;
+    color: hsl(28,8%,40%); max-width: 28rem; margin-left: auto; margin-right: auto;
   }
 `;
 
 export default function Builder() {
+  const { user } = useAuth();
   const [html, setHtml] = useState(INITIAL_HTML);
   const [css, setCss] = useState(INITIAL_CSS);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [projectName, setProjectName] = useState("Untitled Project");
+  const [projectName, setProjectName] = useState("Untitled site");
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [hasGenerated, setHasGenerated] = useState(false);
   const [showBilling, setShowBilling] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Save project
   const saveProject = useCallback(async () => {
     setIsSaving(true);
     try {
       if (projectId) {
-        // Update existing project
         await fetch(`/api/projects/${projectId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ html, css, name: projectName }),
         });
       } else {
-        // Create new project
         const response = await fetch("/api/projects", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ html, css, name: projectName, prompt: lastPrompt }),
         });
         const project = await response.json();
         setProjectId(project.id);
       }
-      toast({ title: "Project Saved", description: "Your changes have been saved." });
-    } catch (error) {
-      toast({ title: "Save Failed", description: "Could not save project.", variant: "destructive" });
+      toast({ title: "Saved", description: "Your work is safe." });
+    } catch {
+      toast({ title: "Save failed", description: "Could not save.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   }, [html, css, projectId, projectName, lastPrompt, toast]);
 
-  // Export project as HTML file
   const handleExport = useCallback(() => {
     const fullHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -164,17 +113,11 @@ export default function Builder() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${projectName}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    ${css}
-  </style>
+  <style>* { margin: 0; padding: 0; box-sizing: border-box; }
+  ${css}</style>
 </head>
-<body>
-  ${html}
-</body>
+<body>${html}</body>
 </html>`;
-
     const blob = new Blob([fullHtml], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -184,15 +127,16 @@ export default function Builder() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    toast({ title: "Exported", description: "Your website has been downloaded." });
+    toast({ title: "Downloaded", description: "Your site's HTML is saved." });
   }, [html, css, projectName, toast]);
 
-  // Publish: save the project (if needed) then make it live at a public URL.
   const handlePublish = useCallback(async () => {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
     setIsPublishing(true);
     try {
-      // Ensure the project is saved so the server has a row to publish.
       let id = projectId;
       if (!id) {
         const res = await fetch("/api/projects", {
@@ -212,148 +156,145 @@ export default function Builder() {
           body: JSON.stringify({ html, css, name: projectName }),
         });
       }
-
       const res = await apiRequest("POST", `/api/projects/${id}/publish`);
       const data = await res.json();
       setPublishedUrl(data.publishedUrl);
       setPreviewUrl(data.previewUrl);
-      toast({
-        title: "Your site is live! 🎉",
-        description: data.publishedUrl,
-      });
+      toast({ title: "Your site is live!", description: data.publishedUrl });
     } catch (error: any) {
       const msg = error?.message?.includes("401")
-        ? "Please sign in to publish your site."
+        ? "Please sign in to publish."
         : "Could not publish. Please try again.";
       toast({ title: "Publish failed", description: msg, variant: "destructive" });
     } finally {
       setIsPublishing(false);
     }
-  }, [projectId, html, css, projectName, lastPrompt, toast]);
+  }, [user, projectId, html, css, projectName, lastPrompt, toast]);
 
   const handleGenerate = async (prompt: string) => {
     setIsGenerating(true);
-
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ prompt }),
       });
-
       if (!response.ok) {
         const error = await response.json();
+        // Paywall / trial limit → nudge to sign up or upgrade.
+        if (response.status === 402) {
+          toast({ title: "You're out of free generations", description: error.details, variant: "destructive" });
+          if (error.requiresAuth) setShowAuth(true);
+          else if (error.requiresUpgrade) setShowBilling(true);
+          return;
+        }
         throw new Error(error.details || error.error || "Generation failed");
       }
-
       const result = await response.json();
-
       setHtml(result.html);
       setCss(result.css);
       setLastPrompt(prompt);
-      toast({
-        title: "Website Generated",
-        description: "Your AI-powered design is ready to preview.",
-      });
+      setHasGenerated(true);
+      toast({ title: "Here's your site", description: "Tweak it, regenerate, or publish." });
     } catch (error: any) {
-      console.error("Generation error:", error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate website. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Generation failed", description: error.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleDesignChange = (key: string, value: any) => {
-    // Simple mock implementation of updating CSS variables
-    if (key === "primaryColor") {
-      setCss(prev => prev.replace(/--primary: #[A-Fa-f0-9]{6}/, `--primary: ${value}`));
-    }
-    if (key === "borderRadius") {
-      setCss(prev => prev.replace(/--radius: \d+px/, `--radius: ${value}px`));
-    }
-  };
-
   return (
-    <div className="h-screen flex flex-col bg-background font-sans overflow-hidden">
-      {/* Top Bar */}
-      <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-background z-10">
+    <div className="h-screen flex flex-col bg-[hsl(40,38%,96%)] font-sans overflow-hidden text-[hsl(24,14%,12%)]">
+      {/* ============ Top bar — editorial ============ */}
+      <header className="h-16 border-b border-[hsl(32,16%,86%)] flex items-center justify-between px-5 bg-[hsl(40,38%,97%)] z-10">
         <div className="flex items-center gap-4">
           <Link href="/">
-            <Button variant="ghost" size="icon">
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
+            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-[hsl(32,16%,84%)] text-[hsl(24,14%,30%)] transition-colors hover:bg-[hsl(36,22%,90%)]">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
           </Link>
-          <div className="flex items-center gap-2">
-             <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
-                <Cpu className="h-3.5 w-3.5" />
-              </div>
-            <span className="font-semibold text-sm">Untitled Project</span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[hsl(24,14%,12%)] font-heading text-base italic leading-none text-[hsl(40,38%,96%)]">
+              a
+            </div>
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              className="w-44 bg-transparent font-heading text-base outline-none focus:border-b focus:border-[hsl(16,78%,50%)]"
+            />
           </div>
-          
-          <div className="h-4 w-px bg-border mx-2" />
-          <EnvironmentSwitch />
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="gap-2 text-amber-500 hover:text-amber-600 hover:bg-amber-50" onClick={() => setShowBilling(true)}>
-            <Gem className="h-4 w-4" /> Upgrade
+          {user ? (
+            <span className="mr-1 font-mono text-xs text-[hsl(28,8%,45%)]">
+              {user.username}
+              {user.plan === "pro" && <span className="ml-1 font-semibold text-[hsl(16,78%,48%)]">· PRO</span>}
+            </span>
+          ) : (
+            <Button variant="ghost" size="sm" className="font-medium" onClick={() => setShowAuth(true)}>
+              Sign in
+            </Button>
+          )}
+          {user?.plan !== "pro" && (
+            <button
+              onClick={() => setShowBilling(true)}
+              className="rounded-full border border-[hsl(16,78%,50%)] px-3 py-1.5 text-sm font-semibold text-[hsl(16,78%,46%)] transition-colors hover:bg-[hsl(16,70%,94%)]"
+            >
+              Upgrade
+            </button>
+          )}
+          <div className="mx-1 h-5 w-px bg-[hsl(32,16%,84%)]" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-[hsl(24,14%,25%)]"
+            onClick={saveProject}
+            disabled={isSaving}
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save
           </Button>
-          <div className="h-4 w-px bg-border mx-2" />
-          <Button variant="outline" size="sm" className="gap-2" onClick={saveProject} disabled={isSaving}>
-            {isSaving ? <Save className="h-4 w-4 animate-pulse" /> : <Check className="h-4 w-4" />}
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-[hsl(24,14%,25%)]" onClick={handleExport}>
             <Download className="h-4 w-4" /> Export
           </Button>
           <Button
-            variant="default"
             size="sm"
-            className="gap-2 bg-gradient-to-r from-primary to-indigo-500 hover:from-primary/90 hover:to-indigo-500/90"
+            className="gap-1.5 rounded-full bg-[hsl(24,14%,12%)] px-5 font-semibold text-[hsl(40,38%,96%)] hover:bg-[hsl(24,14%,20%)]"
             onClick={handlePublish}
             disabled={isPublishing}
           >
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-            {isPublishing ? "Publishing..." : "Publish"}
+            {isPublishing ? "Publishing" : "Publish"}
           </Button>
         </div>
       </header>
-      
-      {/* Published banner */}
+
+      {/* ============ Published banner ============ */}
       {publishedUrl && (
-        <div className="bg-green-500/10 border-b border-green-500/30 px-4 py-2 flex items-center justify-between text-sm">
-          <div className="flex items-center gap-2 text-green-700 dark:text-green-400 min-w-0">
-            <Rocket className="h-4 w-4 shrink-0" />
-            <span className="font-medium shrink-0">Live at</span>
-            <a
-              href={previewUrl ?? publishedUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono truncate hover:underline"
-            >
+        <div className="flex items-center justify-between border-b border-[hsl(16,60%,80%)] bg-[hsl(16,70%,94%)] px-5 py-2.5 text-sm">
+          <div className="flex min-w-0 items-center gap-2 text-[hsl(16,78%,32%)]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(16,78%,50%)]" />
+            <span className="shrink-0 font-medium">Live at</span>
+            <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer" className="truncate font-mono hover:underline">
               {publishedUrl}
             </a>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1.5 h-7"
+              className="h-7 gap-1.5 text-[hsl(16,78%,32%)]"
               onClick={() => {
                 navigator.clipboard?.writeText(publishedUrl);
-                toast({ title: "Copied", description: "URL copied to clipboard." });
+                toast({ title: "Copied" });
               }}
             >
               <Copy className="h-3.5 w-3.5" /> Copy
             </Button>
             <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer">
-              <Button variant="ghost" size="sm" className="gap-1.5 h-7">
+              <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[hsl(16,78%,32%)]">
                 <ExternalLink className="h-3.5 w-3.5" /> Visit
               </Button>
             </a>
@@ -361,30 +302,30 @@ export default function Builder() {
         </div>
       )}
 
-      {/* Main Workspace */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Preview Area (Center) */}
-        <div className="flex-1 flex flex-col relative">
-          <PreviewFrame 
-            html={html} 
-            css={css} 
-            device={device} 
-            onDeviceChange={setDevice} 
-          />
-          
-          {/* Floating Prompt Input */}
-          <div className="absolute bottom-8 left-0 right-0 z-20 px-4 pointer-events-none">
-            <div className="pointer-events-auto">
-              <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
+      {/* ============ Workspace: full-bleed canvas + floating prompt ============ */}
+      <div className="relative flex-1 overflow-hidden">
+        <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
+
+        {/* generating shimmer */}
+        {isGenerating && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[hsl(40,38%,96%)]/70 backdrop-blur-sm">
+            <div className="flex items-center gap-3 rounded-full border border-[hsl(32,16%,84%)] bg-white px-5 py-3 shadow-xl">
+              <Sparkles className="h-4 w-4 animate-pulse text-[hsl(16,78%,50%)]" />
+              <span className="font-mono text-sm text-[hsl(24,14%,25%)]">Designing your site…</span>
             </div>
           </div>
+        )}
+
+        {/* floating prompt */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-7 z-20 px-4">
+          <div className="pointer-events-auto">
+            <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
+          </div>
         </div>
-        
-        {/* Right Sidebar (Design) */}
-        <DesignControls config={{}} onChange={handleDesignChange} />
       </div>
 
       <BillingModal open={showBilling} onOpenChange={setShowBilling} />
+      <AuthModal open={showAuth} onOpenChange={setShowAuth} defaultMode="register" />
     </div>
   );
 }
