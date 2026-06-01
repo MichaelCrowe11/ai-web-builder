@@ -4,14 +4,9 @@ import { storage } from "./storage";
 import { generate, generateStream, parseSite, MODEL } from "./ai";
 import { rateLimitGenerate } from "./ratelimit";
 import { publicUser } from "./plan";
+import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { log } from "./index";
-import { createHash } from "crypto";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
-
-// Simple password hashing (use bcrypt in production)
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
-}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -99,13 +94,14 @@ export async function registerRoutes(
         return res.status(409).json({ error: "Username already taken" });
       }
 
-      // Create user with hashed password
+      // Create user with bcrypt-hashed password
       const user = await storage.createUser({
         username,
-        password: hashPassword(password),
+        password: await hashPassword(password),
         email,
       });
 
+      req.session.userId = user.id;
       log(`User registered: ${username}`);
       return res.status(201).json(publicUser(user));
     } catch (error: any) {
@@ -124,10 +120,11 @@ export async function registerRoutes(
       }
 
       const user = await storage.getUserByUsername(username);
-      if (!user || user.password !== hashPassword(password)) {
+      if (!user || !(await verifyPassword(password, user.password))) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
+      req.session.userId = user.id;
       log(`User logged in: ${username}`);
       return res.json(publicUser(user));
     } catch (error: any) {
@@ -136,18 +133,27 @@ export async function registerRoutes(
     }
   });
 
-  // Get user profile
-  app.get("/api/auth/user/:id", async (req: Request, res: Response) => {
-    try {
-      const user = await storage.getUser(req.params.id);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      return res.json(publicUser(user));
-    } catch (error: any) {
-      return res.status(500).json({ error: "Failed to get user" });
+  // Current authenticated user (from session)
+  app.get("/api/auth/me", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      // Stale session pointing at a deleted user — clear it.
+      req.session.destroy(() => {});
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    return res.json(publicUser(user));
+  });
+
+  // Logout: destroy session + clear cookie
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    req.session.destroy((err) => {
+      if (err) return res.status(500).json({ error: "Logout failed" });
+      res.clearCookie("connect.sid");
+      return res.json({ ok: true });
+    });
   });
 
   // ============ PROJECT ROUTES ============

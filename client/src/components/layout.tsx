@@ -1,12 +1,22 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Cpu, LayoutTemplate, CreditCard, Menu, X } from "lucide-react";
+import { Cpu, LayoutTemplate, CreditCard, Menu } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/hooks/use-auth";
+import { AuthModal } from "@/components/auth/auth-modal";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+
+  const openAuth = (mode: "login" | "register") => {
+    setAuthMode(mode);
+    setAuthOpen(true);
+  };
 
   const navItems = [
     { label: "Builder", href: "/builder", icon: LayoutTemplate },
@@ -40,8 +50,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
             <div className="h-4 w-px bg-border mx-2" />
-            <Button variant="ghost" size="sm">Log in</Button>
-            <Button size="sm">Get Started</Button>
+            {user ? (
+              <>
+                <span className="text-sm text-muted-foreground">
+                  {user.username}
+                  {user.plan === "pro" && (
+                    <span className="ml-1 text-xs font-semibold text-amber-500">PRO</span>
+                  )}
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => logout()}>
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => openAuth("login")}>
+                  Log in
+                </Button>
+                <Button size="sm" onClick={() => openAuth("register")}>
+                  Get Started
+                </Button>
+              </>
+            )}
           </nav>
 
           {/* Mobile Nav */}
@@ -68,8 +98,40 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </Link>
                   ))}
                   <div className="h-px bg-border my-2" />
-                  <Button variant="outline" className="w-full">Log in</Button>
-                  <Button className="w-full">Get Started</Button>
+                  {user ? (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        logout();
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      Log out ({user.username})
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          openAuth("login");
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        Log in
+                      </Button>
+                      <Button
+                        className="w-full"
+                        onClick={() => {
+                          openAuth("register");
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        Get Started
+                      </Button>
+                    </>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
@@ -119,6 +181,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} defaultMode={authMode} />
     </div>
   );
 }
