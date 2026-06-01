@@ -32,7 +32,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
                 <Cpu className="h-5 w-5" />
               </div>
-              <span className="font-heading font-bold text-xl tracking-tight">WebGen AI</span>
+              <span className="font-heading font-bold text-xl tracking-tight">AI Web Builder</span>
             </div>
           </Link>
 
@@ -150,10 +150,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
                 <Cpu className="h-4 w-4" />
               </div>
-              <span className="font-heading font-bold text-lg">WebGen AI</span>
+              <span className="font-heading font-bold text-lg">AI Web Builder</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Building the future of web development, one prompt at a time.
+              Describe your business. Get a website that's live.
             </p>
           </div>
           <div>

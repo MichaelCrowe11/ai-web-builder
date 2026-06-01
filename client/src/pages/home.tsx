@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
 import { Link } from "wouter";
-import { ArrowRight, Sparkles, Zap, Shield, Code } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Shield, Globe } from "lucide-react";
 import heroBg from "@assets/generated_images/abstract_gradient_mesh_background_with_deep_violet_and_blue_tones.png";
 
 export default function Home() {
@@ -21,26 +21,26 @@ export default function Home() {
         <div className="container mx-auto px-4 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>AI-Powered Website Builder V2.0 is live</span>
+            <span>Your website, live in minutes</span>
           </div>
-          
+
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-            Describe your dream site.<br />
-            <span className="text-primary">We build it instantly.</span>
+            Describe your business.<br />
+            <span className="text-primary">Get a website that's live.</span>
           </h1>
-          
+
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-            Generate production-ready React code, stunning designs, and full copy just by chatting. No coding required, but fully extensible if you want.
+            Tell us what you do in a sentence. We'll design a beautiful website, put it online, and connect your own domain — no code, no hosting setup, no headaches.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
             <Link href="/builder">
               <Button size="lg" className="h-12 px-8 text-base shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
-                Start Building Free <ArrowRight className="ml-2 h-4 w-4" />
+                Build my website free <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Button size="lg" variant="outline" className="h-12 px-8 text-base">
-              View Showcase
+              See examples
             </Button>
           </div>
         </div>
@@ -50,9 +50,9 @@ export default function Home() {
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl font-heading font-bold mb-4">Why WebGen AI?</h2>
+            <h2 className="text-3xl font-heading font-bold mb-4">Everything you need to get online</h2>
             <p className="text-muted-foreground">
-              We don't just paste code. We architect solutions with a production-ready stack.
+              From idea to a real website your customers can visit — without touching code.
             </p>
           </div>
 
@@ -60,18 +60,18 @@ export default function Home() {
             {[
               {
                 icon: Zap,
-                title: "Instant Generation",
-                description: "From prompt to preview in under 30 seconds. Iterate in real-time."
+                title: "Live in minutes",
+                description: "Describe your business and watch a polished website appear — then publish it with one click."
               },
               {
-                icon: Code,
-                title: "Clean React Code",
-                description: "Export standard React + Tailwind code. No vendor lock-in."
+                icon: Globe,
+                title: "Your own domain",
+                description: "Connect a custom domain you own, or grab a new one right here. We handle the technical setup."
               },
               {
                 icon: Shield,
-                title: "Enterprise Ready",
-                description: "Secure, scalable, and built on modern infrastructure."
+                title: "Hosting included",
+                description: "No servers, no plugins, no maintenance. Your site stays fast and online — we take care of it."
               }
             ].map((feature, i) => (
               <div key={i} className="p-6 rounded-2xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-shadow">

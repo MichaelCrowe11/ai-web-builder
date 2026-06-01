@@ -10,25 +10,25 @@ import { Cpu, ChevronLeft, Download, Rocket, Gem, Save, Check, ExternalLink, Cop
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-// Mock template for initial state
+// Friendly placeholder shown before the user generates anything.
 const INITIAL_HTML = `
   <div class="hero">
-    <h1>Build Future-Ready Apps</h1>
-    <p>Deploy scalable applications in seconds with our AI-powered infrastructure.</p>
-    <button class="cta-button">Get Started</button>
+    <h1>Your website starts here</h1>
+    <p>Describe your business in the box below, or pick a starter — we'll build it for you in seconds.</p>
+    <button class="cta-button">✨ Try a prompt below</button>
   </div>
   <div class="features">
     <div class="feature-card">
-      <h3>Fast</h3>
-      <p>Blazing fast performance out of the box.</p>
+      <h3>1. Describe it</h3>
+      <p>Tell us what your business does in a sentence.</p>
     </div>
     <div class="feature-card">
-      <h3>Secure</h3>
-      <p>Enterprise-grade security by default.</p>
+      <h3>2. Watch it build</h3>
+      <p>A polished website appears in seconds.</p>
     </div>
     <div class="feature-card">
-      <h3>Scalable</h3>
-      <p>Grow from 1 to 1M users without friction.</p>
+      <h3>3. Publish</h3>
+      <p>Go live with one click — hosting included.</p>
     </div>
   </div>
 `;

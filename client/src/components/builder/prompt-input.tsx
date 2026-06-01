@@ -8,6 +8,37 @@ interface PromptInputProps {
   isGenerating: boolean;
 }
 
+// Vertical starter templates — pre-fill a rich, business-specific prompt so
+// non-technical users never face a blank box. The label is the industry; the
+// prompt is what we actually send to the model.
+const STARTER_TEMPLATES = [
+  {
+    label: "Restaurant",
+    prompt:
+      "A warm, inviting website for a family-owned Italian restaurant. Include a hero with the restaurant name and tagline, a menu section with a few signature dishes and prices, hours and location, and a 'Reserve a table' call to action. Use appetizing imagery and a cozy color palette.",
+  },
+  {
+    label: "Portfolio",
+    prompt:
+      "A clean, modern personal portfolio for a freelance photographer. Include a striking hero with my name, a gallery grid of work, a short about section, and a contact call to action. Minimal, elegant, lots of whitespace.",
+  },
+  {
+    label: "Local service",
+    prompt:
+      "A trustworthy website for a local plumbing business. Include a hero with the business name and phone number, a list of services, a 'Why choose us' section with trust badges, customer reviews, and a prominent 'Get a free quote' button. Professional blue-and-white palette.",
+  },
+  {
+    label: "Online store",
+    prompt:
+      "A bright e-commerce landing page for a small handmade-candle brand. Include a hero with a featured product, a grid of 3 best-sellers with prices, a short brand story, customer reviews, and a newsletter signup. Friendly, warm, modern.",
+  },
+  {
+    label: "Event",
+    prompt:
+      "An exciting one-page website for a community music festival. Include a bold hero with the event name, date and location, a lineup section, a schedule, ticket pricing tiers with a 'Get tickets' button, and an FAQ. Energetic, colorful, modern.",
+  },
+];
+
 export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
   const [prompt, setPrompt] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -66,13 +97,17 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
       </div>
       
       <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {["Landing Page", "Portfolio", "SaaS Dashboard", "Blog"].map((suggestion) => (
+        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0 pr-1">
+          Start with:
+        </span>
+        {STARTER_TEMPLATES.map((t) => (
           <button
-            key={suggestion}
-            onClick={() => setPrompt(suggestion)}
-            className="text-xs px-2.5 py-1 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap border border-border/50"
+            key={t.label}
+            onClick={() => setPrompt(t.prompt)}
+            title={t.prompt}
+            className="text-xs px-2.5 py-1 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap border border-border/50 shrink-0"
           >
-            {suggestion}
+            {t.label}
           </button>
         ))}
       </div>
