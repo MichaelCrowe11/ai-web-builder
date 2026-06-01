@@ -38,45 +38,46 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
-  --font-sans: 'Inter', sans-serif;
-  --font-heading: 'Plus Jakarta Sans', sans-serif;
-  
+  --font-sans: 'Instrument Sans', 'Inter', sans-serif;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
   --radius: 0.5rem;
 }
 
 :root {
-  /* Light Mode - Crisp, Clean, Professional */
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  
-  /* Primary: Deep Indigo */
-  --primary: 250 85% 60%;
-  --primary-foreground: 0 0% 98%;
-  
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  
-  --destructive: 0 84.2% 60.2%;
+  /* Editorial Atelier — warm cream paper, ink, single ember accent */
+  --background: 40 38% 96%;        /* warm cream paper */
+  --foreground: 24 14% 12%;        /* near-black warm ink */
+
+  --card: 40 33% 98%;
+  --card-foreground: 24 14% 12%;
+
+  --popover: 40 33% 98%;
+  --popover-foreground: 24 14% 12%;
+
+  /* Primary: ember / burnt orange */
+  --primary: 16 78% 48%;
+  --primary-foreground: 40 38% 97%;
+
+  --secondary: 36 22% 90%;
+  --secondary-foreground: 24 14% 16%;
+
+  --muted: 36 20% 91%;
+  --muted-foreground: 28 8% 40%;
+
+  --accent: 16 70% 94%;
+  --accent-foreground: 16 78% 30%;
+
+  --destructive: 0 72% 48%;
   --destructive-foreground: 0 0% 98%;
-  
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 250 85% 60%;
-  
+
+  --border: 32 16% 84%;
+  --input: 32 16% 84%;
+  --ring: 16 78% 48%;
+
   --radius: 0.5rem;
-  
+
   --sidebar: 0 0% 98%;
   --sidebar-foreground: 240 5.3% 26.1%;
   --sidebar-primary: 240 5.9% 10%;

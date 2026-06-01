@@ -28,11 +28,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-                <Cpu className="h-5 w-5" />
+            <div className="flex items-center gap-2.5 cursor-pointer group">
+              <div className="h-8 w-8 rounded-full bg-[hsl(24,14%,12%)] flex items-center justify-center text-[hsl(40,38%,96%)] font-heading text-lg italic leading-none transition-transform group-hover:rotate-12">
+                a
               </div>
-              <span className="font-heading font-bold text-xl tracking-tight">AI Web Builder</span>
+              <span className="font-heading text-xl tracking-tight">
+                AI Web Builder
+              </span>
             </div>
           </Link>
 

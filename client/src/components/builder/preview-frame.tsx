@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useMemo } from "react";
 import { Monitor, Smartphone, Tablet } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -10,34 +10,28 @@ interface PreviewFrameProps {
 }
 
 export function PreviewFrame({ html, css, device, onDeviceChange }: PreviewFrameProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    if (iframeRef.current) {
-      const doc = iframeRef.current.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <style>
-                ${css}
-                /* Reset & Base Styles for Preview */
-                body { margin: 0; font-family: system-ui, sans-serif; }
-                * { box-sizing: border-box; }
-              </style>
-              <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
-            </head>
-            <body>
-              ${html}
-            </body>
-          </html>
-        `);
-        doc.close();
-      }
-    }
-  }, [html, css]);
+  // Build the full document and feed it via srcDoc. This renders correctly under
+  // a sandbox without allow-same-origin (contentDocument.write() returns null
+  // when the iframe is cross-origin, which left the preview permanently blank).
+  const srcDoc = useMemo(
+    () => `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, sans-serif; }
+      ${css}
+    </style>
+  </head>
+  <body>
+    ${html}
+  </body>
+</html>`,
+    [html, css],
+  );
 
   const width = {
     desktop: "100%",
@@ -56,17 +50,17 @@ export function PreviewFrame({ html, css, device, onDeviceChange }: PreviewFrame
           </TabsList>
         </Tabs>
       </div>
-      
+
       <div className="flex-1 overflow-auto flex justify-center py-8">
-        <div 
+        <div
           className="bg-white shadow-2xl transition-all duration-500 ease-in-out origin-top"
           style={{ width: width, height: device === "desktop" ? "100%" : "800px", minHeight: "100%" }}
         >
           <iframe
-            ref={iframeRef}
             title="Preview"
+            srcDoc={srcDoc}
             className="w-full h-full border-none"
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-same-origin"
           />
         </div>
       </div>
