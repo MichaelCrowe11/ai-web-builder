@@ -262,12 +262,17 @@ export default function Builder() {
         {/* Bottom dock: nudge + (refine chips OR prompt) */}
         <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 px-4">
           <div className="pointer-events-auto mx-auto max-w-2xl">
-            <div className="mb-2"><JourneyNudge current={step} /></div>
+            {/* Nudge only when there's nothing behind it to overlap */}
+            {!hasGenerated && (
+              <div className="mb-2 inline-block rounded-full bg-[#0b0b0c]/80 px-4 py-1 backdrop-blur-sm">
+                <JourneyNudge current={step} />
+              </div>
+            )}
 
             {!hasGenerated ? (
               <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
             ) : (
-              <div className="rounded-2xl border border-[rgba(191,166,105,0.18)] bg-[#15151a]/95 p-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)] backdrop-blur-lg">
+              <div className="rounded-2xl border border-[rgba(191,166,105,0.25)] bg-[#15151a] p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
                 <div className="mb-2 flex items-center gap-2 px-1">
                   <Wand2 className="h-3.5 w-3.5 text-[#bfa669]" />
                   <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[rgba(232,226,207,0.55)]">Refine — tap to apply</span>
