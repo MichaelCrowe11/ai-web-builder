@@ -7,12 +7,14 @@ import { AuthProvider } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Builder from "@/pages/builder";
+import GrowthPage from "@/pages/growth";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/builder" component={Builder} />
+      <Route path="/projects/:projectId/growth" component={GrowthPage} />
       <Route component={NotFound} />
     </Switch>
   );
