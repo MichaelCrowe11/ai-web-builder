@@ -10,6 +10,7 @@ import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { registerBillingRoutes } from "./billing";
 import { registerPublishRoutes, renderFullHtml } from "./publish";
+import { registerGrowthRoutes } from "./growth-routes";
 import { log } from "./index";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
@@ -22,6 +23,9 @@ export async function registerRoutes(
 
   // Publishing routes (publish/unpublish + /s/:slug serving)
   registerPublishRoutes(app);
+
+  // Growth routes (telemetry sink + Mission Control API)
+  registerGrowthRoutes(app);
 
   // List of tappable refine intents for the UI.
   app.get("/api/refine/intents", (_req: Request, res: Response) => {
