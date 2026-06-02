@@ -14,4 +14,10 @@ describe("renderDocumentBody instrumentation", () => {
     };
     expect(renderDocumentBody(doc)).toContain('data-section-key="0:hero"');
   });
+
+  it("marks CTA buttons as conversion points", () => {
+    const doc = { version: 1, meta: { name: "A" }, theme: { preset: "minimal", radius: "medium" } as any,
+      sections: [{ type: "cta", headline: "Book now", cta: { label: "Call us", action: "call" } } as any] } as any;
+    expect(renderDocumentBody(doc)).toContain("data-conversion");
+  });
 });

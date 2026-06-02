@@ -44,6 +44,11 @@ describe("assembleDocumentHtml", () => {
     expect(html).toContain('data-section-key="0:hero"');
   });
 
+  it("beacon emits conversion with the section key", () => {
+    const html = assembleDocumentHtml(doc, "p1", null, "v1");
+    expect(html).toContain("push('conversion',");
+  });
+
   it("patches in the candidate when the visitor is assigned to it", () => {
     let vid = "";
     for (let i = 0; i < 50; i++) {

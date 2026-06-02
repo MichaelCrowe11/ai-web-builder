@@ -41,7 +41,7 @@ function beacon(ctx: string, keys: string[]): string {
   push('pageview');
   var secs=document.querySelectorAll('[data-section-key]');
   if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){push('section_view',e.target.getAttribute('data-section-key'));io.unobserve(e.target);}});},{threshold:0.4});secs.forEach(function(s){io.observe(s);});}
-  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a,button');if(!a)return;var sec=a.closest('[data-section-key]');push('cta_click',sec&&sec.getAttribute('data-section-key'));if(CTX.conversionEvent&&a.getAttribute('data-conversion')){push('conversion');}flush();});
+  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a,button');if(!a)return;var sec=a.closest('[data-section-key]');push('cta_click',sec&&sec.getAttribute('data-section-key'));if(CTX.conversionEvent&&a.getAttribute('data-conversion')){push('conversion', sec&&sec.getAttribute('data-section-key'));}flush();});
   ['visibilitychange','pagehide'].forEach(function(ev){document.addEventListener(ev,flush);});
   setInterval(flush,5000);
   })();</script>`;

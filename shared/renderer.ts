@@ -122,7 +122,7 @@ function renderSection(section: Section, doc: SiteDocument, index: number): stri
       ${doc.meta.tagline ? `<p class="kicker">${esc(doc.meta.tagline)}</p>` : ""}
       <h1>${esc(section.headline)}</h1>
       ${section.subheadline ? `<p class="lead">${esc(section.subheadline)}</p>` : ""}
-      ${section.cta ? `<a class="btn btn-primary" href="${ctaHref(section.cta.action, section.cta.href, doc)}">${esc(section.cta.label)}</a>` : ""}
+      ${section.cta ? `<a class="btn btn-primary" href="${ctaHref(section.cta.action, section.cta.href, doc)}" data-conversion="1">${esc(section.cta.label)}</a>` : ""}
     </div>
   </section>`;
 
@@ -241,7 +241,7 @@ function renderSection(section: Section, doc: SiteDocument, index: number): stri
   <section class="cta-band" data-section-key="${key}">
     <div class="wrap cta-inner">
       <h2>${esc(section.headline)}</h2>
-      <a class="btn btn-invert" href="${ctaHref(section.cta.action, section.cta.href, doc)}">${esc(section.cta.label)}</a>
+      <a class="btn btn-invert" href="${ctaHref(section.cta.action, section.cta.href, doc)}" data-conversion="1">${esc(section.cta.label)}</a>
     </div>
   </section>`;
 

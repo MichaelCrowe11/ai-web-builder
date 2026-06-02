@@ -250,11 +250,13 @@ export class MemStorage implements IStorage {
   }
 
   async variantStats(experimentId: string): Promise<VariantStat[]> {
+    const exp = await this.getExperiment(experimentId);
+    const target = exp?.targetSectionId;
     const m = new Map<string, VariantStat>();
     for (const r of this.telemetryRows) {
       if (r.experimentId !== experimentId || !r.variantId) continue;
       const s = m.get(r.variantId) ?? { variantId: r.variantId, exposures: 0, conversions: 0 };
-      if (r.type === "section_view") s.exposures++;
+      if (r.type === "section_view" && r.sectionId === target) s.exposures++;
       if (r.type === "conversion") s.conversions++;
       m.set(r.variantId, s);
     }
@@ -446,12 +448,14 @@ export class PostgresStorage implements IStorage {
   }
 
   async variantStats(experimentId: string): Promise<VariantStat[]> {
+    const exp = await this.getExperiment(experimentId);
+    const target = exp?.targetSectionId;
     const rows = await this.db.select().from(telemetryEvents).where(eq(telemetryEvents.experimentId, experimentId));
     const m = new Map<string, VariantStat>();
     for (const r of rows) {
       if (!r.variantId) continue;
       const s = m.get(r.variantId) ?? { variantId: r.variantId, exposures: 0, conversions: 0 };
-      if (r.type === "section_view") s.exposures++;
+      if (r.type === "section_view" && r.sectionId === target) s.exposures++;
       if (r.type === "conversion") s.conversions++;
       m.set(r.variantId, s);
     }
