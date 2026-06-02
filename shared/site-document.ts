@@ -195,6 +195,27 @@ export const siteDocumentSchema = z.object({
 });
 export type SiteDocument = z.infer<typeof siteDocumentSchema>;
 
+// ---- Outline (phase 1 of two-phase generation) ----
+// A tiny, fast-to-generate skeleton: name + theme + the section sequence with
+// each section's headline only. The renderer paints a themed skeleton from this
+// in ~2s; phase 2 (fill) expands it into the full document with the same shape.
+export const siteOutlineSchema = z.object({
+  meta: z.object({
+    name: z.string(),
+    tagline: z.string().optional(),
+    industry: z.string().optional(),
+  }),
+  theme: themeSchema,
+  sections: z.array(
+    z.object({
+      type: z.string(), // one of SECTION_TYPES; renderer tolerates unknowns
+      layout: z.string().optional(),
+      headline: z.string(), // hero headline, or the section title
+    }),
+  ).min(1).max(10),
+});
+export type SiteOutline = z.infer<typeof siteOutlineSchema>;
+
 // All section types, for the AI's instructions and the UI's add-section menu.
 export const SECTION_TYPES: SectionType[] = [
   "hero",

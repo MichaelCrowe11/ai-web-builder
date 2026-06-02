@@ -8,7 +8,7 @@ import { BillingModal } from "@/components/settings/billing-modal";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github,
+  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Sparkles,
 } from "lucide-react";
 import { GitHubExportModal } from "@/components/builder/github-export-modal";
 import { GenerationOverlay } from "@/components/builder/generation-overlay";
@@ -29,6 +29,7 @@ export default function Builder() {
   const [html, setHtml] = useState(INITIAL_HTML);
   const [css, setCss] = useState(INITIAL_CSS);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [filling, setFilling] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("Untitled site");
@@ -59,36 +60,53 @@ export default function Builder() {
     return false;
   };
 
-  // First generation: prompt -> document -> rendered site.
+  // First generation, two-phase: a fast outline paints a themed skeleton in ~2s,
+  // then the full document fills in (the user watches it build instead of waiting).
   const handleGenerate = async (prompt: string) => {
     setIsGenerating(true);
-    try {
-      const res = await fetch("/api/generate/document", {
+    setFilling(false);
+    const post = (url: string, body: any) =>
+      fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        if (res.status === 402) {
-          toast({ title: "You're out of free generations", description: data.details || data.error, variant: "destructive" });
-          handlePaywall(data);
-          return;
-        }
-        throw new Error(data.details || data.error || "Generation failed");
+    const gate = (status: number, data: any, label: string) => {
+      if (status === 402) {
+        toast({ title: "You're out of free generations", description: data.details || data.error, variant: "destructive" });
+        handlePaywall(data);
+        return true;
       }
-      setDoc(data.document);
-      setHtml(data.html);
-      setCss(data.css);
+      if (status >= 400) throw new Error(data.details || data.error || label);
+      return false;
+    };
+    try {
+      // Phase 1: outline -> instant themed skeleton.
+      const oRes = await post("/api/generate/outline", { prompt });
+      const oData = await oRes.json();
+      if (gate(oRes.status, oData, "Generation failed")) return;
+      setHtml(oData.html);
+      setCss(oData.css);
+      if (oData.outline?.meta?.name) setProjectName(oData.outline.meta.name);
+      setFilling(true); // skeleton is now visible; copy is filling in
+
+      // Phase 2: expand the outline into the full document.
+      const fRes = await post("/api/generate/fill", { prompt, outline: oData.outline });
+      const fData = await fRes.json();
+      if (gate(fRes.status, fData, "Generation failed")) return;
+      setDoc(fData.document);
+      setHtml(fData.html);
+      setCss(fData.css);
       setLastPrompt(prompt);
-      if (data.document?.meta?.name) setProjectName(data.document.meta.name);
+      if (fData.document?.meta?.name) setProjectName(fData.document.meta.name);
       setStep("refine");
       toast({ title: "Here's your site", description: "Tweak it with a suggestion, or publish." });
     } catch (error: any) {
       toast({ title: "Generation failed", description: error.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);
+      setFilling(false);
     }
   };
 
@@ -269,7 +287,13 @@ export default function Builder() {
       <div className="relative flex-1 overflow-hidden">
         <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
 
-        {isGenerating && <GenerationOverlay refining={hasGenerated} />}
+        {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} />}
+        {filling && (
+          <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
+            <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
+            <span className="font-mono text-xs text-parchment/80">Writing your copy…</span>
+          </div>
+        )}
 
         {/* Bottom dock: nudge + (refine chips OR prompt) */}
         <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 px-4">

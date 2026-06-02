@@ -7,7 +7,7 @@
 // and variety comes from (a) 12 curated palettes, (b) multiple layout variants
 // per section the AI chooses from, and (c) real imagery resolved server-side.
 // ============================================================================
-import type { SiteDocument, Section, Theme, ResolvedImage } from "@shared/site-document";
+import type { SiteDocument, Section, Theme, ResolvedImage, SiteOutline } from "@shared/site-document";
 
 // ---- Curated theme presets: palette + fonts + feel ----
 interface ThemeTokens {
@@ -642,6 +642,55 @@ export function renderDocumentBody(doc: SiteDocument): string {
   <footer class="site-footer">
     <div class="wrap">© ${esc(doc.meta.name)}</div>
   </footer>`;
+}
+
+// ---- Phase 1 skeleton (instant paint from the fast outline) ----
+const SKELETON_CSS = `
+.sk { background:linear-gradient(90deg,var(--surface) 0%,var(--border) 45%,var(--surface) 80%); background-size:200% 100%; animation:sksh 1.4s ease-in-out infinite; border-radius:var(--r); }
+@keyframes sksh { 0% { background-position:180% 0; } 100% { background-position:-20% 0; } }
+.sk-line { height:1.05rem; margin-top:1rem; }
+.hero .sk-line { max-width:34rem; }
+.band .sk-line { margin-left:auto; margin-right:auto; max-width:40rem; }
+.sk-btn { height:3rem; width:12rem; margin-top:2rem; }
+.sk-card { height:12rem; }
+.skeleton .sec-title, .skeleton h1 { opacity:.92; }
+`;
+
+function renderOutlineSection(s: SiteOutline["sections"][number], outline: SiteOutline, index: number): string {
+  const open = `data-section-key="${index}:${s.type}" style="--i:${index}"`;
+  const head = esc(s.headline);
+  if (s.type === "hero") {
+    return `
+  <section class="hero hero--centered" ${open}>
+    <div class="wrap hero-inner">
+      ${outline.meta.tagline ? `<p class="kicker">${esc(outline.meta.tagline)}</p>` : ""}
+      <h1>${head}</h1>
+      <div class="sk sk-line" style="width:62%"></div>
+      <div class="sk sk-line" style="width:46%"></div>
+      <div class="sk sk-btn"></div>
+    </div>
+  </section>`;
+  }
+  const alt = index % 2 ? "band-alt" : "";
+  return `
+  <section class="band ${alt}" ${open}>
+    <div class="wrap">
+      <h2 class="sec-title">${head}</h2>
+      <div class="grid grid-3"><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div></div>
+    </div>
+  </section>`;
+}
+
+/** Skeleton body for an outline: real theme + headlines, shimmer placeholders. */
+export function renderOutlineBody(outline: SiteOutline): string {
+  const sections = outline.sections.map((s, i) => renderOutlineSection(s, outline, i)).join("\n");
+  return `<div class="skeleton">${sections}
+  <footer class="site-footer"><div class="wrap">© ${esc(outline.meta.name)}</div></footer></div>`;
+}
+
+/** CSS for the skeleton: the document theme CSS plus shimmer styles. */
+export function renderOutlineCss(outline: SiteOutline): string {
+  return renderCss(outline.theme) + SKELETON_CSS;
 }
 
 /** A complete standalone HTML document (used for publish + export). */

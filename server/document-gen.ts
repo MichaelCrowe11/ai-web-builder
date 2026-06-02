@@ -9,9 +9,11 @@
 // ============================================================================
 import {
   siteDocumentSchema,
+  siteOutlineSchema,
   THEME_PRESETS,
   SECTION_TYPES,
   type SiteDocument,
+  type SiteOutline,
 } from "@shared/site-document";
 
 import { azureChat, modelsFromEnv } from "./azure-chat";
@@ -97,6 +99,53 @@ export async function generateDocument(prompt: string): Promise<SiteDocument> {
       ...messages,
       { role: "assistant", content: text },
       { role: "user", content: `That JSON was invalid (${err.message}). Return ONLY a corrected JSON object matching the schema exactly.` },
+    ];
+    text = await chat(repair, 3200);
+    return validate(extractJson(text));
+  }
+}
+
+// ---- Two-phase generation (instant skeleton) ----
+// Phase 1: a tiny, fast outline so a themed skeleton paints in ~2s.
+const OUTLINE_GUIDE = `Design the OUTLINE of a website (a fast first pass). Output ONLY this JSON object:
+{
+  "meta": { "name": string, "tagline": short string, "industry": string },
+  "theme": { "preset": one of ${JSON.stringify(THEME_PRESETS)}, "radius": "none"|"small"|"medium"|"large"|"pill" },
+  "sections": [ { "type": one of ${JSON.stringify(SECTION_TYPES)}, "layout": string, "headline": string } ]
+}
+Rules:
+- 5 to 7 sections. ALWAYS start with "hero" and ALWAYS include "contact".
+- Choose a theme preset + section types that fit the business (trades->industrial-slate, spa->coastal-calm, florist->botanical-fresh, SaaS->tech-precision, bakery/cafe->terracotta-warmth, salon/fine-dining->nocturne-luxe; otherwise pick what fits).
+- Vary section layouts. "headline" is the hero headline or the section title - real and specific, never a placeholder.
+- Output ONLY the JSON object. No prose.`;
+
+/** Phase 1: fast outline (name + theme + section sequence with headlines). */
+export async function generateOutline(prompt: string): Promise<SiteOutline> {
+  const messages = [
+    { role: "system", content: OUTLINE_GUIDE },
+    { role: "user", content: `Outline a website for: ${prompt}` },
+  ];
+  const text = await chat(messages, 800); // small output keeps this fast
+  return siteOutlineSchema.parse(extractJson(text));
+}
+
+/** Phase 2: expand an approved outline into the full document, same structure. */
+export async function fillDocument(outline: SiteOutline, prompt: string): Promise<SiteDocument> {
+  const sys = `${SCHEMA_GUIDE}
+
+You are EXPANDING an approved outline into the COMPLETE site document. Keep the SAME meta.name, the SAME theme (preset + radius), and the SAME sequence of sections with the same "type", "layout", and headline/title. Fill in every remaining field: subheadlines, items with real names/prices/descriptions, body copy, imageHints, and contact details. Output ONLY the JSON object.`;
+  const messages = [
+    { role: "system", content: sys },
+    { role: "user", content: `Business: ${prompt}\n\nApproved outline:\n${JSON.stringify(outline)}` },
+  ];
+  let text = await chat(messages, 3200);
+  try {
+    return validate(extractJson(text));
+  } catch (err: any) {
+    const repair = [
+      ...messages,
+      { role: "assistant", content: text },
+      { role: "user", content: `That JSON was invalid (${err.message}). Return ONLY a corrected complete JSON document.` },
     ];
     text = await chat(repair, 3200);
     return validate(extractJson(text));

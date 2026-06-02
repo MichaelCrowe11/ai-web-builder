@@ -2,10 +2,10 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generate, generateStream, parseSite, MODEL } from "./ai";
-import { generateDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
-import { renderDocumentBody, renderDocumentCss } from "./renderer";
+import { generateDocument, generateOutline, fillDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
+import { renderDocumentBody, renderDocumentCss, renderOutlineBody, renderOutlineCss } from "./renderer";
 import { resolveDocumentImages, type StockProvider } from "./stock-images";
-import { siteDocumentSchema } from "@shared/site-document";
+import { siteDocumentSchema, siteOutlineSchema } from "@shared/site-document";
 
 // Resolve generated imageHints to real stock photos (best-effort; no key => the
 // renderer's gradient placeholders are used). Read env at call time.
@@ -64,6 +64,48 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       log(`Document generation error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to generate site", details: error.message });
+    }
+  });
+
+  // TWO-PHASE generation, phase 1: fast outline -> instant themed skeleton.
+  // Gates on quota (enforceQuota) but does NOT consume; the fill consumes.
+  app.post("/api/generate/outline", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const outline = await generateOutline(prompt);
+      return res.json({ outline, html: renderOutlineBody(outline), css: renderOutlineCss(outline) });
+    } catch (error: any) {
+      log(`Outline error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to outline site", details: error.message });
+    }
+  });
+
+  // Phase 2: expand the approved outline into the full document (consumes quota).
+  app.post("/api/generate/fill", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt, outline } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const parsed = siteOutlineSchema.safeParse(outline);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid outline is required" });
+      }
+      const raw = await fillDocument(parsed.data, prompt);
+      const document = await resolveDocumentImages(raw, stockOpts());
+      const quota = await consumeGeneration(req);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+        quota,
+      });
+    } catch (error: any) {
+      log(`Fill error: ${error.message}`);
       return res.status(500).json({ error: "Failed to generate site", details: error.message });
     }
   });
