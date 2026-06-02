@@ -14,33 +14,23 @@ import {
   type SiteDocument,
 } from "@shared/site-document";
 
+import { azureChat, modelsFromEnv } from "./azure-chat";
+
 const ENDPOINT = process.env.AZURE_CORE_ENDPOINT ?? "";
 const API_KEY = process.env.AZURE_CORE_API_KEY ?? "";
-const DEPLOYMENT = process.env.AI_WEBBUILDER_MODEL ?? "grok-4-1-fast-non-r";
 const API_VERSION = process.env.AZURE_API_VERSION ?? "2024-12-01-preview";
-const IS_GPT5 = /^gpt-5/i.test(DEPLOYMENT);
 
-function chatUrl(): string {
-  if (!ENDPOINT || !API_KEY) {
-    throw new Error("Azure Foundry not configured: set AZURE_CORE_ENDPOINT and AZURE_CORE_API_KEY");
-  }
-  return `${ENDPOINT.replace(/\/$/, "")}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`;
-}
-
-// One Azure chat call returning the assistant text.
+// One Azure chat call returning the assistant text. Resilient: retries 429/408/5xx
+// with backoff (honoring Retry-After) and falls back across the model chain
+// (AI_WEBBUILDER_MODEL primary, then AI_WEBBUILDER_FALLBACK_MODELS) so a single
+// rate-limit blip no longer surfaces as "Failed to generate site".
 export async function chat(messages: Array<{ role: string; content: string }>, maxTokens = 3000): Promise<string> {
-  const body: Record<string, unknown> = { messages };
-  body[IS_GPT5 ? "max_completion_tokens" : "max_tokens"] = maxTokens;
-  if (!IS_GPT5) body.temperature = 0.6;
-
-  const res = await fetch(chatUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "api-key": API_KEY },
-    body: JSON.stringify(body),
+  return azureChat(messages, maxTokens, {
+    endpoint: ENDPOINT,
+    apiKey: API_KEY,
+    apiVersion: API_VERSION,
+    models: modelsFromEnv(),
   });
-  if (!res.ok) throw new Error(`Azure ${DEPLOYMENT} returned ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
 }
 
 // Pull the first JSON object out of a model response.
@@ -143,4 +133,5 @@ export const REFINE_INTENTS: Array<{ label: string; instruction: string }> = [
   { label: "Bolder look", instruction: "Switch to a bolder, higher-contrast theme preset." },
 ];
 
-export const MODEL = DEPLOYMENT;
+// The primary model in the fallback chain (for logging/labels).
+export const MODEL = modelsFromEnv()[0];
