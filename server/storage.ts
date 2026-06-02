@@ -48,6 +48,7 @@ export interface IStorage {
   setGoal(projectId: string, goal: SiteGoal): Promise<void>;
   // Telemetry
   insertTelemetry(events: TelemetryEvent[]): Promise<void>;
+  recentTelemetry(siteId: string, limit?: number): Promise<TelemetryEvent[]>;
   // Experiments
   insertExperiment(exp: Experiment): Promise<void>;
   getExperiment(id: string): Promise<Experiment | undefined>;
@@ -207,6 +208,13 @@ export class MemStorage implements IStorage {
 
   async insertTelemetry(events: TelemetryEvent[]): Promise<void> {
     this.telemetryRows.push(...events);
+  }
+
+  async recentTelemetry(siteId: string, limit = 5000): Promise<TelemetryEvent[]> {
+    return this.telemetryRows
+      .filter((e) => e.siteId === siteId)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, limit);
   }
 
   async insertExperiment(exp: Experiment): Promise<void> {
@@ -373,6 +381,16 @@ export class PostgresStorage implements IStorage {
       siteId: e.siteId, visitorId: e.visitorId, sessionId: e.sessionId, ts: e.ts, type: e.type,
       sectionId: e.sectionId, experimentId: e.experimentId, variantId: e.variantId, meta: e.meta,
     })) as any);
+  }
+
+  async recentTelemetry(siteId: string, limit = 5000): Promise<TelemetryEvent[]> {
+    const rows = await this.db.select().from(telemetryEvents)
+      .where(eq(telemetryEvents.siteId, siteId)).orderBy(desc(telemetryEvents.ts)).limit(limit);
+    return rows.map((r) => ({
+      siteId: r.siteId, visitorId: r.visitorId, sessionId: r.sessionId, ts: r.ts, type: r.type,
+      sectionId: r.sectionId ?? undefined, experimentId: r.experimentId ?? undefined,
+      variantId: r.variantId ?? undefined, meta: (r.meta as any) ?? undefined,
+    }));
   }
 
   // Experiments
