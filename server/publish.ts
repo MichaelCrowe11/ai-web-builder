@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { requireAuth } from "./auth";
 import { log } from "./index";
 import type { Project } from "@shared/schema";
+import { assembleDocumentHtml } from "./serve-document";
 
 const PUBLISH_DOMAIN = process.env.PUBLISH_DOMAIN ?? "ai-webbuilder.com";
 
@@ -121,6 +122,19 @@ async function serveSlug(req: Request, res: Response) {
   if (!project || !project.isPublished) {
     return res.status(404).send("Site not found");
   }
+
+  // Document-backed path: serve the Living Sites renderer + telemetry beacon.
+  const latest = await storage.getLatestDocument(project.id);
+  if (latest) {
+    const exp = await storage.getRunningExperiment(project.id);
+    const vid =
+      req.headers.cookie?.match(/(?:^|; )vid=([^;]+)/)?.[1] ??
+      `v${Date.now()}${Math.random().toString(36).slice(2)}`;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.send(assembleDocumentHtml(latest.document, project.id, exp ?? null, vid));
+  }
+
+  // Legacy path: render from the project's raw html/css fields.
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   return res.send(renderFullHtml(project));
 }
@@ -145,6 +159,18 @@ export function publishedSiteMiddleware(appHosts: string[]) {
     const project = await storage.getProjectBySlug(sub);
     if (!project || !project.isPublished) return next();
 
+    // Document-backed path: serve the Living Sites renderer + telemetry beacon.
+    const latest = await storage.getLatestDocument(project.id);
+    if (latest) {
+      const exp = await storage.getRunningExperiment(project.id);
+      const vid =
+        req.headers.cookie?.match(/(?:^|; )vid=([^;]+)/)?.[1] ??
+        `v${Date.now()}${Math.random().toString(36).slice(2)}`;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.send(assembleDocumentHtml(latest.document, project.id, exp ?? null, vid));
+    }
+
+    // Legacy path: render from the project's raw html/css fields.
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.send(renderFullHtml(project));
   };
