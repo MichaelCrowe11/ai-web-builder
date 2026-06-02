@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, bigint, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -60,3 +60,73 @@ export const insertProjectSchema = createInsertSchema(projects).pick({
 
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
+
+import type { SiteDocument } from "./site-document";
+import type { SiteGoal } from "./site-goal";
+import type { Variant } from "./experiment";
+import type { TelemetryEventType } from "./telemetry";
+
+export const siteDocuments = pgTable("site_documents", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 36 }).notNull().references(() => projects.id),
+  version: integer("version").notNull(),
+  document: jsonb("document").$type<SiteDocument>().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  projectVersionUq: uniqueIndex("site_documents_project_version_uq").on(t.projectId, t.version),
+}));
+export type SiteDocumentRow = typeof siteDocuments.$inferSelect;
+
+export const siteGoals = pgTable("site_goals", {
+  projectId: varchar("project_id", { length: 36 }).primaryKey().references(() => projects.id),
+  goal: jsonb("goal").$type<SiteGoal>().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export type SiteGoalRow = typeof siteGoals.$inferSelect;
+
+export const telemetryEvents = pgTable("telemetry_events", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  siteId: varchar("site_id", { length: 36 }).notNull(),
+  visitorId: text("visitor_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  ts: bigint("ts", { mode: "number" }).notNull(),
+  type: text("type").$type<TelemetryEventType>().notNull(),
+  sectionId: text("section_id"),
+  experimentId: varchar("experiment_id", { length: 36 }),
+  variantId: text("variant_id"),
+  meta: jsonb("meta"),
+}, (t) => ({
+  bySiteTs: index("telemetry_site_ts_idx").on(t.siteId, t.ts),
+  byExpVariant: index("telemetry_exp_variant_idx").on(t.experimentId, t.variantId),
+}));
+export type TelemetryEventRow = typeof telemetryEvents.$inferSelect;
+
+export const experiments = pgTable("experiments", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  siteId: varchar("site_id", { length: 36 }).notNull(),
+  status: text("status").notNull(),
+  targetSectionId: text("target_section_id").notNull(),
+  hypothesis: text("hypothesis").notNull().default(""),
+  conversionEvent: text("conversion_event").notNull(),
+  variants: jsonb("variants").$type<Variant[]>().notNull(),
+  createdBy: text("created_by").notNull(),
+  minExposuresPerVariant: integer("min_exposures_per_variant").notNull().default(200),
+  winnerVariantId: text("winner_variant_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  oneRunningPerSite: uniqueIndex("experiments_one_running_per_site")
+    .on(t.siteId)
+    .where(sql`status = 'running'`),
+}));
+export type ExperimentRow = typeof experiments.$inferSelect;
+
+export const decisionLog = pgTable("decision_log", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  siteId: varchar("site_id", { length: 36 }).notNull(),
+  ts: bigint("ts", { mode: "number" }).notNull(),
+  kind: text("kind").notNull(),
+  detail: jsonb("detail"),
+}, (t) => ({
+  bySite: index("decision_log_site_idx").on(t.siteId, t.ts),
+}));
+export type DecisionLogRow = typeof decisionLog.$inferSelect;
