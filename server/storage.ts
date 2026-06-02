@@ -58,6 +58,8 @@ export interface IStorage {
   // Decision log
   appendDecision(siteId: string, kind: string, detail: unknown): Promise<void>;
   listDecisions(siteId: string, limit?: number): Promise<Array<{ ts: number; kind: string; detail: unknown }>>;
+  // Growth scheduler
+  projectsWithGoals(): Promise<string[]>;
 }
 
 // In-memory storage for development/fallback
@@ -259,6 +261,10 @@ export class MemStorage implements IStorage {
       .slice(0, limit)
       .map((r) => ({ ts: r.ts, kind: r.kind, detail: r.detail }));
   }
+
+  async projectsWithGoals(): Promise<string[]> {
+    return Array.from(this.goalsMap.keys());
+  }
 }
 
 // PostgreSQL storage implementation
@@ -440,6 +446,11 @@ export class PostgresStorage implements IStorage {
     const rows = await this.db.select().from(decisionLog)
       .where(eq(decisionLog.siteId, siteId)).orderBy(desc(decisionLog.ts)).limit(limit);
     return rows.map((r) => ({ ts: r.ts, kind: r.kind, detail: r.detail }));
+  }
+
+  async projectsWithGoals(): Promise<string[]> {
+    const rows = await this.db.select({ id: siteGoals.projectId }).from(siteGoals);
+    return rows.map((r) => r.id);
   }
 }
 

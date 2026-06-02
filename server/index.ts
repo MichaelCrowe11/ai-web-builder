@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { setupSession } from "./auth";
 import { handleStripeWebhook } from "./billing";
 import { publishedSiteMiddleware } from "./publish";
+import { startGrowthScheduler } from "./growth-scheduler";
 import { createServer } from "http";
 
 const app = express();
@@ -84,6 +85,7 @@ app.use(publishedSiteMiddleware(APP_HOSTS));
 
 (async () => {
   await registerRoutes(httpServer, app);
+  startGrowthScheduler();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
