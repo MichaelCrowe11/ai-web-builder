@@ -28,7 +28,7 @@ function chatUrl(): string {
 }
 
 // One Azure chat call returning the assistant text.
-async function chat(messages: Array<{ role: string; content: string }>, maxTokens = 3000): Promise<string> {
+export async function chat(messages: Array<{ role: string; content: string }>, maxTokens = 3000): Promise<string> {
   const body: Record<string, unknown> = { messages };
   body[IS_GPT5 ? "max_completion_tokens" : "max_tokens"] = maxTokens;
   if (!IS_GPT5) body.temperature = 0.6;
@@ -44,7 +44,7 @@ async function chat(messages: Array<{ role: string; content: string }>, maxToken
 }
 
 // Pull the first JSON object out of a model response.
-function extractJson(text: string): any {
+export function extractJson(text: string): any {
   // Prefer fenced ```json blocks, else the first {...} span.
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const raw = fenced ? fenced[1] : (text.match(/\{[\s\S]*\}/)?.[0] ?? "");
