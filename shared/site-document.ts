@@ -173,3 +173,5 @@ export const SECTION_TYPES: SectionType[] = [
   "contact",
   "cta",
 ];
+
+export { sectionKey, findSectionIndex, patchSection } from "./section-key";
