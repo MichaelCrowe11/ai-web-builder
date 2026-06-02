@@ -41,6 +41,7 @@
 
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-heading: 'Inter', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --radius: 0.5rem;
@@ -158,5 +159,34 @@
 
   .glow-hover {
     @apply transition-shadow duration-300 hover:shadow-xl hover:shadow-primary/30;
+  }
+
+  /* Orchestrated page-load reveal. Stagger via inline style="--d:120ms". */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .rise {
+    opacity: 0;
+    animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rise { animation: none; opacity: 1; }
+  }
+
+  /* Slow gold aurora drift for hero atmosphere. */
+  @keyframes drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(2%, -3%, 0) scale(1.08); }
+  }
+  .aurora { animation: drift 18s ease-in-out infinite; }
+
+  /* Fine letterpress sheen on gold display text. */
+  .gold-sheen {
+    background: linear-gradient(180deg, #d8c188 0%, var(--crowe-gold) 55%, #9c854f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }

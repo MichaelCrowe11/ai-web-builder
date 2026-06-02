@@ -8,14 +8,17 @@ import { BillingModal } from "@/components/settings/billing-modal";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Sparkles, Wand2,
+  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Sparkles, Wand2, Github,
 } from "lucide-react";
+import { GitHubExportModal } from "@/components/builder/github-export-modal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { CroweHexC } from "@/components/brand/crowe-hex-c";
 
-// On-brand empty state (shown before first generation).
-const INITIAL_HTML = `<div class="stage"><p class="kicker">A blank canvas</p><h1>Your website<br/><em>starts with a sentence.</em></h1></div>`;
-const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:center;background:#0b0b0c;color:#e8e2cf;font-family:'Inter',sans-serif;padding:3rem 3rem 16rem;text-align:center;background-image:radial-gradient(40rem 30rem at 50% -10%,rgba(191,166,105,0.10),transparent 60%)}.stage{max-width:40rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.25em;text-transform:uppercase;color:#bfa669;margin-bottom:1.5rem}h1{font-family:'Inter',sans-serif;font-weight:600;font-size:clamp(2.2rem,6vw,4rem);line-height:1.05;letter-spacing:-0.03em}h1 em{color:#bfa669;font-style:normal}.sub{margin-top:1.5rem;font-size:1.05rem;line-height:1.6;color:rgba(232,226,207,0.6);max-width:28rem;margin-left:auto;margin-right:auto}`;
+// Clean, modern workspace empty state (rarely seen - arriving from the home
+// prompt auto-builds). Crowe gold-on-graphite, clean sans.
+const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Describe a website to begin.</h1><p class="sub">Type what you want in the bar below — a business, a vibe, a few details — and the workspace builds it live.</p></div>`;
+const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:center;background:#0b0b0c;color:#e8e2cf;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 17rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(191,166,105,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#bfa669;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:rgba(232,226,207,0.5);max-width:24rem}`;
 
 interface RefineIntent { label: string; instruction: string; }
 
@@ -35,6 +38,7 @@ export default function Builder() {
   const [showBilling, setShowBilling] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [showGithub, setShowGithub] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
@@ -184,6 +188,17 @@ export default function Builder() {
     }
   }, [user, projectId, html, css, projectName, lastPrompt, toast]);
 
+  // Arriving from the home prompt (/builder?prompt=...) starts building at once.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("prompt");
+    if (p && p.trim()) {
+      window.history.replaceState({}, "", "/builder");
+      handleGenerate(p.trim());
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const hasGenerated = doc !== null;
 
   return (
@@ -197,8 +212,8 @@ export default function Builder() {
             </button>
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-parchment font-heading text-base italic leading-none text-graphite">a</div>
-            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-40 bg-transparent font-heading text-base outline-none focus:border-b focus:border-gold" />
+            <CroweHexC size={22} />
+            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-44 bg-transparent font-heading text-base font-medium tracking-tight outline-none transition-colors focus:border-b focus:border-gold" />
           </div>
         </div>
 
@@ -221,7 +236,10 @@ export default function Builder() {
           <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={handleExport} disabled={!hasGenerated}>
             <Download className="h-4 w-4" />Export
           </Button>
-          <Button size="sm" className="gap-1.5 rounded-full bg-parchment px-5 font-semibold text-graphite hover:bg-gold" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowGithub(true)} disabled={!hasGenerated}>
+            <Github className="h-4 w-4" />GitHub
+          </Button>
+          <Button size="sm" className="gap-1.5 rounded-full bg-gold px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(191,166,105,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>
         </div>
@@ -297,6 +315,7 @@ export default function Builder() {
 
       <BillingModal open={showBilling} onOpenChange={setShowBilling} />
       <AuthModal open={showAuth} onOpenChange={setShowAuth} defaultMode="register" />
+      <GitHubExportModal open={showGithub} onOpenChange={setShowGithub} name={projectName} html={html} css={css} />
     </div>
   );
 }

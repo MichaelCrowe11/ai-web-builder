@@ -19,6 +19,7 @@ import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { registerBillingRoutes } from "./billing";
 import { registerPublishRoutes, renderFullHtml } from "./publish";
 import { registerGrowthRoutes } from "./growth-routes";
+import { registerExportRoutes } from "./github-export";
 import { log } from "./index";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
@@ -34,6 +35,9 @@ export async function registerRoutes(
 
   // Growth routes (telemetry sink + Mission Control API)
   registerGrowthRoutes(app);
+
+  // Export the generated site to GitHub (transient PAT, no OAuth app).
+  registerExportRoutes(app);
 
   // List of tappable refine intents for the UI.
   app.get("/api/refine/intents", (_req: Request, res: Response) => {

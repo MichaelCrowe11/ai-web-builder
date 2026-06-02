@@ -1,159 +1,123 @@
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
-import { Link } from "wouter";
-import { ArrowRight, Globe, Zap, ShieldCheck } from "lucide-react";
+import { useLocation } from "wouter";
+import { useState } from "react";
+import { Sparkles, Globe, Zap, ShieldCheck, ArrowUp } from "lucide-react";
 
-// Crowe Logic brand: gold (#bfa669) on graphite (#0b0b0c), parchment text.
-// Source of truth: ~/BRAND.md. App chrome only — generated sites stay neutral.
+// Crowe Logic AI Web Builder. Replit-Agent-style: a big central prompt is the
+// hero. You describe a site and land straight in the workspace, building.
+// Crowe identity (gold on graphite, parchment), clean modern sans (no serif).
+const STARTERS = [
+  "A cozy coffee shop in Tucson with a menu and online reservations",
+  "A freelance photographer portfolio",
+  "A local plumbing company with service booking",
+  "An online store for handmade ceramics",
+  "A yoga studio with a class schedule",
+];
+
 export default function Home() {
+  const [, navigate] = useLocation();
+  const [prompt, setPrompt] = useState("");
+
+  const start = (p: string) => {
+    const text = p.trim();
+    if (!text) return;
+    navigate(`/builder?prompt=${encodeURIComponent(text)}`);
+  };
+
   return (
     <Layout>
       <div className="bg-graphite text-parchment">
-        {/* ============ HERO ============ */}
+        {/* ============ PROMPT HERO (Replit-Agent style) ============ */}
         <section className="relative overflow-hidden">
-          {/* gold glow + grain */}
           <div
             className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(55rem 38rem at 78% -8%, rgba(191,166,105,0.16), transparent 60%), radial-gradient(40rem 40rem at 0% 110%, rgba(191,166,105,0.05), transparent 60%)",
-            }}
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(191,166,105,0.13), transparent 62%)" }}
           />
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.035] mix-blend-screen"
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-            }}
-          />
-
-          <div className="container relative z-10 mx-auto grid items-center gap-12 px-6 pb-24 pt-20 lg:grid-cols-[1.1fr_0.9fr] lg:pb-28 lg:pt-28">
-            <div>
-              {/* eyebrow pill (canonical primitive) */}
-              <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-gold">
-                <span className="h-1 w-1 animate-pulse rounded-full bg-gold" />
-                Crowe Logic · AI Web Builder
-              </div>
-
-              <h1 className="text-[clamp(2.6rem,6.5vw,5rem)] font-semibold leading-[1.0] tracking-[-0.03em] text-parchment">
-                Describe your business.
-                <br />
-                <span className="text-gold">Get a website that's live.</span>
-              </h1>
-
-              <p className="mt-7 max-w-md text-lg leading-relaxed text-parchment/65">
-                Tell us what you do in a sentence. We design a polished website,
-                put it online, and connect your own domain — no code, no hosting,
-                no headaches.
-              </p>
-
-              <div className="mt-10 flex flex-wrap items-center gap-4">
-                <Link href="/builder">
-                  <Button
-                    size="lg"
-                    className="group h-13 rounded-full bg-gold px-8 text-base font-semibold text-graphite shadow-[0_0_40px_-8px_rgba(191,166,105,0.5)] transition-all hover:bg-gold hover:shadow-[0_0_50px_-6px_rgba(191,166,105,0.7)]"
-                  >
-                    Build my website
-                    <ArrowRight className="ml-1 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
-                  </Button>
-                </Link>
-                <span className="font-mono text-xs text-parchment/45">
-                  free to start · no card
-                </span>
-              </div>
+          <div className="container relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-20 pt-24 text-center lg:pt-28">
+            <div className="rise mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
+              <span className="h-1 w-1 animate-pulse rounded-full bg-gold" />
+              Crowe Logic · AI Web Builder
             </div>
 
-            {/* product mock — app window chrome (canonical) */}
-            <div className="relative">
-              <div className="overflow-hidden rounded-xl border border-gold/25 bg-graphite shadow-[0_40px_140px_-40px_rgba(191,166,105,0.40)]">
-                <div className="flex items-center gap-1.5 border-b border-gold/15 bg-graphite px-4 py-2.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-gold/40" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-gold/25" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-gold/15" />
-                  <span className="ml-3 font-mono text-[0.65rem] text-parchment/40">
-                    bean-there.ai-webbuilder.com
+            <h1
+              className="rise text-[clamp(2.2rem,5vw,3.7rem)] font-semibold leading-[1.04] tracking-[-0.03em] text-parchment"
+              style={{ ["--d" as any]: "60ms" }}
+            >
+              What do you want to build?
+            </h1>
+            <p
+              className="rise mt-4 max-w-lg text-[1.05rem] leading-relaxed text-parchment/55"
+              style={{ ["--d" as any]: "140ms" }}
+            >
+              Describe your business in a sentence. We design it, write the copy,
+              and put it live on the web — with your own domain.
+            </p>
+
+            {/* THE COMPOSER — the hero element */}
+            <div className="rise mt-10 w-full" style={{ ["--d" as any]: "220ms" }}>
+              <div className="group rounded-2xl border border-gold/25 bg-graphite-soft/80 p-2.5 text-left shadow-[0_30px_90px_-36px_rgba(191,166,105,0.5)] backdrop-blur-sm transition-colors focus-within:border-gold/50">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(prompt);
+                  }}
+                  rows={3}
+                  placeholder="e.g. a neighborhood coffee shop in Tucson with a menu and online reservations"
+                  className="w-full resize-none bg-transparent px-3.5 py-3 text-[1.05rem] leading-relaxed text-parchment outline-none placeholder:text-parchment/35"
+                  autoFocus
+                />
+                <div className="flex items-center justify-between px-2 pb-0.5">
+                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/35">
+                    Free to start · no card · ⌘↵ to build
                   </span>
-                </div>
-                {/* mini generated site (neutral — a customer's site, not Crowe-branded) */}
-                <div className="bg-white text-graphite">
-                  <div className="bg-graphite-soft px-6 py-9 text-center text-white">
-                    <p className="text-2xl font-semibold">Bean There</p>
-                    <p className="mt-1 text-xs text-white/60">Neighborhood coffee, roasted daily</p>
-                    <span className="mt-4 inline-block rounded-full bg-[#c2511f] px-4 py-1.5 text-xs font-semibold">
-                      Reserve a table
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 p-4">
-                    {["Espresso", "Pour Over", "Cold Brew"].map((x) => (
-                      <div key={x} className="rounded-md bg-parchment p-3">
-                        <div className="mb-2 h-9 rounded bg-parchment" />
-                        <p className="text-[0.6rem] font-semibold">{x}</p>
-                        <p className="text-[0.55rem] text-parchment-dim">$4.50</p>
-                      </div>
-                    ))}
-                  </div>
+                  <Button
+                    onClick={() => start(prompt)}
+                    disabled={!prompt.trim()}
+                    className="h-11 rounded-xl bg-gold px-6 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(191,166,105,0.75)] disabled:opacity-40"
+                  >
+                    <Sparkles className="mr-1.5 h-4 w-4" />
+                    Build it
+                    <ArrowUp className="ml-1 h-4 w-4 rotate-45" />
+                  </Button>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* marquee */}
-          <div className="relative z-10 border-y border-gold/12 bg-black/30 py-3">
-            <div className="flex items-center gap-8 overflow-hidden px-6 font-mono text-xs uppercase tracking-[0.25em] text-parchment/35">
-              {["Restaurants", "Portfolios", "Local services", "Online stores", "Events", "Studios", "Cafés"].map((x) => (
-                <span key={x} className="flex items-center gap-8 whitespace-nowrap">
-                  {x} <span className="text-gold/70">·</span>
-                </span>
-              ))}
+              {/* starter chips */}
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {STARTERS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => start(s)}
+                    className="rounded-full border border-gold/15 bg-graphite-soft/50 px-3.5 py-1.5 text-xs text-parchment/60 transition-colors hover:border-gold/40 hover:text-gold"
+                  >
+                    {s.length > 42 ? s.slice(0, 40) + "…" : s}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ============ HOW IT WORKS ============ */}
-        <section className="py-24">
+        {/* ============ HOW IT WORKS (clean, compact) ============ */}
+        <section className="border-t border-gold/10 py-20">
           <div className="container mx-auto px-6">
-            <div className="mb-14 max-w-2xl">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-                How it works
-              </p>
-              <h2 className="text-[clamp(1.9rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
-                Three steps from a sentence to a site your customers can visit.
-              </h2>
-            </div>
-
             <div className="grid gap-px overflow-hidden rounded-2xl border border-gold/15 bg-gold/15 md:grid-cols-3">
               {[
-                { n: "01", icon: Zap, title: "Describe it", body: "Tell us what your business does in one sentence — or pick a starter for your industry." },
-                { n: "02", icon: Globe, title: "Make it yours", body: "A polished site appears in seconds. Refine the look and copy with a tap." },
-                { n: "03", icon: ShieldCheck, title: "Go live", body: "Publish with one click. Hosting's included. Connect your own domain when you're ready." },
+                { n: "01", icon: Zap, title: "Describe it", body: "Tell us what your business does in one sentence — or pick a starter above." },
+                { n: "02", icon: Globe, title: "Refine it", body: "A polished site appears in seconds. Adjust the look and copy with a tap in the workspace." },
+                { n: "03", icon: ShieldCheck, title: "Ship it", body: "Publish with one click. Hosting's included. Connect your own domain when you're ready." },
               ].map((f) => (
-                <div key={f.n} className="group bg-graphite p-8 transition-colors hover:bg-graphite-soft">
-                  <span className="font-mono text-sm text-gold">{f.n}</span>
-                  <f.icon className="mt-6 h-7 w-7 text-gold" strokeWidth={1.5} />
-                  <h3 className="mt-4 text-2xl font-semibold">{f.title}</h3>
-                  <p className="mt-2 text-[0.95rem] leading-relaxed text-parchment/60">{f.body}</p>
+                <div key={f.n} className="group bg-graphite p-8 transition-colors duration-300 hover:bg-graphite-soft">
+                  <div className="flex items-center justify-between">
+                    <f.icon className="h-6 w-6 text-gold" strokeWidth={1.6} />
+                    <span className="font-mono text-xs text-gold/70">{f.n}</span>
+                  </div>
+                  <h3 className="mt-5 text-lg font-semibold tracking-tight text-parchment">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-parchment/55">{f.body}</p>
                 </div>
               ))}
-            </div>
-
-            {/* domain CTA band */}
-            <div className="mt-14 flex flex-col items-start justify-between gap-6 rounded-2xl border border-gold/25 bg-gradient-to-br from-graphite-soft to-graphite p-10 md:flex-row md:items-center">
-              <div>
-                <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-                  Your name, your site
-                </p>
-                <h3 className="text-2xl font-semibold md:text-3xl">
-                  Grab your own domain right here — we handle the technical setup.
-                </h3>
-              </div>
-              <Link href="/builder">
-                <Button
-                  size="lg"
-                  className="h-13 shrink-0 rounded-full bg-gold px-7 font-semibold text-graphite hover:bg-gold"
-                >
-                  Start building <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </Link>
             </div>
           </div>
         </section>
