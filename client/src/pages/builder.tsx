@@ -30,6 +30,7 @@ export default function Builder() {
   const [css, setCss] = useState(INITIAL_CSS);
   const [isGenerating, setIsGenerating] = useState(false);
   const [filling, setFilling] = useState(false);
+  const [imaging, setImaging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("Untitled site");
@@ -102,11 +103,38 @@ export default function Builder() {
       if (fData.document?.meta?.name) setProjectName(fData.document.meta.name);
       setStep("refine");
       toast({ title: "Here's your site", description: "Tweak it with a suggestion, or publish." });
+      // Pro: generate real images in the background (best-effort) and swap them in.
+      if (user?.plan === "pro") void generateImages(fData.document);
     } catch (error: any) {
       toast({ title: "Generation failed", description: error.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);
       setFilling(false);
+    }
+  };
+
+  // Pro-only: generate real topical images (~20s each) AFTER the site is shown,
+  // then swap them into the document. Best-effort - failures keep gradients.
+  const generateImages = async (document: any) => {
+    setImaging(true);
+    try {
+      const res = await fetch("/api/generate/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ document }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDoc(data.document);
+        setHtml(data.html);
+        setCss(data.css);
+        toast({ title: "Photos added", description: "Generated images for your site." });
+      }
+    } catch {
+      // best-effort; the site already looks good with gradients
+    } finally {
+      setImaging(false);
     }
   };
 
@@ -292,6 +320,12 @@ export default function Builder() {
           <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
             <span className="font-mono text-xs text-parchment/80">Writing your copy…</span>
+          </div>
+        )}
+        {imaging && !filling && (
+          <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
+            <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
+            <span className="font-mono text-xs text-parchment/80">Generating photos…</span>
           </div>
         )}
 

@@ -5,6 +5,7 @@ import { generate, generateStream, parseSite, MODEL } from "./ai";
 import { generateDocument, generateOutline, fillDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
 import { renderDocumentBody, renderDocumentCss, renderOutlineBody, renderOutlineCss } from "./renderer";
 import { resolveDocumentImages, type StockProvider } from "./stock-images";
+import { addGeneratedImages } from "./azure-image";
 import { siteDocumentSchema, siteOutlineSchema } from "@shared/site-document";
 
 // Resolve generated imageHints to real stock photos (best-effort; no key => the
@@ -135,6 +136,30 @@ export async function registerRoutes(
     } catch (error: any) {
       log(`Refine error: ${error.message}`);
       return res.status(500).json({ error: "Failed to refine site", details: error.message });
+    }
+  });
+
+  // PRO image generation (async, after the text site is shown). Generates real
+  // topical images (gpt-image-1) for hero + about. Free tier keeps gradients.
+  app.post("/api/generate/images", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") {
+        return res.status(403).json({ error: "Image generation is a Pro feature.", requiresUpgrade: true });
+      }
+      const parsed = siteDocumentSchema.safeParse(req.body?.document);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid document is required" });
+      }
+      const document = await addGeneratedImages(parsed.data);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+      });
+    } catch (error: any) {
+      log(`Image gen error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to generate images", details: error.message });
     }
   });
 
