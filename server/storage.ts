@@ -53,6 +53,7 @@ export interface IStorage {
   insertExperiment(exp: Experiment): Promise<void>;
   getExperiment(id: string): Promise<Experiment | undefined>;
   getRunningExperiment(siteId: string): Promise<Experiment | undefined>;
+  getActionableExperiment(siteId: string): Promise<Experiment | undefined>;
   updateExperiment(id: string, patch: Partial<Pick<Experiment, "status" | "winnerVariantId">>): Promise<void>;
   variantStats(experimentId: string): Promise<VariantStat[]>;
   // Decision log
@@ -231,6 +232,16 @@ export class MemStorage implements IStorage {
     return Array.from(this.experimentsMap.values()).find(
       (e) => e.siteId === siteId && e.status === "running",
     );
+  }
+
+  async getActionableExperiment(siteId: string): Promise<Experiment | undefined> {
+    const running = await this.getRunningExperiment(siteId);
+    if (running) return running;
+    // Return the most-recently inserted proposed experiment (highest insertion order).
+    const proposed = Array.from(this.experimentsMap.values()).filter(
+      (e) => e.siteId === siteId && e.status === "proposed",
+    );
+    return proposed.length > 0 ? proposed[proposed.length - 1] : undefined;
   }
 
   async updateExperiment(id: string, patch: Partial<Pick<Experiment, "status" | "winnerVariantId">>): Promise<void> {
@@ -417,6 +428,16 @@ export class PostgresStorage implements IStorage {
   async getRunningExperiment(siteId: string): Promise<Experiment | undefined> {
     const rows = await this.db.select().from(experiments)
       .where(and(eq(experiments.siteId, siteId), eq(experiments.status, "running"))).limit(1);
+    return rows[0] ? rowToExperiment(rows[0]) : undefined;
+  }
+
+  async getActionableExperiment(siteId: string): Promise<Experiment | undefined> {
+    const running = await this.getRunningExperiment(siteId);
+    if (running) return running;
+    const rows = await this.db.select().from(experiments)
+      .where(and(eq(experiments.siteId, siteId), eq(experiments.status, "proposed")))
+      .orderBy(desc(experiments.id))
+      .limit(1);
     return rows[0] ? rowToExperiment(rows[0]) : undefined;
   }
 
