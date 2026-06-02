@@ -1,0 +1,29 @@
+/* Vendored from @crowe/design-system@0.1.0 (preset/tailwind-v4.css).
+ * Re-sync on a design-system release; do not hand-edit.
+ * Import AFTER `@import "tailwindcss"` so the @theme utilities register.
+ * Exposes the canonical dark palette + fonts + tracking as utilities:
+ * bg-graphite, bg-graphite-soft, text-parchment, text-parchment-dim,
+ * text-gold, bg-gold, text-gold-dim, text-error, font-sans/mono/serif,
+ * tracking-eyebrow, tracking-status, tracking-tight. */
+
+@import "./colors.css";
+@import "./typography.css";
+@import "./spacing.css";
+
+@theme {
+  --color-graphite: var(--crowe-graphite);
+  --color-graphite-soft: var(--crowe-graphite-soft);
+  --color-parchment: var(--crowe-parchment);
+  --color-parchment-dim: var(--crowe-parchment-dim);
+  --color-gold: var(--crowe-gold);
+  --color-gold-dim: var(--crowe-gold-dim);
+  --color-error: var(--crowe-error);
+
+  --font-sans: var(--crowe-font-sans);
+  --font-mono: var(--crowe-font-mono);
+  --font-serif: var(--crowe-font-serif);
+
+  --tracking-eyebrow: var(--crowe-tracking-eyebrow);
+  --tracking-status: var(--crowe-tracking-status);
+  --tracking-tight: var(--crowe-tracking-tight);
+}

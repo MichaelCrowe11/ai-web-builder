@@ -76,7 +76,7 @@ export function BillingModal({ open, onOpenChange }: BillingModalProps) {
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-heading font-bold text-center">
-            {isPro ? "You're on Pro 🎉" : "Upgrade your plan"}
+            {isPro ? "You're on Pro" : "Upgrade your plan"}
           </DialogTitle>
           <DialogDescription className="text-center text-base">
             {isPro ? "Unlimited generations are unlocked." : "Go unlimited and publish without limits."}

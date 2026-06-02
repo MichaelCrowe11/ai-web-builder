@@ -1,0 +1,36 @@
+/* Vendored from @crowe/design-system@0.1.0 (tokens/colors.css).
+ * Re-sync on a design-system release; do not hand-edit.
+ * Canonical dark gold-on-ink. Gold is accent only, never body text.
+ * Forbidden: light-direction gold #C4A86C, amber #D4941A, any navy. */
+
+:root {
+  /* Canonical palette */
+  --crowe-gold: #bfa669;
+  --crowe-gold-dim: #8a7848;
+  --crowe-graphite: #0b0b0c;
+  --crowe-graphite-soft: #15151a;
+  --crowe-parchment: #e8e2cf;
+  --crowe-parchment-dim: rgba(232, 226, 207, 0.6);
+  --crowe-error: #d97356;
+
+  /* Derived gold alphas (gold over ink). Use these for borders, panels, focus. */
+  --crowe-gold-border: rgba(191, 166, 105, 0.18);
+  --crowe-gold-border-hover: rgba(191, 166, 105, 0.4);
+  --crowe-gold-focus: rgba(191, 166, 105, 0.55);
+  --crowe-gold-panel: rgba(191, 166, 105, 0.04);
+  --crowe-gold-highlight: rgba(191, 166, 105, 0.12);
+  --crowe-gold-glow: 0 0 30px rgba(191, 166, 105, 0.18);
+
+  /* Semantic roles. Prefer these in components. */
+  --crowe-surface: var(--crowe-graphite);
+  --crowe-surface-raised: var(--crowe-graphite-soft);
+  --crowe-text: var(--crowe-parchment);
+  --crowe-text-muted: var(--crowe-parchment-dim);
+  --crowe-accent: var(--crowe-gold);
+  --crowe-accent-dim: var(--crowe-gold-dim);
+  --crowe-divider: var(--crowe-gold-border);
+  --crowe-danger: var(--crowe-error);
+
+  /* Focus ring: gold at focus alpha, the brand's restrained outline. */
+  --crowe-focus-ring: var(--crowe-gold-focus);
+}

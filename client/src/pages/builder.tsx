@@ -187,18 +187,18 @@ export default function Builder() {
   const hasGenerated = doc !== null;
 
   return (
-    <div className="h-screen flex flex-col bg-[#0b0b0c] font-sans overflow-hidden text-[#e8e2cf]">
+    <div className="h-screen flex flex-col bg-graphite font-sans overflow-hidden text-parchment">
       {/* Top bar */}
-      <header className="h-16 border-b border-[rgba(191,166,105,0.18)] flex items-center justify-between px-5 bg-[#15151a] z-10">
+      <header className="h-16 border-b border-gold/20 flex items-center justify-between px-5 bg-graphite-soft z-10">
         <div className="flex items-center gap-4">
           <Link href="/">
-            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(191,166,105,0.18)] text-[rgba(232,226,207,0.7)] transition-colors hover:bg-[#15151a]">
+            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-gold/20 text-parchment/70 transition-colors hover:bg-graphite-soft">
               <ArrowLeft className="h-4 w-4" />
             </button>
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e8e2cf] font-heading text-base italic leading-none text-[#0b0b0c]">a</div>
-            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-40 bg-transparent font-heading text-base outline-none focus:border-b focus:border-[#bfa669]" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-parchment font-heading text-base italic leading-none text-graphite">a</div>
+            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-40 bg-transparent font-heading text-base outline-none focus:border-b focus:border-gold" />
           </div>
         </div>
 
@@ -207,21 +207,21 @@ export default function Builder() {
 
         <div className="flex items-center gap-2">
           {user ? (
-            <span className="mr-1 font-mono text-xs text-[rgba(232,226,207,0.55)]">{user.username}{user.plan === "pro" && <span className="ml-1 font-semibold text-[#bfa669]">· PRO</span>}</span>
+            <span className="mr-1 font-mono text-xs text-parchment/55">{user.username}{user.plan === "pro" && <span className="ml-1 font-semibold text-gold">· PRO</span>}</span>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => setShowAuth(true)}>Sign in</Button>
           )}
           {user?.plan !== "pro" && (
-            <button onClick={() => setShowBilling(true)} className="rounded-full border border-[#bfa669] px-3 py-1.5 text-sm font-semibold text-[#bfa669] transition-colors hover:bg-[rgba(191,166,105,0.12)]">Upgrade</button>
+            <button onClick={() => setShowBilling(true)} className="rounded-full border border-gold px-3 py-1.5 text-sm font-semibold text-gold transition-colors hover:bg-gold/10">Upgrade</button>
           )}
-          <div className="mx-1 h-5 w-px bg-[rgba(191,166,105,0.18)]" />
-          <Button variant="ghost" size="sm" className="gap-1.5 text-[rgba(232,226,207,0.8)]" onClick={saveProject} disabled={isSaving || !hasGenerated}>
+          <div className="mx-1 h-5 w-px bg-gold/20" />
+          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={saveProject} disabled={isSaving || !hasGenerated}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save
           </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-[rgba(232,226,207,0.8)]" onClick={handleExport} disabled={!hasGenerated}>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={handleExport} disabled={!hasGenerated}>
             <Download className="h-4 w-4" />Export
           </Button>
-          <Button size="sm" className="gap-1.5 rounded-full bg-[#e8e2cf] px-5 font-semibold text-[#0b0b0c] hover:bg-[#d4be84]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
+          <Button size="sm" className="gap-1.5 rounded-full bg-parchment px-5 font-semibold text-graphite hover:bg-gold" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>
         </div>
@@ -229,18 +229,18 @@ export default function Builder() {
 
       {/* Published banner */}
       {publishedUrl && (
-        <div className="flex items-center justify-between border-b border-[rgba(191,166,105,0.3)] bg-[rgba(191,166,105,0.12)] px-5 py-2.5 text-sm">
-          <div className="flex min-w-0 items-center gap-2 text-[#bfa669]">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#bfa669]" />
+        <div className="flex items-center justify-between border-b border-gold/30 bg-gold/10 px-5 py-2.5 text-sm">
+          <div className="flex min-w-0 items-center gap-2 text-gold">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold" />
             <span className="shrink-0 font-medium">Live at</span>
             <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer" className="truncate font-mono hover:underline">{publishedUrl}</a>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[#bfa669]" onClick={() => { navigator.clipboard?.writeText(publishedUrl); toast({ title: "Copied" }); }}>
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-gold" onClick={() => { navigator.clipboard?.writeText(publishedUrl); toast({ title: "Copied" }); }}>
               <Copy className="h-3.5 w-3.5" /> Copy
             </Button>
             <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer">
-              <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[#bfa669]"><ExternalLink className="h-3.5 w-3.5" /> Visit</Button>
+              <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-gold"><ExternalLink className="h-3.5 w-3.5" /> Visit</Button>
             </a>
           </div>
         </div>
@@ -251,10 +251,10 @@ export default function Builder() {
         <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
 
         {isGenerating && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#0b0b0c]/70 backdrop-blur-sm">
-            <div className="flex items-center gap-3 rounded-full border border-[rgba(191,166,105,0.18)] bg-[#15151a] px-5 py-3 shadow-xl">
-              <Sparkles className="h-4 w-4 animate-pulse text-[#bfa669]" />
-              <span className="font-mono text-sm text-[rgba(232,226,207,0.8)]">{hasGenerated ? "Applying your change…" : "Designing your site…"}</span>
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-graphite/70 backdrop-blur-sm">
+            <div className="flex items-center gap-3 rounded-full border border-gold/20 bg-graphite-soft px-5 py-3 shadow-xl">
+              <Sparkles className="h-4 w-4 animate-pulse text-gold" />
+              <span className="font-mono text-sm text-parchment/80">{hasGenerated ? "Applying your change…" : "Designing your site…"}</span>
             </div>
           </div>
         )}
@@ -264,7 +264,7 @@ export default function Builder() {
           <div className="pointer-events-auto mx-auto max-w-2xl">
             {/* Nudge only when there's nothing behind it to overlap */}
             {!hasGenerated && (
-              <div className="mb-2 inline-block rounded-full bg-[#0b0b0c]/80 px-4 py-1 backdrop-blur-sm">
+              <div className="mb-2 inline-block rounded-full bg-graphite/80 px-4 py-1 backdrop-blur-sm">
                 <JourneyNudge current={step} />
               </div>
             )}
@@ -272,20 +272,20 @@ export default function Builder() {
             {!hasGenerated ? (
               <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
             ) : (
-              <div className="rounded-2xl border border-[rgba(191,166,105,0.25)] bg-[#15151a] p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
+              <div className="rounded-2xl border border-gold/25 bg-graphite-soft p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
                 <div className="mb-2 flex items-center gap-2 px-1">
-                  <Wand2 className="h-3.5 w-3.5 text-[#bfa669]" />
-                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[rgba(232,226,207,0.55)]">Refine — tap to apply</span>
+                  <Wand2 className="h-3.5 w-3.5 text-gold" />
+                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/55">Refine — tap to apply</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {refineIntents.map((r) => (
                     <button key={r.label} onClick={() => handleRefine(r.instruction)} disabled={isGenerating}
-                      className="rounded-full border border-[rgba(191,166,105,0.18)] bg-[#15151a] px-3 py-1.5 text-sm font-medium text-[rgba(232,226,207,0.85)] transition-colors hover:border-[#d4be84] hover:text-[#bfa669] disabled:opacity-50">
+                      className="rounded-full border border-gold/20 bg-graphite-soft px-3 py-1.5 text-sm font-medium text-parchment/85 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
                       {r.label}
                     </button>
                   ))}
                   <button onClick={() => { setDoc(null); setHtml(INITIAL_HTML); setCss(INITIAL_CSS); setStep("describe"); }}
-                    className="rounded-full px-3 py-1.5 text-sm font-medium text-[rgba(232,226,207,0.5)] hover:text-[rgba(232,226,207,0.8)]">
+                    className="rounded-full px-3 py-1.5 text-sm font-medium text-parchment/50 hover:text-parchment/80">
                     Start over
                   </button>
                 </div>
