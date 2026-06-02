@@ -2,8 +2,9 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { storage } from "./storage";
 import type { SiteDocument } from "@shared/site-document";
 
-const hasDb = !!(process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL);
-
+// Runs against whatever `createStorage()` selects: MemStorage when no DATABASE_URL
+// (dev/worktree/CI), or PostgresStorage when one is configured. Either way this
+// exercises the real document-versioning methods.
 const doc = (heading: string): SiteDocument => ({
   version: 1,
   meta: { name: "Acme" },
@@ -11,7 +12,7 @@ const doc = (heading: string): SiteDocument => ({
   sections: [{ type: "hero", headline: heading, subheadline: "x", cta: { label: "Go", action: "scroll-contact" } } as any],
 });
 
-describe.skipIf(!hasDb)("storage document versioning", () => {
+describe("storage document versioning", () => {
   let projectId: string;
   beforeAll(async () => {
     const user = await storage.createUser({ username: `u_${Date.now()}`, password: "x" } as any);
