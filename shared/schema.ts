@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, bigint, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, bigint, index, uniqueIndex, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -112,6 +112,7 @@ export const experiments = pgTable("experiments", {
   createdBy: text("created_by").notNull(),
   minExposuresPerVariant: integer("min_exposures_per_variant").notNull().default(200),
   winnerVariantId: text("winner_variant_id"),
+  baselineConversionRate: doublePrecision("baseline_conversion_rate"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   oneRunningPerSite: uniqueIndex("experiments_one_running_per_site")

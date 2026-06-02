@@ -419,6 +419,7 @@ export class PostgresStorage implements IStorage {
       hypothesis: exp.hypothesis, conversionEvent: exp.conversionEvent, variants: exp.variants,
       createdBy: exp.createdBy, minExposuresPerVariant: exp.minExposuresPerVariant,
       winnerVariantId: exp.winnerVariantId,
+      baselineConversionRate: exp.baselineConversionRate,
     } as any);
   }
 
@@ -485,6 +486,7 @@ function rowToExperiment(r: ExperimentRow): Experiment {
     hypothesis: r.hypothesis, conversionEvent: r.conversionEvent, variants: r.variants,
     createdBy: r.createdBy, minExposuresPerVariant: r.minExposuresPerVariant,
     winnerVariantId: r.winnerVariantId ?? undefined,
+    baselineConversionRate: r.baselineConversionRate ?? undefined,
   });
 }
 

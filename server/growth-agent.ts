@@ -75,6 +75,16 @@ export async function runGrowthCycle(projectId: string, deps: GrowthDeps = {}): 
   const candidates = await proposeVariants(latest.document.sections[idx], goal, pick.hypothesis, 1, deps);
   if (candidates.length === 0) return { launched: false, reason: "no valid candidate" };
 
+  const priorEvents = await storage.recentTelemetry(projectId);
+  let baseViews = 0, baseConvs = 0;
+  for (const e of priorEvents) {
+    if (e.sectionId === pick.targetSectionId) {
+      if (e.type === "section_view") baseViews++;
+      if (e.type === "conversion") baseConvs++;
+    }
+  }
+  const baselineConversionRate = baseViews > 0 ? baseConvs / baseViews : undefined;
+
   const newId = (deps.randomId ?? cryptoId)();
   const exp: Experiment = experimentSchema.parse({
     id: newId, siteId: projectId, status: goal.constraints.autonomy === "auto" ? "running" : "proposed",
@@ -84,6 +94,7 @@ export async function runGrowthCycle(projectId: string, deps: GrowthDeps = {}): 
       { id: "cand", label: "Candidate", patch: candidates[0] },
     ] satisfies Variant[],
     createdBy: "agent", minExposuresPerVariant: goal.constraints.minExposuresPerVariant,
+    baselineConversionRate,
   });
   await storage.insertExperiment(exp);
   await audit(projectId, "experiment_launched", { id: exp.id, status: exp.status, targetSectionId: exp.targetSectionId, hypothesis: exp.hypothesis });
@@ -107,10 +118,9 @@ export async function evaluateAndMaybePromote(projectId: string): Promise<{ prom
     return { promoted: false, reason: "control won" };
   }
 
-  const goal = (await storage.getGoal(projectId))!;
-  const report = await funnel(projectId, goal, []);
-  const baseline = report.sections.find((s) => s.key === exp.targetSectionId)?.nextStep ?? 0;
-  const guard = checkGuardrail(exp.targetSectionId, baseline, report);
+  const winnerStat = stats.find((s) => s.variantId === winner.id);
+  const winnerRate = winnerStat && winnerStat.exposures > 0 ? winnerStat.conversions / winnerStat.exposures : 0;
+  const guard = checkGuardrail(winnerRate, exp.baselineConversionRate ?? null);
   if (!guard.ok) {
     await audit(projectId, "promotion_blocked", { id: exp.id, reason: guard.reason });
     return { promoted: false, reason: guard.reason };

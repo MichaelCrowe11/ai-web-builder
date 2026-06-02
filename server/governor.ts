@@ -1,7 +1,6 @@
 import { storage } from "./storage";
 import type { SiteGoal } from "@shared/site-goal";
 import type { Experiment } from "@shared/experiment";
-import type { FunnelReport } from "@shared/telemetry";
 
 export class GovernorError extends Error {}
 
@@ -17,16 +16,13 @@ export function assertAllowed(targetSectionId: string, goal: SiteGoal, running: 
   }
 }
 
-/** Guardrail: block promotion if the winner regresses engagement beyond the threshold. */
-export function checkGuardrail(targetSectionId: string, baselineNextStep: number, report: FunnelReport): { ok: boolean; reason: string } {
-  const sec = report.sections.find((s) => s.key === targetSectionId);
-  const after = sec?.nextStep ?? 0;
-  if (baselineNextStep === 0) return { ok: true, reason: "no baseline" };
-  const delta = (after - baselineNextStep) / baselineNextStep;
-  if (delta < -GUARDRAIL_MAX_REGRESSION) {
-    return { ok: false, reason: `engagement regressed ${(delta * 100).toFixed(0)}% (threshold -${GUARDRAIL_MAX_REGRESSION * 100}%)` };
+/** Block promotion if the winner's conversion rate regresses beyond the threshold vs the pre-experiment baseline. */
+export function checkGuardrail(winnerRate: number, baselineRate: number | null | undefined): { ok: boolean; reason: string } {
+  if (baselineRate == null) return { ok: true, reason: "no baseline" };
+  if (winnerRate < baselineRate * (1 - GUARDRAIL_MAX_REGRESSION)) {
+    return { ok: false, reason: `winner rate ${(winnerRate * 100).toFixed(1)}% regressed >${GUARDRAIL_MAX_REGRESSION * 100}% below baseline ${(baselineRate * 100).toFixed(1)}%` };
   }
-  return { ok: true, reason: `engagement delta ${(delta * 100).toFixed(0)}%` };
+  return { ok: true, reason: `winner rate ${(winnerRate * 100).toFixed(1)}% vs baseline ${(baselineRate * 100).toFixed(1)}%` };
 }
 
 /** Append-only audit entry surfaced in Mission Control. */

@@ -23,6 +23,7 @@ export const experimentSchema = z.object({
   createdBy: z.enum(["agent", "owner"]),
   minExposuresPerVariant: z.number().int().positive(),
   winnerVariantId: z.string().optional(),
+  baselineConversionRate: z.number().optional(),
 });
 export type Experiment = z.infer<typeof experimentSchema>;
 
