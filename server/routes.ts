@@ -4,7 +4,15 @@ import { storage } from "./storage";
 import { generate, generateStream, parseSite, MODEL } from "./ai";
 import { generateDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
 import { renderDocumentBody, renderDocumentCss } from "./renderer";
+import { resolveDocumentImages, type StockProvider } from "./stock-images";
 import { siteDocumentSchema } from "@shared/site-document";
+
+// Resolve generated imageHints to real stock photos (best-effort; no key => the
+// renderer's gradient placeholders are used). Read env at call time.
+const stockOpts = () => ({
+  apiKey: process.env.STOCK_IMAGE_API_KEY,
+  provider: process.env.STOCK_IMAGE_PROVIDER as StockProvider | undefined,
+});
 import { enforceQuota, consumeGeneration } from "./quota";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
@@ -41,7 +49,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Prompt is required" });
       }
       log(`Generating document (${MODEL}) for: ${prompt.substring(0, 50)}...`);
-      const document = await generateDocument(prompt);
+      const raw = await generateDocument(prompt);
+      const document = await resolveDocumentImages(raw, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
         document,
@@ -68,7 +77,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Valid document is required" });
       }
       log(`Refining document: ${instruction.substring(0, 50)}...`);
-      const updated = await refineDocument(parsed.data, instruction);
+      const refined = await refineDocument(parsed.data, instruction);
+      const updated = await resolveDocumentImages(refined, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
         document: updated,

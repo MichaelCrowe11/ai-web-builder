@@ -52,22 +52,25 @@ Output ONLY a JSON object with this shape:
   "sections": [ ... 4 to 7 sections ... ]
 }
 
-Each section is one of these shapes (pick the ones that fit the business; ALWAYS start with "hero" and ALWAYS include "contact"):
-- { "type": "hero", "headline": string, "subheadline": string, "cta": { "label": string, "action": "scroll-contact"|"call"|"email" } }
-- { "type": "services", "title": string, "items": [ { "name": string, "description": string } ] }   // 3-6 items, for service businesses
-- { "type": "menu", "title": string, "items": [ { "name": string, "price": string, "description": string } ] }  // restaurants/cafes
-- { "type": "products", "title": string, "items": [ { "name": string, "price": string, "description": string } ] }  // shops
-- { "type": "about", "title": string, "body": string }   // 2-4 sentence story
-- { "type": "gallery", "title": string, "imageHints": [ string ] }   // 3-6 short image descriptions
-- { "type": "testimonials", "title": string, "items": [ { "quote": string, "author": string, "role": string } ] }
-- { "type": "contact", "title": string, "email": string, "phone": string, "address": string, "hours": string, "showForm": true }
-- { "type": "cta", "headline": string, "cta": { "label": string, "action": "call"|"email"|"scroll-contact" } }
+Each section is one of these shapes (pick the ones that fit the business; ALWAYS start with "hero" and ALWAYS include "contact"). Each section also takes a "layout" that controls its visual arrangement; choose one that suits the content:
+- { "type": "hero", "layout": "centered"|"split"|"overlay"|"minimal", "headline": string, "subheadline": string, "cta": { "label": string, "action": "scroll-contact"|"call"|"email" }, "imageHint": string }
+- { "type": "services", "layout": "grid"|"list"|"feature", "title": string, "items": [ { "name": string, "description": string } ] }   // 3-6 items, for service businesses
+- { "type": "menu", "layout": "single"|"columns"|"grouped", "title": string, "items": [ { "name": string, "price": string, "description": string } ] }  // restaurants/cafes
+- { "type": "products", "layout": "grid"|"showcase"|"list", "title": string, "items": [ { "name": string, "price": string, "description": string, "imageHint": string } ] }  // shops
+- { "type": "about", "layout": "centered"|"split"|"statement", "title": string, "body": string, "imageHint": string }   // 2-4 sentence story
+- { "type": "gallery", "layout": "grid-uniform"|"masonry"|"carousel-strip", "title": string, "imageHints": [ string ] }   // 3-6 short image descriptions
+- { "type": "testimonials", "layout": "cards"|"single-spotlight"|"marquee", "title": string, "items": [ { "quote": string, "author": string, "role": string } ] }
+- { "type": "contact", "layout": "split"|"stacked"|"card", "title": string, "email": string, "phone": string, "address": string, "hours": string, "showForm": true }
+- { "type": "cta", "layout": "band"|"boxed"|"full-bleed", "headline": string, "cta": { "label": string, "action": "call"|"email"|"scroll-contact" } }
 
 Available section types: ${JSON.stringify(SECTION_TYPES)}.
+Theme presets: ${JSON.stringify(THEME_PRESETS)}.
 
 Rules:
-- Choose a theme preset that fits the brand's mood.
-- Write real, specific, warm copy — never lorem ipsum, never placeholder brackets.
+- Choose a theme preset that fits the brand's mood. Rough guide: trades/auto/fabrication => industrial-slate; wellness/spa/coastal => coastal-calm; florist/garden/plants => botanical-fresh; SaaS/agency/consultancy => tech-precision; bakery/cafe/maker/ceramics => terracotta-warmth; salon/fine-dining/premium => nocturne-luxe or luxe-mono. Otherwise pick whatever fits best.
+- VARY the layouts across sections so the page does not feel repetitive. Prefer image-rich layouts (hero "split" or "overlay", about "split", products "showcase") when a photo would strengthen the section.
+- Provide a concrete, photographable "imageHint" on hero, about, every product, and gallery entries: a real subject in 2-5 words (e.g. "sourdough loaf on a wooden board", not "food"). No brand names, no text-in-image. Do NOT output any image URLs; the system fills real photos from your hints.
+- Write real, specific, warm copy. Never lorem ipsum, never placeholder brackets.
 - Invent plausible details (sample menu items, services, a phone like 555-0100) the owner can edit.
 - Pick sections that match the business type (a plumber gets services, a cafe gets a menu, a shop gets products).
 - Output ONLY the JSON object. No prose, no code fences.`;

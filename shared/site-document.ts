@@ -20,6 +20,12 @@ export const THEME_PRESETS = [
   "soft-organic",     // sage/sand, earthy, rounded — friendly
   "luxe-mono",        // black, gold, restrained — premium
   "fresh-vibrant",    // bright, energetic, playful — youthful
+  "coastal-calm",     // pale blue/sand, navy ink, teal accent — wellness, hospitality
+  "industrial-slate", // concrete grays, near-black, safety-orange — trades, auto, fabrication
+  "botanical-fresh",  // off-white, deep forest green, blush — florists, garden, plants
+  "tech-precision",   // true white, slate ink, electric indigo — SaaS, agencies
+  "terracotta-warmth",// clay/cream, espresso ink, burnt sienna — bakeries, makers, ceramics
+  "nocturne-luxe",    // deep plum/charcoal, champagne, rose-gold — salons, fine dining
 ] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
@@ -43,18 +49,34 @@ const ctaSchema = z.object({
   href: z.string().optional(),
 });
 
+// A real image, resolved server-side from an imageHint (e.g. via a stock photo
+// API) AFTER generation. The AI never fills these — it only writes imageHints.
+// Absent => the renderer draws a tasteful gradient placeholder (unchanged look).
+export const resolvedImageSchema = z.object({
+  url: z.string().url(),
+  alt: z.string().optional(),
+  credit: z.string().optional(),     // photographer / source attribution
+  creditUrl: z.string().url().optional(),
+});
+export type ResolvedImage = z.infer<typeof resolvedImageSchema>;
+
 const heroSection = z.object({
   type: z.literal("hero"),
+  // Layout variant the AI picks; default keeps the original centered hero so
+  // documents created before variants existed render unchanged.
+  layout: z.enum(["centered", "split", "overlay", "minimal"]).default("centered"),
   headline: z.string(),
   subheadline: z.string().optional(),
   cta: ctaSchema.optional(),
   // Image is described, not uploaded — renderer maps to a tasteful default or
   // a stock query. Keeps generation deterministic and safe.
   imageHint: z.string().optional(),
+  image: resolvedImageSchema.optional(), // server-filled from imageHint
 });
 
 const servicesSection = z.object({
   type: z.literal("services"),
+  layout: z.enum(["grid", "list", "feature"]).default("grid"),
   title: z.string().default("What we do"),
   items: z.array(
     z.object({
@@ -67,6 +89,7 @@ const servicesSection = z.object({
 
 const menuSection = z.object({
   type: z.literal("menu"),
+  layout: z.enum(["single", "columns", "grouped"]).default("single"),
   title: z.string().default("Menu"),
   items: z.array(
     z.object({
@@ -79,6 +102,7 @@ const menuSection = z.object({
 
 const productsSection = z.object({
   type: z.literal("products"),
+  layout: z.enum(["grid", "showcase", "list"]).default("grid"),
   title: z.string().default("Featured"),
   items: z.array(
     z.object({
@@ -86,26 +110,34 @@ const productsSection = z.object({
       description: z.string().optional(),
       price: z.string().optional(),
       imageHint: z.string().optional(),
+      image: resolvedImageSchema.optional(), // server-filled from imageHint
     }),
   ).min(1).max(12),
 });
 
 const aboutSection = z.object({
   type: z.literal("about"),
+  layout: z.enum(["centered", "split", "statement"]).default("centered"),
   title: z.string().default("About"),
   body: z.string(),
   imageHint: z.string().optional(),
+  image: resolvedImageSchema.optional(), // server-filled from imageHint
 });
 
 const gallerySection = z.object({
   type: z.literal("gallery"),
+  layout: z.enum(["grid-uniform", "masonry", "carousel-strip"]).default("grid-uniform"),
   title: z.string().default("Gallery"),
   // Image hints only — renderer fills with tasteful placeholders/stock.
   imageHints: z.array(z.string()).min(1).max(12),
+  // Resolved server-side, parallel to imageHints (index-aligned). Absent entries
+  // fall back to a gradient cell.
+  imageUrls: z.array(resolvedImageSchema).optional(),
 });
 
 const testimonialsSection = z.object({
   type: z.literal("testimonials"),
+  layout: z.enum(["cards", "single-spotlight", "marquee"]).default("cards"),
   title: z.string().default("What people say"),
   items: z.array(
     z.object({
@@ -118,6 +150,7 @@ const testimonialsSection = z.object({
 
 const contactSection = z.object({
   type: z.literal("contact"),
+  layout: z.enum(["split", "stacked", "card"]).default("split"),
   title: z.string().default("Get in touch"),
   email: z.string().optional(),
   phone: z.string().optional(),
@@ -130,6 +163,7 @@ const contactSection = z.object({
 
 const ctaSection = z.object({
   type: z.literal("cta"),
+  layout: z.enum(["band", "boxed", "full-bleed"]).default("band"),
   headline: z.string(),
   cta: ctaSchema,
 });
