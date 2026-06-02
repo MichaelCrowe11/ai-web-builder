@@ -8,9 +8,10 @@ import { BillingModal } from "@/components/settings/billing-modal";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Sparkles, Wand2, Github,
+  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github,
 } from "lucide-react";
 import { GitHubExportModal } from "@/components/builder/github-export-modal";
+import { GenerationOverlay } from "@/components/builder/generation-overlay";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CroweHexC } from "@/components/brand/crowe-hex-c";
@@ -268,14 +269,7 @@ export default function Builder() {
       <div className="relative flex-1 overflow-hidden">
         <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
 
-        {isGenerating && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-graphite/70 backdrop-blur-sm">
-            <div className="flex items-center gap-3 rounded-full border border-gold/20 bg-graphite-soft px-5 py-3 shadow-xl">
-              <Sparkles className="h-4 w-4 animate-pulse text-gold" />
-              <span className="font-mono text-sm text-parchment/80">{hasGenerated ? "Applying your change…" : "Designing your site…"}</span>
-            </div>
-          </div>
-        )}
+        {isGenerating && <GenerationOverlay refining={hasGenerated} />}
 
         {/* Bottom dock: nudge + (refine chips OR prompt) */}
         <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 px-4">

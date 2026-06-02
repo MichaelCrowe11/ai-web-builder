@@ -175,6 +175,12 @@
     .rise { animation: none; opacity: 1; }
   }
 
+  /* Indeterminate progress sweep (generation overlay). */
+  @keyframes sweep {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(360%); }
+  }
+
   /* Slow gold aurora drift for hero atmosphere. */
   @keyframes drift {
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
