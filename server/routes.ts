@@ -24,7 +24,7 @@ import { registerPublishRoutes, renderFullHtml } from "./publish";
 import { registerGrowthRoutes } from "./growth-routes";
 import { registerExportRoutes } from "./github-export";
 import { registerAgentRoutes } from "./agent/routes";
-import { DisabledVerifier } from "./agent/payments";
+import { makeVerifier } from "./agent/x402-verifier";
 import { log } from "./log";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
@@ -52,12 +52,12 @@ export async function registerRoutes(
   registerExportRoutes(app);
 
   // Agent API — /v1/agent/* routes (build, refine, claim, status, leads).
-  // DisabledVerifier is a safe placeholder until Task 8 wires the real x402
-  // verifier via makeVerifier(); it rejects every request with 503 so no free
-  // sites can be built in production before the payment path is live.
+  // makeVerifier() returns X402Verifier when X402_PAY_TO_ADDRESS + X402_FACILITATOR_URL
+  // are set; otherwise returns DisabledVerifier (503 payments_unavailable) so no
+  // free sites can be built in production before a wallet/facilitator is configured.
   registerAgentRoutes(app, {
     storage,
-    verifier: new DisabledVerifier(),
+    verifier: makeVerifier(),
     prices: {
       build: Number(process.env.AGENT_PRICE_BUILD_USDC ?? "1"),
       refine: Number(process.env.AGENT_PRICE_REFINE_USDC ?? "0.25"),
