@@ -3,7 +3,20 @@ import { MemStorage } from "../storage";
 import { buildAndPublishSite } from "./build-service";
 import type { SiteDocument } from "@shared/site-document";
 
-const fakeDoc = { meta: { name: "Acme Co" } } as unknown as SiteDocument;
+// Minimal but VALID SiteDocument so renderDocumentBody/renderDocumentCss
+// actually execute without throwing.
+const fakeDoc: SiteDocument = {
+  version: 1,
+  meta: { name: "Acme Co" },
+  theme: { preset: "modern-minimal", radius: "medium" },
+  sections: [
+    {
+      type: "hero",
+      layout: "centered",
+      headline: "Welcome to Acme Co",
+    },
+  ],
+};
 
 describe("buildAndPublishSite", () => {
   let s: MemStorage;
@@ -21,6 +34,7 @@ describe("buildAndPublishSite", () => {
     const project = await s.getProject(r.projectId);
     expect(project?.userId).toBeNull();      // unclaimed
     expect(project?.isPublished).toBe(true);
+    expect(project?.html).not.toBe("");      // renderer actually ran
 
     const { hashToken } = await import("./claim-tokens");
     const row = await s.getClaimTokenByHash(hashToken(r.claimToken));

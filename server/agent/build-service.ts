@@ -30,16 +30,11 @@ export async function buildAndPublishSite(prompt: string, deps: BuildDeps): Prom
   const document = await generate(prompt); // throws AtCapacityError BEFORE any DB write
 
   // Render html/css for the legacy project fields (Living Sites serves the doc
-  // version, but the columns are NOT NULL so we provide safe fallbacks).
-  let html = "";
-  let css = "";
-  try {
-    html = renderDocumentBody(document);
-    css = renderDocumentCss(document);
-  } catch {
-    // Minimal doc (e.g. in tests) may lack sections; the doc version is the
-    // canonical source of truth so empty strings here are safe.
-  }
+  // version, but the columns are NOT NULL and empty strings are NOT safe —
+  // serveSlug / publishedSiteMiddleware fall back to these columns, so a render
+  // failure must abort the build, not silently publish a blank site.
+  const html = renderDocumentBody(document);
+  const css = renderDocumentCss(document);
 
   const project = await deps.storage.createProject({
     userId: null,
