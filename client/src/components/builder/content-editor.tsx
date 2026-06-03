@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil, Loader2 } from "lucide-react";
+import { Pencil, Loader2, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 
 // No-code content editor (CMS): edit a generated site's text directly, no AI.
 // Works on a deep-cloned copy; "Save" hands the updated document back to the builder.
@@ -53,6 +53,39 @@ export function ContentEditor({
       return { ...d, sections };
     });
 
+  // --- Collections: owner-managed list items (add / remove / reorder) ---
+  // A section's items[] IS its collection. The renderer already maps over it and
+  // the document saves through the existing PUT route, so this is purely client-side.
+  const blankItemFor = (type: string): AnyDoc => {
+    switch (type) {
+      case "menu":
+      case "products":
+        return { name: "", description: "", price: "" };
+      case "testimonials":
+        return { quote: "", author: "" };
+      case "services":
+      default:
+        return { name: "", description: "" };
+    }
+  };
+  const COLLECTION_TYPES = ["services", "menu", "products", "testimonials"];
+  const isCollection = (s: AnyDoc) => Array.isArray(s.items) || COLLECTION_TYPES.includes(s.type);
+
+  const mutSection = (si: number, fn: (s: AnyDoc) => AnyDoc) =>
+    setDraft((d: AnyDoc) => ({ ...d, sections: d.sections.map((s: AnyDoc, idx: number) => (idx === si ? fn(s) : s)) }));
+  const addItem = (si: number) =>
+    mutSection(si, (s) => ({ ...s, items: [...(s.items ?? []), blankItemFor(s.type)] }));
+  const removeItem = (si: number, ii: number) =>
+    mutSection(si, (s) => ({ ...s, items: (s.items ?? []).filter((_: AnyDoc, j: number) => j !== ii) }));
+  const moveItem = (si: number, ii: number, dir: number) =>
+    mutSection(si, (s) => {
+      const items = [...(s.items ?? [])];
+      const j = ii + dir;
+      if (j < 0 || j >= items.length) return s;
+      [items[ii], items[j]] = [items[j], items[ii]];
+      return { ...s, items };
+    });
+
   const Text = ({ label, value, onChange, area }: { label: string; value: any; onChange: (v: string) => void; area?: boolean }) => (
     <div>
       <label className={labelCls}>{label}</label>
@@ -72,7 +105,7 @@ export function ContentEditor({
             <Pencil className="h-5 w-5 text-gold" /> Edit content
           </DialogTitle>
           <DialogDescription className="text-parchment/55">
-            Change your site's text directly. No regeneration, no AI.
+            Edit your text and manage list items — add, remove, reorder. No regeneration, no AI.
           </DialogDescription>
         </DialogHeader>
 
@@ -102,17 +135,38 @@ export function ContentEditor({
                     <Text label="Hours" value={s.hours} onChange={(v) => setField(i, "hours", v)} />
                   </div>
                 )}
-                {Array.isArray(s.items) && s.items.length > 0 && (
+                {isCollection(s) && (
                   <div className="space-y-2">
-                    {s.items.map((it: AnyDoc, ii: number) => (
-                      <div key={ii} className="grid grid-cols-12 gap-2 rounded-md border border-gold/10 p-2">
-                        {"name" in it && <input className={`${inputCls} col-span-4`} value={it.name ?? ""} placeholder="name" onChange={(e) => setItem(i, ii, "name", e.target.value)} />}
-                        {"quote" in it && <input className={`${inputCls} col-span-7`} value={it.quote ?? ""} placeholder="quote" onChange={(e) => setItem(i, ii, "quote", e.target.value)} />}
-                        {"author" in it && <input className={`${inputCls} col-span-3`} value={it.author ?? ""} placeholder="author" onChange={(e) => setItem(i, ii, "author", e.target.value)} />}
-                        {"description" in it && <input className={`${inputCls} col-span-6`} value={it.description ?? ""} placeholder="description" onChange={(e) => setItem(i, ii, "description", e.target.value)} />}
-                        {"price" in it && <input className={`${inputCls} col-span-2`} value={it.price ?? ""} placeholder="price" onChange={(e) => setItem(i, ii, "price", e.target.value)} />}
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[0.58rem] uppercase tracking-[0.16em] text-gold-dim">
+                        Items{Array.isArray(s.items) ? ` · ${s.items.length}` : ""}
+                      </span>
+                    </div>
+                    {(s.items ?? []).map((it: AnyDoc, ii: number) => (
+                      <div key={ii} className="flex items-start gap-2 rounded-md border border-gold/10 p-2">
+                        <div className="grid flex-1 grid-cols-12 gap-2">
+                          {"name" in it && <input className={`${inputCls} col-span-4`} value={it.name ?? ""} placeholder="name" onChange={(e) => setItem(i, ii, "name", e.target.value)} />}
+                          {"quote" in it && <input className={`${inputCls} col-span-7`} value={it.quote ?? ""} placeholder="quote" onChange={(e) => setItem(i, ii, "quote", e.target.value)} />}
+                          {"author" in it && <input className={`${inputCls} col-span-3`} value={it.author ?? ""} placeholder="author" onChange={(e) => setItem(i, ii, "author", e.target.value)} />}
+                          {"description" in it && <input className={`${inputCls} col-span-6`} value={it.description ?? ""} placeholder="description" onChange={(e) => setItem(i, ii, "description", e.target.value)} />}
+                          {"price" in it && <input className={`${inputCls} col-span-2`} value={it.price ?? ""} placeholder="price" onChange={(e) => setItem(i, ii, "price", e.target.value)} />}
+                        </div>
+                        <div className="flex flex-col gap-0.5 pt-0.5">
+                          <button type="button" title="Move up" disabled={ii === 0} onClick={() => moveItem(i, ii, -1)} className="rounded p-0.5 text-parchment/45 transition-colors hover:text-gold disabled:opacity-25 disabled:hover:text-parchment/45">
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button type="button" title="Move down" disabled={ii === (s.items?.length ?? 0) - 1} onClick={() => moveItem(i, ii, 1)} className="rounded p-0.5 text-parchment/45 transition-colors hover:text-gold disabled:opacity-25 disabled:hover:text-parchment/45">
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </button>
+                          <button type="button" title="Delete item" onClick={() => removeItem(i, ii)} className="rounded p-0.5 text-parchment/45 transition-colors hover:text-error">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
+                    <button type="button" onClick={() => addItem(i)} className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gold/25 py-1.5 text-xs font-medium text-gold-dim transition-colors hover:border-gold/50 hover:text-gold">
+                      <Plus className="h-3.5 w-3.5" /> Add item
+                    </button>
                   </div>
                 )}
               </div>
