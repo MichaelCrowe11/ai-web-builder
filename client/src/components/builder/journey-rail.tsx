@@ -28,17 +28,17 @@ export function JourneyRail({ current }: { current: JourneyStep }) {
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.7rem] font-semibold transition-colors ${
                   state === "done"
-                    ? "bg-[#bfa669] text-white"
+                    ? "bg-gold text-white"
                     : state === "current"
-                    ? "border-2 border-[#bfa669] text-[#bfa669]"
-                    : "border border-[rgba(191,166,105,0.25)] text-[rgba(232,226,207,0.5)]"
+                    ? "border-2 border-gold text-gold"
+                    : "border border-gold/25 text-parchment/50"
                 }`}
               >
                 {state === "done" ? <Check className="h-3.5 w-3.5" /> : i + 1}
               </span>
               <span
                 className={`hidden text-sm font-medium sm:inline ${
-                  state === "current" ? "text-[#e8e2cf]" : "text-[rgba(232,226,207,0.5)]"
+                  state === "current" ? "text-parchment" : "text-parchment/50"
                 }`}
               >
                 {step.label}
@@ -47,7 +47,7 @@ export function JourneyRail({ current }: { current: JourneyStep }) {
             {i < STEPS.length - 1 && (
               <span
                 className={`mx-2 h-px w-6 ${
-                  idx < currentIdx ? "bg-[#bfa669]" : "bg-[rgba(191,166,105,0.18)]"
+                  idx < currentIdx ? "bg-gold" : "bg-gold/20"
                 }`}
               />
             )}
@@ -64,9 +64,9 @@ export function JourneyNudge({ current }: { current: JourneyStep }) {
     describe: "Describe your business below to get started — or tap a starter.",
     refine: "Looking good! Tweak it with a suggestion below, or hit Publish when you're happy.",
     publish: "Ready to go live? Hit Publish to put your site online.",
-    done: "🎉 Your site is live. Copy the link and share it with the world.",
+    done: "Your site is live. Copy the link and share it with the world.",
   };
   return (
-    <p className="text-center text-sm text-[rgba(232,226,207,0.6)]">{messages[current]}</p>
+    <p className="text-center text-sm text-parchment/60">{messages[current]}</p>
   );
 }

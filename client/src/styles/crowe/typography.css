@@ -1,0 +1,33 @@
+/* Vendored from @crowe/design-system@0.1.0 (tokens/typography.css).
+ * Re-sync on a design-system release; do not hand-edit.
+ * Inter primary (UI + body), JetBrains Mono for code/labels/eyebrow,
+ * EB Garamond optional serif for editorial display. */
+
+:root {
+  --crowe-font-sans: "Inter", "InterVariable", system-ui, -apple-system, sans-serif;
+  --crowe-font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --crowe-font-serif: "EB Garamond", "Source Serif Pro", Georgia, serif;
+
+  /* Type scale, modular ~1.25. Display sizes use serif. */
+  --crowe-size-caption: 0.8125rem;
+  --crowe-size-body-sm: 0.9375rem;
+  --crowe-size-body: 1.0625rem;
+  --crowe-size-eyebrow: 0.75rem;
+  --crowe-size-h4: 1.25rem;
+  --crowe-size-h3: 1.5rem;
+  --crowe-size-h2: 2rem;
+  --crowe-size-h1: 2.75rem;
+  --crowe-size-display: clamp(2.75rem, 5vw + 1rem, 4.75rem);
+
+  --crowe-leading-tight: 1.15;
+  --crowe-leading-snug: 1.3;
+  --crowe-leading-body: 1.55;
+
+  --crowe-tracking-eyebrow: 0.22em;
+  --crowe-tracking-status: 0.18em;
+  --crowe-tracking-tight: -0.01em;
+
+  --crowe-weight-regular: 400;
+  --crowe-weight-medium: 500;
+  --crowe-weight-semibold: 600;
+}

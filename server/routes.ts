@@ -2,15 +2,26 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generate, generateStream, parseSite, MODEL } from "./ai";
-import { generateDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
-import { renderDocumentBody, renderDocumentCss } from "./renderer";
-import { siteDocumentSchema } from "@shared/site-document";
+import { generateDocument, generateOutline, fillDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
+import { renderDocumentBody, renderDocumentCss, renderOutlineBody, renderOutlineCss } from "./renderer";
+import { resolveDocumentImages, type StockProvider } from "./stock-images";
+import { addGeneratedImages } from "./azure-image";
+import { startVideo, getVideoStatus, downloadVideo } from "./azure-video";
+import { siteDocumentSchema, siteOutlineSchema } from "@shared/site-document";
+
+// Resolve generated imageHints to real stock photos (best-effort; no key => the
+// renderer's gradient placeholders are used). Read env at call time.
+const stockOpts = () => ({
+  apiKey: process.env.STOCK_IMAGE_API_KEY,
+  provider: process.env.STOCK_IMAGE_PROVIDER as StockProvider | undefined,
+});
 import { enforceQuota, consumeGeneration } from "./quota";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { registerBillingRoutes } from "./billing";
 import { registerPublishRoutes, renderFullHtml } from "./publish";
 import { registerGrowthRoutes } from "./growth-routes";
+import { registerExportRoutes } from "./github-export";
 import { log } from "./index";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
@@ -27,6 +38,9 @@ export async function registerRoutes(
   // Growth routes (telemetry sink + Mission Control API)
   registerGrowthRoutes(app);
 
+  // Export the generated site to GitHub (transient PAT, no OAuth app).
+  registerExportRoutes(app);
+
   // List of tappable refine intents for the UI.
   app.get("/api/refine/intents", (_req: Request, res: Response) => {
     return res.json({ intents: REFINE_INTENTS });
@@ -41,7 +55,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Prompt is required" });
       }
       log(`Generating document (${MODEL}) for: ${prompt.substring(0, 50)}...`);
-      const document = await generateDocument(prompt);
+      const raw = await generateDocument(prompt);
+      const document = await resolveDocumentImages(raw, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
         document,
@@ -51,6 +66,48 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       log(`Document generation error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to generate site", details: error.message });
+    }
+  });
+
+  // TWO-PHASE generation, phase 1: fast outline -> instant themed skeleton.
+  // Gates on quota (enforceQuota) but does NOT consume; the fill consumes.
+  app.post("/api/generate/outline", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const outline = await generateOutline(prompt);
+      return res.json({ outline, html: renderOutlineBody(outline), css: renderOutlineCss(outline) });
+    } catch (error: any) {
+      log(`Outline error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to outline site", details: error.message });
+    }
+  });
+
+  // Phase 2: expand the approved outline into the full document (consumes quota).
+  app.post("/api/generate/fill", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt, outline } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const parsed = siteOutlineSchema.safeParse(outline);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid outline is required" });
+      }
+      const raw = await fillDocument(parsed.data, prompt);
+      const document = await resolveDocumentImages(raw, stockOpts());
+      const quota = await consumeGeneration(req);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+        quota,
+      });
+    } catch (error: any) {
+      log(`Fill error: ${error.message}`);
       return res.status(500).json({ error: "Failed to generate site", details: error.message });
     }
   });
@@ -68,7 +125,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Valid document is required" });
       }
       log(`Refining document: ${instruction.substring(0, 50)}...`);
-      const updated = await refineDocument(parsed.data, instruction);
+      const refined = await refineDocument(parsed.data, instruction);
+      const updated = await resolveDocumentImages(refined, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
         document: updated,
@@ -79,6 +137,144 @@ export async function registerRoutes(
     } catch (error: any) {
       log(`Refine error: ${error.message}`);
       return res.status(500).json({ error: "Failed to refine site", details: error.message });
+    }
+  });
+
+  // PRO image generation (async, after the text site is shown). Generates real
+  // topical images (gpt-image-1) for hero + about. Free tier keeps gradients.
+  app.post("/api/generate/images", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") {
+        return res.status(403).json({ error: "Image generation is a Pro feature.", requiresUpgrade: true });
+      }
+      const parsed = siteDocumentSchema.safeParse(req.body?.document);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid document is required" });
+      }
+      const document = await addGeneratedImages(parsed.data);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+      });
+    } catch (error: any) {
+      log(`Image gen error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to generate images", details: error.message });
+    }
+  });
+
+  // PRO hero video (Sora 2). Start a render job; client polls status; the
+  // finished mp4 streams from /api/video/:id and becomes the hero background.
+  app.post("/api/generate/video/start", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") {
+        return res.status(403).json({ error: "Video generation is a Pro feature.", requiresUpgrade: true });
+      }
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const videoId = await startVideo(prompt);
+      if (!videoId) return res.status(502).json({ error: "Could not start video generation." });
+      return res.json({ videoId });
+    } catch (error: any) {
+      log(`Video start error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to start video", details: error.message });
+    }
+  });
+
+  app.get("/api/generate/video/status/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") return res.status(403).json({ error: "Pro feature" });
+      const st = await getVideoStatus(req.params.id);
+      if (!st) return res.status(502).json({ error: "Could not get video status" });
+      return res.json(st);
+    } catch (error: any) {
+      return res.status(500).json({ error: "Status check failed", details: error.message });
+    }
+  });
+
+  // Public: stream the finished mp4. Durable: serves the stored copy if present,
+  // else downloads from Azure ONCE, stores it, and serves it - so published hero
+  // videos survive even after the upstream (Azure) copy expires.
+  app.get("/api/video/:id", async (req: Request, res: Response) => {
+    try {
+      const stored = await storage.getMedia(req.params.id);
+      if (stored) {
+        res.setHeader("Content-Type", stored.mime);
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        return res.send(stored.data);
+      }
+      const buf = await downloadVideo(req.params.id);
+      if (!buf) return res.status(404).send("not found");
+      await storage.saveMedia(req.params.id, "video/mp4", buf).catch(() => {}); // persist durable copy
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return res.send(buf);
+    } catch {
+      return res.status(502).send("error");
+    }
+  });
+
+  // LEAD CAPTURE: a published site's contact/booking form posts here (public).
+  // Honeypot + field/size caps; stores the submission for the owner's inbox.
+  app.post("/api/forms/:projectId/submit", async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ error: "Site not found" });
+      const body = req.body ?? {};
+      if (body.website || body._hp) return res.json({ ok: true }); // honeypot: silently accept, drop
+      const data: Record<string, string> = {};
+      for (const [k, v] of Object.entries(body)) {
+        if (typeof v === "string" && k.length < 60) data[k] = v.slice(0, 5000);
+      }
+      if (Object.keys(data).length === 0) return res.status(400).json({ error: "Empty submission" });
+      await storage.saveSubmission(req.params.projectId, data);
+      return res.json({ ok: true });
+    } catch (error: any) {
+      log(`Form submit error: ${error.message}`);
+      return res.status(500).json({ error: "Could not submit" });
+    }
+  });
+
+  // CMS: persist an owner's edited document (re-renders + saves both the doc
+  // version and the project html/css so every serve path reflects the edit).
+  app.put("/api/projects/:id/document", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ error: "Not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const parsed = siteDocumentSchema.safeParse(req.body?.document);
+      if (!parsed.success) return res.status(400).json({ error: "Valid document is required" });
+      const document = parsed.data;
+      const html = renderDocumentBody(document);
+      const css = renderDocumentCss(document);
+      await storage.saveDocumentVersion(req.params.id, document);
+      await storage.updateProject(req.params.id, { html, css, name: document.meta.name });
+      return res.json({ ok: true, html, css });
+    } catch (error: any) {
+      log(`Document save error: ${error.message}`);
+      return res.status(500).json({ error: "Save failed", details: error.message });
+    }
+  });
+
+  // OWNER INBOX: list a project's submissions (auth + ownership).
+  app.get("/api/projects/:projectId/submissions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ error: "Not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const submissions = await storage.listSubmissions(req.params.projectId);
+      return res.json({ submissions });
+    } catch (error: any) {
+      return res.status(500).json({ error: "Failed to load submissions" });
     }
   });
 

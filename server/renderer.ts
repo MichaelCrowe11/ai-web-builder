@@ -4,4 +4,6 @@ export {
   renderDocumentCss,
   renderDocumentBody,
   renderDocumentFull,
+  renderOutlineBody,
+  renderOutlineCss,
 } from "@shared/renderer";

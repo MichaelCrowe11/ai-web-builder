@@ -1,6 +1,8 @@
 // AI generation backed by Crowe Logic's Azure AI Foundry (crowelm-prod-eastus2).
 // OpenAI-format REST calls over plain fetch — no SDK dependency, uses our Azure quota.
 
+import { azureChat, modelsFromEnv } from "./azure-chat";
+
 const ENDPOINT = process.env.AZURE_CORE_ENDPOINT ?? "";
 const API_KEY = process.env.AZURE_CORE_API_KEY ?? "";
 const DEPLOYMENT = process.env.AI_WEBBUILDER_MODEL ?? "grok-4-1-fast-non-r";
@@ -71,18 +73,17 @@ export function parseSite(text: string): { html: string; css: string } {
   return { html: result.html ?? "", css: result.css ?? "" };
 }
 
-/** Non-streaming generation. Returns the raw model text (expected to be JSON). */
+/** Non-streaming generation. Returns the raw model text (expected to be JSON).
+ *  Resilient: retries 429/408/5xx with backoff and falls back across the model chain. */
 export async function generate(prompt: string): Promise<string> {
-  const res = await fetch(chatUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "api-key": API_KEY },
-    body: JSON.stringify(withPrompt(buildBody(false), prompt)),
-  });
-  if (!res.ok) {
-    throw new Error(`Azure ${DEPLOYMENT} returned ${res.status}: ${await res.text()}`);
-  }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  return azureChat(
+    [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: `Create a website based on this description: ${prompt}` },
+    ],
+    MAX_TOKENS,
+    { endpoint: ENDPOINT, apiKey: API_KEY, apiVersion: API_VERSION, models: modelsFromEnv() },
+  );
 }
 
 /** Streaming generation. Calls onChunk for each text delta; resolves with the full text. */

@@ -1,5 +1,12 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, bigint, index, uniqueIndex, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, bigint, index, uniqueIndex, doublePrecision, customType } from "drizzle-orm/pg-core";
+
+// Raw bytes column (for durable media: generated video/image blobs).
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -131,3 +138,24 @@ export const decisionLog = pgTable("decision_log", {
   bySite: index("decision_log_site_idx").on(t.siteId, t.ts),
 }));
 export type DecisionLogRow = typeof decisionLog.$inferSelect;
+
+// Lead capture: a published site's form submissions land here, viewable by the owner.
+export const formSubmissions = pgTable("form_submissions", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 36 }).notNull(),
+  data: jsonb("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  byProject: index("form_submissions_project_idx").on(t.projectId, t.createdAt),
+}));
+export type FormSubmissionRow = typeof formSubmissions.$inferSelect;
+
+// Durable media: generated video (and large image) blobs, served from /api/video/:id
+// so published sites never lose them when the upstream (Azure) copy expires.
+export const siteMedia = pgTable("site_media", {
+  id: varchar("id", { length: 80 }).primaryKey(),
+  mime: text("mime").notNull(),
+  data: bytea("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type SiteMediaRow = typeof siteMedia.$inferSelect;

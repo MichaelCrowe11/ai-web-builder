@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "wouter";
+import { Button } from "@/components/ui/button";
 
 interface GrowthState {
   goal: any | null;
@@ -31,95 +32,101 @@ export default function GrowthPage() {
     load();
   }
 
-  if (err) return <div className="growth-error">Couldn't load growth: {err}</div>;
-  if (!state) return <div>Loading...</div>;
-
   const rate = (s: { conversions: number; exposures: number }) =>
     s.exposures ? ((s.conversions / s.exposures) * 100).toFixed(1) : "0.0";
 
-  return (
-    <main className="growth">
-      <h1>Mission Control</h1>
+  const Shell = ({ children }: { children: React.ReactNode }) => (
+    <main className="min-h-screen bg-graphite text-parchment font-sans px-6 py-12">
+      <div className="mx-auto max-w-5xl">
+        <p className="text-xs tracking-eyebrow uppercase text-gold-dim mb-1">Mission Control</p>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight text-parchment mb-8">
+          Living Site
+        </h1>
+        {children}
+      </div>
+    </main>
+  );
 
-      <section>
-        <h2>Goal</h2>
+  if (err) return <Shell><p className="text-error">Couldn't load growth: {err}</p></Shell>;
+  if (!state) return <Shell><p className="text-parchment-dim">Loading...</p></Shell>;
+
+  const card = "rounded-sm border border-gold/15 bg-graphite-soft p-6 mb-6";
+  const sectionLabel = "text-xs tracking-eyebrow uppercase text-gold-dim mb-3";
+
+  return (
+    <Shell>
+      <section className={card}>
+        <h2 className={sectionLabel}>Goal</h2>
         {state.goal ? (
-          <p>
-            {state.goal.objective} -{">"}
-            <strong>{state.goal.conversionEvent}</strong> · autonomy:{" "}
-            {state.goal.constraints.autonomy}
+          <p className="text-parchment">
+            {state.goal.objective} {"->"} <strong className="text-gold">{state.goal.conversionEvent}</strong>
+            <span className="text-parchment-dim"> · autonomy: {state.goal.constraints.autonomy}</span>
           </p>
         ) : (
-          <p>No goal set yet.</p>
+          <p className="text-parchment-dim">No goal set yet.</p>
         )}
       </section>
 
-      <section>
-        <h2>Active experiment</h2>
+      <section className={card}>
+        <h2 className={sectionLabel}>Active experiment</h2>
         {state.experiment ? (
           <div>
-            <p>
-              <em>{state.experiment.hypothesis}</em>
-            </p>
-            <table>
+            <p className="italic text-parchment-dim mb-4">{state.experiment.hypothesis}</p>
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th>Variant</th>
-                  <th>Exposures</th>
-                  <th>Conversions</th>
-                  <th>Rate</th>
+                <tr className="text-left text-xs tracking-status uppercase text-parchment-dim">
+                  <th className="border-b border-gold/15 py-2 font-medium">Variant</th>
+                  <th className="border-b border-gold/15 py-2 font-medium">Exposures</th>
+                  <th className="border-b border-gold/15 py-2 font-medium">Conversions</th>
+                  <th className="border-b border-gold/15 py-2 font-medium">Rate</th>
                 </tr>
               </thead>
               <tbody>
                 {state.stats.map((s) => (
                   <tr key={s.variantId}>
-                    <td>{s.variantId}</td>
-                    <td>{s.exposures}</td>
-                    <td>{s.conversions}</td>
-                    <td>{rate(s)}%</td>
+                    <td className="border-b border-gold/10 py-2 font-mono">{s.variantId}</td>
+                    <td className="border-b border-gold/10 py-2">{s.exposures}</td>
+                    <td className="border-b border-gold/10 py-2">{s.conversions}</td>
+                    <td className="border-b border-gold/10 py-2 font-mono text-gold">{rate(s)}%</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             {state.experiment.status === "proposed" && (
-              <div className="controls">
-                <button
-                  onClick={() =>
-                    act(`/experiments/${state.experiment.id}/approve`)
-                  }
-                >
+              <div className="flex gap-3 mt-5">
+                <Button size="sm" onClick={() => act(`/experiments/${state.experiment.id}/approve`)}>
                   Approve
-                </button>
-                <button
-                  onClick={() =>
-                    act(`/experiments/${state.experiment.id}/reject`)
-                  }
-                >
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => act(`/experiments/${state.experiment.id}/reject`)}>
                   Reject
-                </button>
+                </Button>
               </div>
             )}
           </div>
         ) : (
-          <p>
-            No experiment running. The agent will propose one when there's
-            enough traffic.
+          <p className="text-parchment-dim">
+            No experiment running. The agent will propose one when there is enough traffic.
           </p>
         )}
       </section>
 
-      <section>
-        <h2>Decision feed</h2>
-        <ul>
-          {state.decisions.map((d, i) => (
-            <li key={i}>
-              {new Date(d.ts).toLocaleString()} -{" "}
-              <strong>{d.kind}</strong>
-              {d.detail?.reason ? ` · ${d.detail.reason}` : ""}
-            </li>
-          ))}
-        </ul>
+      <section className={card}>
+        <h2 className={sectionLabel}>Decision feed</h2>
+        {state.decisions.length ? (
+          <ul className="space-y-2 font-mono text-sm">
+            {state.decisions.map((d, i) => (
+              <li key={i} className="text-parchment-dim">
+                <span className="text-gold-dim">{new Date(d.ts).toLocaleString()}</span>
+                {" "}
+                <strong className="text-gold">{d.kind}</strong>
+                {d.detail?.reason ? ` · ${d.detail.reason}` : ""}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-parchment-dim">No decisions yet.</p>
+        )}
       </section>
-    </main>
+    </Shell>
   );
 }

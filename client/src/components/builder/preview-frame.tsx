@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Monitor, Smartphone, Tablet } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Monitor, Smartphone, Tablet, Eye, Code2, Copy, Check } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PreviewFrameProps {
@@ -10,9 +10,9 @@ interface PreviewFrameProps {
 }
 
 export function PreviewFrame({ html, css, device, onDeviceChange }: PreviewFrameProps) {
-  // Build the full document and feed it via srcDoc. This renders correctly under
-  // a sandbox without allow-same-origin (contentDocument.write() returns null
-  // when the iframe is cross-origin, which left the preview permanently blank).
+  const [view, setView] = useState<"preview" | "code">("preview");
+  const [copied, setCopied] = useState<string | null>(null);
+
   const srcDoc = useMemo(
     () => `<!DOCTYPE html>
 <html>
@@ -33,37 +33,107 @@ export function PreviewFrame({ html, css, device, onDeviceChange }: PreviewFrame
     [html, css],
   );
 
-  const width = {
-    desktop: "100%",
-    tablet: "768px",
-    mobile: "375px",
-  }[device];
+  // A complete, copy-paste-ready standalone document.
+  const fullHtml = useMemo(
+    () =>
+      `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1" />\n  <style>\n${css}\n  </style>\n</head>\n<body>\n${html}\n</body>\n</html>`,
+    [html, css],
+  );
+
+  const copy = (label: string, text: string) => {
+    navigator.clipboard?.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied((c) => (c === label ? null : c)), 1500);
+  };
+
+  const width = { desktop: "100%", tablet: "768px", mobile: "375px" }[device];
+
+  const segBtn = (active: boolean) =>
+    `flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+      active ? "bg-gold/15 text-gold" : "text-parchment/55 hover:text-parchment"
+    }`;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-muted/20">
-      <div className="h-12 border-b border-border flex items-center justify-center bg-background px-4">
-        <Tabs value={device} onValueChange={(v) => onDeviceChange(v as any)}>
-          <TabsList className="h-8">
-            <TabsTrigger value="desktop"><Monitor className="h-4 w-4" /></TabsTrigger>
-            <TabsTrigger value="tablet"><Tablet className="h-4 w-4" /></TabsTrigger>
-            <TabsTrigger value="mobile"><Smartphone className="h-4 w-4" /></TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+    <div className="flex h-full flex-1 flex-col bg-graphite">
+      {/* toolbar */}
+      <div className="flex h-12 items-center justify-between border-b border-gold/15 bg-graphite-soft px-3">
+        {/* left: view toggle */}
+        <div className="flex items-center gap-0.5 rounded-lg border border-gold/15 p-0.5">
+          <button className={segBtn(view === "preview")} onClick={() => setView("preview")}>
+            <Eye className="h-3.5 w-3.5" /> Preview
+          </button>
+          <button className={segBtn(view === "code")} onClick={() => setView("code")}>
+            <Code2 className="h-3.5 w-3.5" /> Code
+          </button>
+        </div>
 
-      <div className="flex-1 overflow-auto flex justify-center py-8">
-        <div
-          className="bg-white shadow-2xl transition-all duration-500 ease-in-out origin-top"
-          style={{ width: width, height: device === "desktop" ? "100%" : "800px", minHeight: "100%" }}
-        >
-          <iframe
-            title="Preview"
-            srcDoc={srcDoc}
-            className="w-full h-full border-none"
-            sandbox="allow-scripts allow-same-origin"
-          />
+        {/* center: device tabs (preview only) */}
+        {view === "preview" ? (
+          <Tabs value={device} onValueChange={(v) => onDeviceChange(v as any)}>
+            <TabsList className="h-8 bg-graphite">
+              <TabsTrigger value="desktop"><Monitor className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="tablet"><Tablet className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="mobile"><Smartphone className="h-4 w-4" /></TabsTrigger>
+            </TabsList>
+          </Tabs>
+        ) : (
+          <span className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-parchment/40">
+            Generated HTML + CSS
+          </span>
+        )}
+
+        {/* right: copy (code view) */}
+        <div className="flex w-[120px] justify-end">
+          {view === "code" && (
+            <button
+              onClick={() => copy("all", fullHtml)}
+              className="flex items-center gap-1.5 rounded-md border border-gold/20 px-2.5 py-1 text-xs font-medium text-parchment/70 transition-colors hover:border-gold/40 hover:text-gold"
+            >
+              {copied === "all" ? <Check className="h-3.5 w-3.5 text-gold" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied === "all" ? "Copied" : "Copy file"}
+            </button>
+          )}
         </div>
       </div>
+
+      {view === "preview" ? (
+        <div className="flex flex-1 justify-center overflow-auto py-8">
+          <div
+            className="origin-top bg-white shadow-2xl transition-all duration-500 ease-in-out"
+            style={{ width, height: device === "desktop" ? "100%" : "800px", minHeight: "100%" }}
+          >
+            <iframe
+              title="Preview"
+              srcDoc={srcDoc}
+              className="h-full w-full border-none"
+              sandbox="allow-scripts allow-same-origin"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 space-y-4 overflow-auto p-5">
+          {[
+            { label: "index.html (body)", text: html },
+            { label: "styles.css", text: css },
+          ].map((block) => (
+            <div key={block.label} className="overflow-hidden rounded-xl border border-gold/15 bg-graphite-soft">
+              <div className="flex items-center justify-between border-b border-gold/15 px-4 py-2">
+                <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-gold/80">{block.label}</span>
+                <button
+                  onClick={() => copy(block.label, block.text)}
+                  className="flex items-center gap-1.5 text-[0.7rem] text-parchment/55 transition-colors hover:text-gold"
+                >
+                  {copied === block.label ? <Check className="h-3 w-3 text-gold" /> : <Copy className="h-3 w-3" />}
+                  {copied === block.label ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <pre className="max-h-[42vh] overflow-auto p-4 font-mono text-[0.72rem] leading-relaxed text-parchment/80">
+                <code>{block.text}</code>
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

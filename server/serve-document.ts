@@ -27,7 +27,23 @@ export function assembleDocumentHtml(
     variantId,
     conversionEvent: exp?.conversionEvent,
   });
-  return html.replace("</body>", `${beacon(ctx, keys)}\n</body>`);
+  return html.replace("</body>", `${beacon(ctx, keys)}\n${formCapture(siteId)}\n</body>`);
+}
+
+/** Capture contact/booking form submissions to the owner's inbox (replaces mailto). */
+function formCapture(siteId: string): string {
+  return `<script>(function(){
+  document.querySelectorAll('form.contact-form').forEach(function(f){
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      var data={};new FormData(f).forEach(function(v,k){data[k]=v;});
+      fetch('/api/forms/${siteId}/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+        .then(function(r){if(!r.ok)throw 0;return r;})
+        .then(function(){f.innerHTML='<p style="padding:1.2rem 0;font-size:1.05rem;color:var(--ink)">Thanks! We got your message and will be in touch.</p>';})
+        .catch(function(){var a=f.getAttribute('action');if(a&&a.indexOf('mailto:')===0)window.location.href=a;});
+    });
+  });
+  })();</script>`;
 }
 
 /** First-party telemetry beacon. No third-party trackers, no PII. */

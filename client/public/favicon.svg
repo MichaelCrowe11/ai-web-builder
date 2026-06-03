@@ -1,15 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Crowe Logic">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#E9C872"/>
-      <stop offset="0.45" stop-color="#D4AF37"/>
-      <stop offset="1" stop-color="#9A7A23"/>
-    </linearGradient>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Crowe Logic">
   <rect width="64" height="64" rx="14" fill="#0b0b0c"/>
-  <g transform="translate(14 14) scale(1.5)"
-     stroke="url(#g)" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <path d="M17.25 6.25A7.75 7.75 0 1 0 17.25 17.75" stroke-width="2.4"/>
-    <path d="M10.75 9.25 14 12 10.75 14.75" stroke-width="1.95"/>
-  </g>
+  <polygon points="32,9 50,19.5 50,40.5 32,51 14,40.5 14,19.5" fill="none" stroke="#e8e2cf" stroke-width="1.8" stroke-linejoin="miter"/>
+  <path d="M41 24c-2.3-2.3-5.3-3.5-8.7-3.5-5.8 0-10.3 4.6-10.3 11s4.5 11 10.3 11c3.4 0 6.4-1.2 8.7-3.5" fill="none" stroke="#bfa669" stroke-width="3" stroke-linecap="square"/>
 </svg>

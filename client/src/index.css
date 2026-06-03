@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/crowe/preset.css";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -40,24 +41,15 @@
 
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-heading: 'Inter', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --radius: 0.5rem;
 }
 
-/* ===== Crowe Logic brand tokens (app chrome only) ===== */
-/* Source of truth: ~/BRAND.md — gold on graphite, parchment text. */
-:root {
-  --crowe-gold: #bfa669;
-  --crowe-gold-hi: #d4be84;
-  --crowe-gold-dim: #8a7850;
-  --crowe-graphite: #0b0b0c;
-  --crowe-graphite-soft: #15151a;
-  --crowe-parchment: #e8e2cf;
-  --crowe-parchment-dim: rgba(232, 226, 207, 0.6);
-  --crowe-error: #d97356;
-}
-
+/* Crowe brand tokens (--crowe-gold, --crowe-graphite, ...) now come from the
+ * vendored design system: ./styles/crowe/colors.css (imported via preset.css).
+ * The shadcn HSL mapping below stays as the canonical (and only) theme. */
 :root {
   /* Crowe Logic — gold on graphite, parchment text (app chrome). ~/BRAND.md */
   --background: 240 4% 4%;          /* graphite #0b0b0c */
@@ -101,45 +93,8 @@
   --sidebar-ring: 217.2 91.2% 59.8%;
 }
 
-.dark {
-  /* Dark Mode - Deep Space / Cyber */
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  
-  --primary: 250 85% 60%;
-  --primary-foreground: 0 0% 98%;
-  
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
-  
-  --sidebar: 240 5.9% 10%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: 224.3 76.3% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
-}
+/* No .dark block: Crowe gold-on-graphite (above) is the single canonical theme.
+ * The dark: variant stays defined (for shadcn dark: utilities) but never matches. */
 
 @layer base {
   * {
@@ -175,7 +130,7 @@
   .gradient-border::before {
     content: '';
     @apply absolute inset-0 rounded-[inherit] p-[1px];
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(250 85% 75%));
+    background: linear-gradient(135deg, var(--crowe-gold), var(--crowe-gold-dim));
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -204,5 +159,40 @@
 
   .glow-hover {
     @apply transition-shadow duration-300 hover:shadow-xl hover:shadow-primary/30;
+  }
+
+  /* Orchestrated page-load reveal. Stagger via inline style="--d:120ms". */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .rise {
+    opacity: 0;
+    animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rise { animation: none; opacity: 1; }
+  }
+
+  /* Indeterminate progress sweep (generation overlay). */
+  @keyframes sweep {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(360%); }
+  }
+
+  /* Slow gold aurora drift for hero atmosphere. */
+  @keyframes drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(2%, -3%, 0) scale(1.08); }
+  }
+  .aurora { animation: drift 18s ease-in-out infinite; }
+
+  /* Fine letterpress sheen on gold display text. */
+  .gold-sheen {
+    background: linear-gradient(180deg, #d8c188 0%, var(--crowe-gold) 55%, #9c854f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }

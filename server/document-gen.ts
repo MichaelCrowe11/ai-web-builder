@@ -9,38 +9,30 @@
 // ============================================================================
 import {
   siteDocumentSchema,
+  siteOutlineSchema,
   THEME_PRESETS,
   SECTION_TYPES,
   type SiteDocument,
+  type SiteOutline,
 } from "@shared/site-document";
+
+import { azureChat, modelsFromEnv } from "./azure-chat";
 
 const ENDPOINT = process.env.AZURE_CORE_ENDPOINT ?? "";
 const API_KEY = process.env.AZURE_CORE_API_KEY ?? "";
-const DEPLOYMENT = process.env.AI_WEBBUILDER_MODEL ?? "grok-4-1-fast-non-r";
 const API_VERSION = process.env.AZURE_API_VERSION ?? "2024-12-01-preview";
-const IS_GPT5 = /^gpt-5/i.test(DEPLOYMENT);
 
-function chatUrl(): string {
-  if (!ENDPOINT || !API_KEY) {
-    throw new Error("Azure Foundry not configured: set AZURE_CORE_ENDPOINT and AZURE_CORE_API_KEY");
-  }
-  return `${ENDPOINT.replace(/\/$/, "")}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`;
-}
-
-// One Azure chat call returning the assistant text.
+// One Azure chat call returning the assistant text. Resilient: retries 429/408/5xx
+// with backoff (honoring Retry-After) and falls back across the model chain
+// (AI_WEBBUILDER_MODEL primary, then AI_WEBBUILDER_FALLBACK_MODELS) so a single
+// rate-limit blip no longer surfaces as "Failed to generate site".
 export async function chat(messages: Array<{ role: string; content: string }>, maxTokens = 3000): Promise<string> {
-  const body: Record<string, unknown> = { messages };
-  body[IS_GPT5 ? "max_completion_tokens" : "max_tokens"] = maxTokens;
-  if (!IS_GPT5) body.temperature = 0.6;
-
-  const res = await fetch(chatUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "api-key": API_KEY },
-    body: JSON.stringify(body),
+  return azureChat(messages, maxTokens, {
+    endpoint: ENDPOINT,
+    apiKey: API_KEY,
+    apiVersion: API_VERSION,
+    models: modelsFromEnv(),
   });
-  if (!res.ok) throw new Error(`Azure ${DEPLOYMENT} returned ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
 }
 
 // Pull the first JSON object out of a model response.
@@ -62,22 +54,25 @@ Output ONLY a JSON object with this shape:
   "sections": [ ... 4 to 7 sections ... ]
 }
 
-Each section is one of these shapes (pick the ones that fit the business; ALWAYS start with "hero" and ALWAYS include "contact"):
-- { "type": "hero", "headline": string, "subheadline": string, "cta": { "label": string, "action": "scroll-contact"|"call"|"email" } }
-- { "type": "services", "title": string, "items": [ { "name": string, "description": string } ] }   // 3-6 items, for service businesses
-- { "type": "menu", "title": string, "items": [ { "name": string, "price": string, "description": string } ] }  // restaurants/cafes
-- { "type": "products", "title": string, "items": [ { "name": string, "price": string, "description": string } ] }  // shops
-- { "type": "about", "title": string, "body": string }   // 2-4 sentence story
-- { "type": "gallery", "title": string, "imageHints": [ string ] }   // 3-6 short image descriptions
-- { "type": "testimonials", "title": string, "items": [ { "quote": string, "author": string, "role": string } ] }
-- { "type": "contact", "title": string, "email": string, "phone": string, "address": string, "hours": string, "showForm": true }
-- { "type": "cta", "headline": string, "cta": { "label": string, "action": "call"|"email"|"scroll-contact" } }
+Each section is one of these shapes (pick the ones that fit the business; ALWAYS start with "hero" and ALWAYS include "contact"). Each section also takes a "layout" that controls its visual arrangement; choose one that suits the content:
+- { "type": "hero", "layout": "centered"|"split"|"overlay"|"minimal", "headline": string, "subheadline": string, "cta": { "label": string, "action": "scroll-contact"|"call"|"email" }, "imageHint": string }
+- { "type": "services", "layout": "grid"|"list"|"feature", "title": string, "items": [ { "name": string, "description": string } ] }   // 3-6 items, for service businesses
+- { "type": "menu", "layout": "single"|"columns"|"grouped", "title": string, "items": [ { "name": string, "price": string, "description": string } ] }  // restaurants/cafes
+- { "type": "products", "layout": "grid"|"showcase"|"list", "title": string, "items": [ { "name": string, "price": string, "description": string, "imageHint": string } ] }  // shops
+- { "type": "about", "layout": "centered"|"split"|"statement", "title": string, "body": string, "imageHint": string }   // 2-4 sentence story
+- { "type": "gallery", "layout": "grid-uniform"|"masonry"|"carousel-strip", "title": string, "imageHints": [ string ] }   // 3-6 short image descriptions
+- { "type": "testimonials", "layout": "cards"|"single-spotlight"|"marquee", "title": string, "items": [ { "quote": string, "author": string, "role": string } ] }
+- { "type": "contact", "layout": "split"|"stacked"|"card", "title": string, "email": string, "phone": string, "address": string, "hours": string, "showForm": true }
+- { "type": "cta", "layout": "band"|"boxed"|"full-bleed", "headline": string, "cta": { "label": string, "action": "call"|"email"|"scroll-contact" } }
 
 Available section types: ${JSON.stringify(SECTION_TYPES)}.
+Theme presets: ${JSON.stringify(THEME_PRESETS)}.
 
 Rules:
-- Choose a theme preset that fits the brand's mood.
-- Write real, specific, warm copy — never lorem ipsum, never placeholder brackets.
+- Choose a theme preset that fits the brand's mood. Rough guide: trades/auto/fabrication => industrial-slate; wellness/spa/coastal => coastal-calm; florist/garden/plants => botanical-fresh; SaaS/agency/consultancy => tech-precision; bakery/cafe/maker/ceramics => terracotta-warmth; salon/fine-dining/premium => nocturne-luxe or luxe-mono. Otherwise pick whatever fits best.
+- VARY the layouts across sections so the page does not feel repetitive. Prefer image-rich layouts (hero "split" or "overlay", about "split", products "showcase") when a photo would strengthen the section.
+- Provide a concrete, photographable "imageHint" on hero, about, every product, and gallery entries: a real subject in 2-5 words (e.g. "sourdough loaf on a wooden board", not "food"). No brand names, no text-in-image. Do NOT output any image URLs; the system fills real photos from your hints.
+- Write real, specific, warm copy. Never lorem ipsum, never placeholder brackets.
 - Invent plausible details (sample menu items, services, a phone like 555-0100) the owner can edit.
 - Pick sections that match the business type (a plumber gets services, a cafe gets a menu, a shop gets products).
 - Output ONLY the JSON object. No prose, no code fences.`;
@@ -104,6 +99,53 @@ export async function generateDocument(prompt: string): Promise<SiteDocument> {
       ...messages,
       { role: "assistant", content: text },
       { role: "user", content: `That JSON was invalid (${err.message}). Return ONLY a corrected JSON object matching the schema exactly.` },
+    ];
+    text = await chat(repair, 3200);
+    return validate(extractJson(text));
+  }
+}
+
+// ---- Two-phase generation (instant skeleton) ----
+// Phase 1: a tiny, fast outline so a themed skeleton paints in ~2s.
+const OUTLINE_GUIDE = `Design the OUTLINE of a website (a fast first pass). Output ONLY this JSON object:
+{
+  "meta": { "name": string, "tagline": short string, "industry": string },
+  "theme": { "preset": one of ${JSON.stringify(THEME_PRESETS)}, "radius": "none"|"small"|"medium"|"large"|"pill" },
+  "sections": [ { "type": one of ${JSON.stringify(SECTION_TYPES)}, "layout": string, "headline": string } ]
+}
+Rules:
+- 5 to 7 sections. ALWAYS start with "hero" and ALWAYS include "contact".
+- Choose a theme preset + section types that fit the business (trades->industrial-slate, spa->coastal-calm, florist->botanical-fresh, SaaS->tech-precision, bakery/cafe->terracotta-warmth, salon/fine-dining->nocturne-luxe; otherwise pick what fits).
+- Vary section layouts. "headline" is the hero headline or the section title - real and specific, never a placeholder.
+- Output ONLY the JSON object. No prose.`;
+
+/** Phase 1: fast outline (name + theme + section sequence with headlines). */
+export async function generateOutline(prompt: string): Promise<SiteOutline> {
+  const messages = [
+    { role: "system", content: OUTLINE_GUIDE },
+    { role: "user", content: `Outline a website for: ${prompt}` },
+  ];
+  const text = await chat(messages, 800); // small output keeps this fast
+  return siteOutlineSchema.parse(extractJson(text));
+}
+
+/** Phase 2: expand an approved outline into the full document, same structure. */
+export async function fillDocument(outline: SiteOutline, prompt: string): Promise<SiteDocument> {
+  const sys = `${SCHEMA_GUIDE}
+
+You are EXPANDING an approved outline into the COMPLETE site document. Keep the SAME meta.name, the SAME theme (preset + radius), and the SAME sequence of sections with the same "type", "layout", and headline/title. Fill in every remaining field: subheadlines, items with real names/prices/descriptions, body copy, imageHints, and contact details. Output ONLY the JSON object.`;
+  const messages = [
+    { role: "system", content: sys },
+    { role: "user", content: `Business: ${prompt}\n\nApproved outline:\n${JSON.stringify(outline)}` },
+  ];
+  let text = await chat(messages, 3200);
+  try {
+    return validate(extractJson(text));
+  } catch (err: any) {
+    const repair = [
+      ...messages,
+      { role: "assistant", content: text },
+      { role: "user", content: `That JSON was invalid (${err.message}). Return ONLY a corrected complete JSON document.` },
     ];
     text = await chat(repair, 3200);
     return validate(extractJson(text));
@@ -143,4 +185,5 @@ export const REFINE_INTENTS: Array<{ label: string; instruction: string }> = [
   { label: "Bolder look", instruction: "Switch to a bolder, higher-contrast theme preset." },
 ];
 
-export const MODEL = DEPLOYMENT;
+// The primary model in the fallback chain (for logging/labels).
+export const MODEL = modelsFromEnv()[0];
