@@ -8,10 +8,11 @@ import { BillingModal } from "@/components/settings/billing-modal";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Sparkles,
+  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Sparkles, Film,
 } from "lucide-react";
 import { GitHubExportModal } from "@/components/builder/github-export-modal";
 import { GenerationOverlay } from "@/components/builder/generation-overlay";
+import { renderDocumentBody, renderDocumentCss } from "@shared/renderer";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CroweHexC } from "@/components/brand/crowe-hex-c";
@@ -31,6 +32,7 @@ export default function Builder() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [filling, setFilling] = useState(false);
   const [imaging, setImaging] = useState(false);
+  const [videoPct, setVideoPct] = useState<number | null>(null); // null = idle, else rendering %
   const [isSaving, setIsSaving] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("Untitled site");
@@ -135,6 +137,51 @@ export default function Builder() {
       // best-effort; the site already looks good with gradients
     } finally {
       setImaging(false);
+    }
+  };
+
+  // Pro-only: render a Sora hero background video (~1 min), poll, then swap it in
+  // (re-rendered client-side via the shared renderer). Free users hit the paywall.
+  const generateHeroVideo = async () => {
+    if (!doc) return;
+    const hero = (doc.sections as any[]).find((s) => s.type === "hero");
+    const prompt = hero?.imageHint || `${doc.meta?.name ?? "the business"}, a cinematic establishing shot`;
+    setVideoPct(0);
+    try {
+      const r = await fetch("/api/generate/video/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ prompt }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        if (d.requiresUpgrade) { setShowBilling(true); return; }
+        throw new Error(d.error || "Could not start video");
+      }
+      const id = d.videoId;
+      for (let i = 0; i < 80; i++) {
+        await new Promise((res) => setTimeout(res, 4000));
+        const sd = await (await fetch(`/api/generate/video/status/${id}`, { credentials: "include" })).json();
+        if (typeof sd.progress === "number") setVideoPct(sd.progress);
+        if (sd.status === "completed") {
+          const updated = {
+            ...doc,
+            sections: (doc.sections as any[]).map((s) => (s.type === "hero" ? { ...s, videoUrl: `/api/video/${id}` } : s)),
+          };
+          setDoc(updated);
+          setHtml(renderDocumentBody(updated as any));
+          setCss(renderDocumentCss(updated as any));
+          toast({ title: "Hero video added", description: "A generated background video is on your hero." });
+          return;
+        }
+        if (sd.status === "failed") throw new Error("Video render failed");
+      }
+      throw new Error("Video timed out");
+    } catch (e: any) {
+      toast({ title: "Video failed", description: e.message, variant: "destructive" });
+    } finally {
+      setVideoPct(null);
     }
   };
 
@@ -354,6 +401,11 @@ export default function Builder() {
                       {r.label}
                     </button>
                   ))}
+                  <button onClick={generateHeroVideo} disabled={isGenerating || videoPct !== null}
+                    className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-sm font-medium text-gold transition-colors hover:bg-gold/20 disabled:opacity-50">
+                    <Film className="h-3.5 w-3.5" />
+                    {videoPct !== null ? `Rendering ${videoPct}%` : "Hero video"}
+                  </button>
                   <button onClick={() => { setDoc(null); setHtml(INITIAL_HTML); setCss(INITIAL_CSS); setStep("describe"); }}
                     className="rounded-full px-3 py-1.5 text-sm font-medium text-parchment/50 hover:text-parchment/80">
                     Start over

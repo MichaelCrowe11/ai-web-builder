@@ -186,6 +186,16 @@ function renderHero(section: Extract<Section, { type: "hero" }>, doc: SiteDocume
     : "";
   const copy = `${kicker}<h1>${esc(section.headline)}</h1>${lead}${cta}`;
 
+  // A generated background video (Pro) overrides the layout with a cinematic overlay hero.
+  if (section.videoUrl) {
+    return `
+  <section class="hero hero--overlay hero--video" ${open}>
+    <video class="hero-bg" src="${esc(section.videoUrl)}" autoplay muted loop playsinline preload="auto"></video>
+    <div class="hero-scrim"></div>
+    <div class="wrap hero-inner">${copy}</div>
+  </section>`;
+  }
+
   if (layout === "split") {
     return `
   <section class="hero hero--split" ${open}>

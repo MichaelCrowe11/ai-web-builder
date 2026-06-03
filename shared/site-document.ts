@@ -72,6 +72,7 @@ const heroSection = z.object({
   // a stock query. Keeps generation deterministic and safe.
   imageHint: z.string().optional(),
   image: resolvedImageSchema.optional(), // server-filled from imageHint
+  videoUrl: z.string().optional(),       // Pro: generated hero background video (served via /api/video/:id)
 });
 
 const servicesSection = z.object({

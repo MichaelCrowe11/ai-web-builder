@@ -6,6 +6,7 @@ import { generateDocument, generateOutline, fillDocument, refineDocument, REFINE
 import { renderDocumentBody, renderDocumentCss, renderOutlineBody, renderOutlineCss } from "./renderer";
 import { resolveDocumentImages, type StockProvider } from "./stock-images";
 import { addGeneratedImages } from "./azure-image";
+import { startVideo, getVideoStatus, downloadVideo } from "./azure-video";
 import { siteDocumentSchema, siteOutlineSchema } from "@shared/site-document";
 
 // Resolve generated imageHints to real stock photos (best-effort; no key => the
@@ -160,6 +161,52 @@ export async function registerRoutes(
     } catch (error: any) {
       log(`Image gen error: ${error.message}`);
       return res.status(500).json({ error: "Failed to generate images", details: error.message });
+    }
+  });
+
+  // PRO hero video (Sora 2). Start a render job; client polls status; the
+  // finished mp4 streams from /api/video/:id and becomes the hero background.
+  app.post("/api/generate/video/start", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") {
+        return res.status(403).json({ error: "Video generation is a Pro feature.", requiresUpgrade: true });
+      }
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const videoId = await startVideo(prompt);
+      if (!videoId) return res.status(502).json({ error: "Could not start video generation." });
+      return res.json({ videoId });
+    } catch (error: any) {
+      log(`Video start error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to start video", details: error.message });
+    }
+  });
+
+  app.get("/api/generate/video/status/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") return res.status(403).json({ error: "Pro feature" });
+      const st = await getVideoStatus(req.params.id);
+      if (!st) return res.status(502).json({ error: "Could not get video status" });
+      return res.json(st);
+    } catch (error: any) {
+      return res.status(500).json({ error: "Status check failed", details: error.message });
+    }
+  });
+
+  // Public: stream the finished mp4 so the preview iframe and published sites can load it.
+  app.get("/api/video/:id", async (req: Request, res: Response) => {
+    try {
+      const buf = await downloadVideo(req.params.id);
+      if (!buf) return res.status(404).send("not found");
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.send(buf);
+    } catch {
+      return res.status(502).send("error");
     }
   });
 
