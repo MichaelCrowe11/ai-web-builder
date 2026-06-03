@@ -100,3 +100,10 @@ export const genLimiter = makeLimiter({
 });
 
 export const runLimited = genLimiter.runLimited;
+
+export function makeCapacityPayload(err: AtCapacityError) {
+  return {
+    retryAfterSeconds: Math.ceil(err.retryAfterMs / 1000),
+    body: { error: "at_capacity" as const, retryAfterMs: err.retryAfterMs },
+  };
+}

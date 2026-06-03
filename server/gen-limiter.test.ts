@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { makeLimiter, AtCapacityError } from "./gen-limiter";
+import { makeLimiter, AtCapacityError, makeCapacityPayload } from "./gen-limiter";
 
 // A controllable promise: resolve() it from the test to let a task "finish".
 function deferred<T = void>() {
@@ -65,5 +65,13 @@ describe("gen-limiter", () => {
     const e = new AtCapacityError(8000);
     expect(e.name).toBe("AtCapacityError");
     expect(e.retryAfterMs).toBe(8000);
+  });
+});
+
+describe("capacity payload", () => {
+  it("maps retryAfterMs to a whole-second Retry-After and stable body", () => {
+    const { retryAfterSeconds, body } = makeCapacityPayload(new AtCapacityError(8200));
+    expect(retryAfterSeconds).toBe(9);          // ceil(8.2s)
+    expect(body).toEqual({ error: "at_capacity", retryAfterMs: 8200 });
   });
 });

@@ -16,6 +16,7 @@ const stockOpts = () => ({
   provider: process.env.STOCK_IMAGE_PROVIDER as StockProvider | undefined,
 });
 import { enforceQuota, consumeGeneration } from "./quota";
+import { runLimited, AtCapacityError, makeCapacityPayload } from "./gen-limiter";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { registerBillingRoutes } from "./billing";
@@ -29,6 +30,13 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Turn an AtCapacityError into a graceful 503 the client auto-retries.
+  const sendCapacity = (res: Response, err: AtCapacityError) => {
+    const { retryAfterSeconds, body } = makeCapacityPayload(err);
+    res.setHeader("Retry-After", String(retryAfterSeconds));
+    return res.status(503).json(body);
+  };
+
   // Billing routes (Stripe checkout + portal)
   registerBillingRoutes(app);
 
@@ -55,7 +63,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Prompt is required" });
       }
       log(`Generating document (${MODEL}) for: ${prompt.substring(0, 50)}...`);
-      const raw = await generateDocument(prompt);
+      const raw = await runLimited(() => generateDocument(prompt));
       const document = await resolveDocumentImages(raw, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
@@ -65,6 +73,7 @@ export async function registerRoutes(
         quota,
       });
     } catch (error: any) {
+      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
       log(`Document generation error: ${error.message}`);
       return res.status(500).json({ error: "Failed to generate site", details: error.message });
     }
@@ -78,9 +87,10 @@ export async function registerRoutes(
       if (!prompt || typeof prompt !== "string") {
         return res.status(400).json({ error: "Prompt is required" });
       }
-      const outline = await generateOutline(prompt);
+      const outline = await runLimited(() => generateOutline(prompt));
       return res.json({ outline, html: renderOutlineBody(outline), css: renderOutlineCss(outline) });
     } catch (error: any) {
+      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
       log(`Outline error: ${error.message}`);
       return res.status(500).json({ error: "Failed to outline site", details: error.message });
     }
@@ -97,7 +107,7 @@ export async function registerRoutes(
       if (!parsed.success) {
         return res.status(400).json({ error: "Valid outline is required" });
       }
-      const raw = await fillDocument(parsed.data, prompt);
+      const raw = await runLimited(() => fillDocument(parsed.data, prompt));
       const document = await resolveDocumentImages(raw, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
@@ -107,6 +117,7 @@ export async function registerRoutes(
         quota,
       });
     } catch (error: any) {
+      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
       log(`Fill error: ${error.message}`);
       return res.status(500).json({ error: "Failed to generate site", details: error.message });
     }
@@ -125,7 +136,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Valid document is required" });
       }
       log(`Refining document: ${instruction.substring(0, 50)}...`);
-      const refined = await refineDocument(parsed.data, instruction);
+      const refined = await runLimited(() => refineDocument(parsed.data, instruction));
       const updated = await resolveDocumentImages(refined, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
@@ -135,6 +146,7 @@ export async function registerRoutes(
         quota,
       });
     } catch (error: any) {
+      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
       log(`Refine error: ${error.message}`);
       return res.status(500).json({ error: "Failed to refine site", details: error.message });
     }
@@ -289,7 +301,7 @@ export async function registerRoutes(
 
       log(`Generating website (${MODEL}) for prompt: ${prompt.substring(0, 50)}...`);
 
-      const text = await generate(prompt);
+      const text = await runLimited(() => generate(prompt));
       const result = parseSite(text);
 
       // Count this generation against the user's quota only on success.
@@ -302,6 +314,7 @@ export async function registerRoutes(
         quota,
       });
     } catch (error: any) {
+      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
       log(`Generation error: ${error.message}`);
       return res.status(500).json({
         error: "Failed to generate website",
