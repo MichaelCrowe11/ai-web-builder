@@ -47,6 +47,12 @@ export async function buildAndPublishSite(prompt: string, deps: BuildDeps): Prom
   // Persist the doc so a later refine can load it (mirrors the human CMS path).
   await deps.storage.saveDocumentVersion(project.id, document);
 
+  // Partial-state windows below: this app has no DB transactions. If publish or
+  // createClaimToken throws, the project row already exists. An unpublished
+  // orphan (no token) is inaccessible to anyone, so harmless; the narrow
+  // worst case is a published site whose token mint failed (live but
+  // unclaimable). The route settles payment only on full success, so the agent
+  // is never charged for a partial build — they retry and get a fresh site.
   const { slug, publishedUrl } = await publishProjectRecord(project, deps.storage);
 
   const { token, hash } = mintClaimToken();
