@@ -12,10 +12,10 @@ const fakeDoc = {
   sections: [{ type: "hero", layout: "centered", headline: "Welcome to Acme" }],
 } as unknown as SiteDocument;
 
-function appWith(storage: MemStorage, verifier: FakeVerifier, generate: any) {
+function appWith(storage: MemStorage, verifier: FakeVerifier, generate: any, refine?: any) {
   const app = express();
   app.use(express.json());
-  registerAgentRoutes(app, { storage, verifier, generate, prices: { build: 1, refine: 0.25 } });
+  registerAgentRoutes(app, { storage, verifier, generate, refine, prices: { build: 1, refine: 0.25 } });
   return app;
 }
 
@@ -101,5 +101,54 @@ describe("agent routes", () => {
     const id = built.json.projectId;
     const r = await call(app, "GET", `/v1/agent/sites/${id}/leads`, { "x-claim-token": "a".repeat(64) });
     expect(r.status).toBe(403);
+  });
+
+  // ── refine tests ─────────────────────────────────────────────────────────────
+
+  it("refine happy path: built+paid site -> 200 document returned, settles once more", async () => {
+    const fakeRefine = vi.fn().mockResolvedValue(fakeDoc);
+    const app = appWith(storage, verifier, generate, fakeRefine);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    expect(built.status).toBe(200);
+    const id = built.json.projectId;
+    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-payment": "fake-ok" }, { instruction: "make it bold" });
+    expect(r.status).toBe(200);
+    expect(r.json.document).toBeDefined();
+    expect(r.json.projectId).toBe(id);
+    // settled once for build + once for refine
+    expect(verifier.settled).toBe(2);
+  });
+
+  it("refine unpaid -> 402, no settle", async () => {
+    const fakeRefine = vi.fn().mockResolvedValue(fakeDoc);
+    const app = appWith(storage, verifier, generate, fakeRefine);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const id = built.json.projectId;
+    const settledAfterBuild = verifier.settled;
+    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, {}, { instruction: "make it bold" });
+    expect(r.status).toBe(402);
+    expect(verifier.settled).toBe(settledAfterBuild);
+  });
+
+  it("refine on unknown site (no document) -> 404, no settle", async () => {
+    const fakeRefine = vi.fn().mockResolvedValue(fakeDoc);
+    const app = appWith(storage, verifier, generate, fakeRefine);
+    const r = await call(app, "POST", "/v1/agent/sites/nonexistent-id/refine", { "x-payment": "fake-ok" }, { instruction: "make it bold" });
+    expect(r.status).toBe(404);
+    expect(r.json.error).toBe("site_not_found");
+    expect(verifier.settled).toBe(0);
+  });
+
+  it("refine at-capacity -> 503, no settle", async () => {
+    const { AtCapacityError } = await import("../gen-limiter");
+    const fakeRefine = vi.fn().mockRejectedValue(new AtCapacityError(8000));
+    const app = appWith(storage, verifier, generate, fakeRefine);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const id = built.json.projectId;
+    const settledAfterBuild = verifier.settled;
+    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-payment": "fake-ok" }, { instruction: "make it bold" });
+    expect(r.status).toBe(503);
+    expect(r.json.error).toBe("at_capacity");
+    expect(verifier.settled).toBe(settledAfterBuild);
   });
 });

@@ -12,11 +12,13 @@ import { AtCapacityError, makeCapacityPayload, runLimited } from "../gen-limiter
 import { refineDocument } from "../document-gen";
 import { renderDocumentBody, renderDocumentCss } from "../renderer";
 import { tokensMatch } from "./claim-tokens";
+import { log } from "../log";
 
 export interface AgentRouteDeps {
   storage: IStorage;
   verifier: PaymentVerifier;
   generate?: (prompt: string) => Promise<SiteDocument>;
+  refine?: (doc: SiteDocument, instruction: string) => Promise<SiteDocument>;
   prices: { build: number; refine: number };
 }
 
@@ -38,7 +40,7 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
     requirePayment(() => prices.build, verifier),
     async (req: Request, res: Response) => {
       const { prompt } = req.body ?? {};
-      if (!prompt || typeof prompt !== "string") {
+      if (!prompt || typeof prompt !== "string" || prompt.length > 8000) {
         return res.status(400).json({ error: "prompt_required" });
       }
       try {
@@ -53,7 +55,8 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
         });
       } catch (err: any) {
         if (err instanceof AtCapacityError) return sendCapacity(res, err);
-        return res.status(500).json({ error: "build_failed", detail: err.message });
+        log(`Agent build error: ${err.message}`);
+        return res.status(500).json({ error: "build_failed" });
       }
     },
   );
@@ -65,13 +68,14 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
     requirePayment(() => prices.refine, verifier),
     async (req: Request, res: Response) => {
       const { instruction } = req.body ?? {};
-      if (!instruction || typeof instruction !== "string") {
+      if (!instruction || typeof instruction !== "string" || instruction.length > 8000) {
         return res.status(400).json({ error: "instruction_required" });
       }
       const latest = await storage.getLatestDocument(req.params.id);
       if (!latest) return res.status(404).json({ error: "site_not_found" });
+      const refineFn = deps.refine ?? refineDocument;
       try {
-        const refined = await runLimited(() => refineDocument(latest.document, instruction));
+        const refined = await runLimited(() => refineFn(latest.document, instruction));
         await storage.updateProject(req.params.id, {
           html: renderDocumentBody(refined),
           css: renderDocumentCss(refined),
@@ -81,7 +85,8 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
         return res.json({ projectId: req.params.id, document: refined });
       } catch (err: any) {
         if (err instanceof AtCapacityError) return sendCapacity(res, err);
-        return res.status(500).json({ error: "refine_failed", detail: err.message });
+        log(`Agent refine error: ${err.message}`);
+        return res.status(500).json({ error: "refine_failed" });
       }
     },
   );
@@ -95,6 +100,9 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
     }
     if (!identity || typeof identity !== "string") {
       return res.status(400).json({ error: "identity_required" });
+    }
+    if (identity.length > 255) {
+      return res.status(400).json({ error: "identity too long" });
     }
     const row = await storage.getClaimTokenByProject(req.params.id);
     if (!row) return res.status(404).json({ error: "no_claim_token" });
