@@ -4,7 +4,7 @@ import type { Express, Request, Response } from "express";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { requireAuth } from "./auth";
-import { log } from "./index";
+import { log } from "./log";
 
 const SECRET = process.env.STRIPE_SECRET_KEY ?? "";
 const PRICE_PRO = process.env.STRIPE_PRICE_PRO ?? "";

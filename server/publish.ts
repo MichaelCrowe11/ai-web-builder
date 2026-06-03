@@ -2,8 +2,9 @@
 // <slug>.ai-webbuilder.com (or /s/<slug> before wildcard DNS is live).
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
+import type { IStorage } from "./storage";
 import { requireAuth } from "./auth";
-import { log } from "./index";
+import { log } from "./log";
 import type { Project } from "@shared/schema";
 import { assembleDocumentHtml } from "./serve-document";
 
@@ -44,20 +45,32 @@ function slugifyBase(name: string): string {
   return base || "site";
 }
 
-// Find an available slug, appending a short suffix on collision.
-async function uniqueSlug(name: string, currentSlug: string | null): Promise<string> {
+// Find an available slug using an injectable store, appending a short suffix on collision.
+async function uniqueSlugWith(store: IStorage, name: string, currentSlug: string | null): Promise<string> {
   const base = slugifyBase(name);
   // Keep the existing slug if it already matches the base (re-publish).
   if (currentSlug && currentSlug.startsWith(base)) return currentSlug;
   let candidate = base;
   for (let i = 0; i < 50; i++) {
-    const existing = await storage.getProjectBySlug(candidate);
+    const existing = await store.getProjectBySlug(candidate);
     if (!existing) return candidate;
     // deterministic-ish suffix without Math.random (varies by attempt)
     candidate = `${base}-${(i + 2).toString(36)}${base.length}`;
   }
   // Last resort: timestamp-free unique-ish using base + length marker
   return `${base}-${Date.now().toString(36)}`;
+}
+
+// Session-less publish core: assign a unique slug, mark published, return the
+// public URL. Shared by the human publish route and the agent build service.
+export async function publishProjectRecord(
+  project: Project,
+  store: IStorage = storage,
+): Promise<{ slug: string; publishedUrl: string; project: Project }> {
+  const slug = await uniqueSlugWith(store, project.name, project.slug ?? null);
+  const publishedUrl = `https://${slug}.${PUBLISH_DOMAIN}`;
+  const updated = await store.updateProject(project.id, { slug, isPublished: true, publishedUrl });
+  return { slug, publishedUrl, project: updated ?? project };
 }
 
 export function registerPublishRoutes(app: Express) {
@@ -70,16 +83,13 @@ export function registerPublishRoutes(app: Express) {
         return res.status(403).json({ error: "Not your project" });
       }
 
-      const slug = await uniqueSlug(project.name, project.slug);
-      const publishedUrl = `https://${slug}.${PUBLISH_DOMAIN}`;
-
-      const updated = await storage.updateProject(project.id, {
-        slug,
-        isPublished: true,
-        publishedUrl,
-        // Claim ownership for anonymous projects on first publish.
-        ...(project.userId ? {} : { userId: req.session.userId }),
-      });
+      // Claim ownership for anonymous projects on first publish.
+      const toPublish = project.userId ? project : ({ ...project, userId: req.session.userId } as Project);
+      // Persist the userId claim for anonymous projects before publishing.
+      if (!project.userId) {
+        await storage.updateProject(project.id, { userId: req.session.userId });
+      }
+      const { slug, publishedUrl, project: updated } = await publishProjectRecord(toPublish);
 
       log(`Project ${project.id} published at ${slug}`);
       return res.json({

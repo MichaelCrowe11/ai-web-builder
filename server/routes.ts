@@ -23,7 +23,7 @@ import { registerBillingRoutes } from "./billing";
 import { registerPublishRoutes, renderFullHtml } from "./publish";
 import { registerGrowthRoutes } from "./growth-routes";
 import { registerExportRoutes } from "./github-export";
-import { log } from "./index";
+import { log } from "./log";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
 export async function registerRoutes(
