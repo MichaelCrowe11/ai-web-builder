@@ -25,4 +25,8 @@ describe("claim-tokens", () => {
     expect(tokensMatch(token, hash)).toBe(true);
     expect(tokensMatch("deadbeef", hash)).toBe(false);
   });
+
+  it("tokensMatch returns false for a malformed storedHash", () => {
+    expect(tokensMatch("anything", "not-a-valid-hash")).toBe(false);
+  });
 });
