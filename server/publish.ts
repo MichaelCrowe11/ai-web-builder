@@ -63,13 +63,19 @@ async function uniqueSlugWith(store: IStorage, name: string, currentSlug: string
 
 // Session-less publish core: assign a unique slug, mark published, return the
 // public URL. Shared by the human publish route and the agent build service.
+// ownerUserId: when set (anonymous claim), written in the SAME update as publish
+// fields to eliminate the partial-state window where a project is claimed but
+// not yet published. Agent-built sites pass no ownerUserId so userId stays null.
 export async function publishProjectRecord(
   project: Project,
   store: IStorage = storage,
+  ownerUserId?: string,
 ): Promise<{ slug: string; publishedUrl: string; project: Project }> {
   const slug = await uniqueSlugWith(store, project.name, project.slug ?? null);
   const publishedUrl = `https://${slug}.${PUBLISH_DOMAIN}`;
-  const updated = await store.updateProject(project.id, { slug, isPublished: true, publishedUrl });
+  const patch: Partial<Project> = { slug, isPublished: true, publishedUrl };
+  if (ownerUserId) patch.userId = ownerUserId;
+  const updated = await store.updateProject(project.id, patch);
   return { slug, publishedUrl, project: updated ?? project };
 }
 
@@ -83,13 +89,11 @@ export function registerPublishRoutes(app: Express) {
         return res.status(403).json({ error: "Not your project" });
       }
 
-      // Claim ownership for anonymous projects on first publish.
-      const toPublish = project.userId ? project : ({ ...project, userId: req.session.userId } as Project);
-      // Persist the userId claim for anonymous projects before publishing.
-      if (!project.userId) {
-        await storage.updateProject(project.id, { userId: req.session.userId });
-      }
-      const { slug, publishedUrl, project: updated } = await publishProjectRecord(toPublish);
+      // For anonymous projects, fold the ownership claim into the publish update
+      // (single atomic write) so there is no partial-state window where the
+      // project is claimed but not yet published.
+      const claimOwner = project.userId ? undefined : req.session.userId;
+      const { slug, publishedUrl, project: updated } = await publishProjectRecord(project, storage, claimOwner);
 
       log(`Project ${project.id} published at ${slug}`);
       return res.json({
