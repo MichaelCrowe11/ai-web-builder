@@ -17,7 +17,12 @@ export function requirePayment(priceFor: (req: Request) => number, verifier: Pay
       return res.status(503).json({ error: "payments_unavailable" });
     }
 
-    const result = await verifier.verify(req, price);
+    let result;
+    try {
+      result = await verifier.verify(req, price);
+    } catch {
+      return res.status(503).json({ error: "payment_verification_unavailable" });
+    }
     if (!result) {
       // x402-standard 402 body: an `accepts` array of payment requirements.
       return res.status(402).json({
@@ -27,7 +32,8 @@ export function requirePayment(priceFor: (req: Request) => number, verifier: Pay
           network: challenge.network ?? "base",
           asset: challenge.asset ?? "USDC",
           payTo: challenge.payTo,
-          maxAmountRequired: String(price),
+          // real X402Verifier supplies challenge.maxAmountRequired in atomic units (micro-USDC); String(price) is only a dev/test fallback.
+          maxAmountRequired: challenge.maxAmountRequired ?? String(price),
           resource: challenge.resource,
         }],
       });

@@ -10,6 +10,7 @@ export interface PaymentChallenge {
   network?: string;     // e.g. "base"
   asset?: string;       // USDC contract / symbol
   unavailable?: boolean; // DisabledVerifier => respond "payments not configured"
+  maxAmountRequired?: string; // verifier-supplied wire amount (asset's smallest unit, e.g. micro-USDC). When set, the 402 body uses this instead of the raw float price.
 }
 
 export interface VerifyResult {

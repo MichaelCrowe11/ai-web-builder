@@ -43,4 +43,14 @@ describe("requirePayment", () => {
     expect(res.body.error).toBe("payments_unavailable");
     expect(next).not.toHaveBeenCalled();
   });
+
+  it("returns 503 when verification throws (facilitator unreachable)", async () => {
+    const throwing = { challenge: (p: number, r: string) => ({ priceUsdc: p, payTo: "0xabc", resource: r }), verify: async () => { throw new Error("facilitator down"); }, settle: async () => {} };
+    const mw = requirePayment(() => 1.0, throwing as any);
+    const res = mockRes(); const next = vi.fn();
+    await mw(mockReq("something"), res, next);
+    expect(res.statusCode).toBe(503);
+    expect(res.body.error).toBe("payment_verification_unavailable");
+    expect(next).not.toHaveBeenCalled();
+  });
 });
