@@ -12,6 +12,7 @@ import {
   experiments,
   decisionLog,
   formSubmissions,
+  siteMedia,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -65,6 +66,9 @@ export interface IStorage {
   // Lead capture (form submissions)
   saveSubmission(projectId: string, data: unknown): Promise<void>;
   listSubmissions(projectId: string, limit?: number): Promise<Array<{ id: string; data: unknown; createdAt: Date | null }>>;
+  // Durable media (generated video/image blobs)
+  saveMedia(id: string, mime: string, data: Buffer): Promise<void>;
+  getMedia(id: string): Promise<{ mime: string; data: Buffer } | undefined>;
 }
 
 // In-memory storage for development/fallback
@@ -292,6 +296,14 @@ export class MemStorage implements IStorage {
   async listSubmissions(projectId: string, limit = 100): Promise<Array<{ id: string; data: unknown; createdAt: Date | null }>> {
     return (this.submissionsMap.get(projectId) ?? []).slice(0, limit);
   }
+
+  private mediaMap = new Map<string, { mime: string; data: Buffer }>();
+  async saveMedia(id: string, mime: string, data: Buffer): Promise<void> {
+    this.mediaMap.set(id, { mime, data });
+  }
+  async getMedia(id: string): Promise<{ mime: string; data: Buffer } | undefined> {
+    return this.mediaMap.get(id);
+  }
 }
 
 // PostgreSQL storage implementation
@@ -504,6 +516,14 @@ export class PostgresStorage implements IStorage {
       .orderBy(desc(formSubmissions.createdAt))
       .limit(limit);
     return rows.map((r) => ({ id: r.id, data: r.data, createdAt: r.createdAt }));
+  }
+
+  async saveMedia(id: string, mime: string, data: Buffer): Promise<void> {
+    await this.db.insert(siteMedia).values({ id, mime, data }).onConflictDoNothing();
+  }
+  async getMedia(id: string): Promise<{ mime: string; data: Buffer } | undefined> {
+    const rows = await this.db.select().from(siteMedia).where(eq(siteMedia.id, id)).limit(1);
+    return rows[0] ? { mime: rows[0].mime, data: rows[0].data } : undefined;
   }
 }
 

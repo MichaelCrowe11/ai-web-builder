@@ -197,13 +197,22 @@ export async function registerRoutes(
     }
   });
 
-  // Public: stream the finished mp4 so the preview iframe and published sites can load it.
+  // Public: stream the finished mp4. Durable: serves the stored copy if present,
+  // else downloads from Azure ONCE, stores it, and serves it - so published hero
+  // videos survive even after the upstream (Azure) copy expires.
   app.get("/api/video/:id", async (req: Request, res: Response) => {
     try {
+      const stored = await storage.getMedia(req.params.id);
+      if (stored) {
+        res.setHeader("Content-Type", stored.mime);
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        return res.send(stored.data);
+      }
       const buf = await downloadVideo(req.params.id);
       if (!buf) return res.status(404).send("not found");
+      await storage.saveMedia(req.params.id, "video/mp4", buf).catch(() => {}); // persist durable copy
       res.setHeader("Content-Type", "video/mp4");
-      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       return res.send(buf);
     } catch {
       return res.status(502).send("error");
