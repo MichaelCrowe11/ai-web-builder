@@ -11,7 +11,7 @@ describe("claim-token storage (Mem)", () => {
 
     const byHash = await s.getClaimTokenByHash("hash123");
     expect(byHash?.projectId).toBe(project.id);
-    expect(byHash?.claimedBy).toBeFalsy();
+    expect(byHash?.claimedBy).toBeNull();
 
     const byProject = await s.getClaimTokenByProject(project.id);
     expect(byProject?.tokenHash).toBe("hash123");
@@ -31,5 +31,9 @@ describe("claim-token storage (Mem)", () => {
 
   it("getClaimTokenByHash returns undefined for unknown hash", async () => {
     expect(await s.getClaimTokenByHash("nope")).toBeUndefined();
+  });
+
+  it("getClaimTokenByProject returns undefined for a project with no token", async () => {
+    expect(await s.getClaimTokenByProject("no-such-project")).toBeUndefined();
   });
 });

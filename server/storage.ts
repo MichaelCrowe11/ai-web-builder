@@ -331,7 +331,8 @@ export class MemStorage implements IStorage {
   async claimToken(tokenHash: string, claimedBy: string): Promise<boolean> {
     const r = this.claimTokens.get(tokenHash);
     if (!r || r.claimedBy) return false;
-    r.claimedBy = claimedBy; r.claimedAt = new Date();
+    r.claimedBy = claimedBy;
+    r.claimedAt = new Date();
     return true;
   }
 }
@@ -560,11 +561,11 @@ export class PostgresStorage implements IStorage {
     await this.db.insert(agentClaimTokens).values({ tokenHash, projectId });
   }
   async getClaimTokenByHash(tokenHash: string): Promise<AgentClaimTokenRow | undefined> {
-    const r = await this.db.select().from(agentClaimTokens).where(eq(agentClaimTokens.tokenHash, tokenHash));
+    const r = await this.db.select().from(agentClaimTokens).where(eq(agentClaimTokens.tokenHash, tokenHash)).limit(1);
     return r[0];
   }
   async getClaimTokenByProject(projectId: string): Promise<AgentClaimTokenRow | undefined> {
-    const r = await this.db.select().from(agentClaimTokens).where(eq(agentClaimTokens.projectId, projectId));
+    const r = await this.db.select().from(agentClaimTokens).where(eq(agentClaimTokens.projectId, projectId)).limit(1);
     return r[0];
   }
   async claimToken(tokenHash: string, claimedBy: string): Promise<boolean> {
