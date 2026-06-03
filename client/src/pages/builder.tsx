@@ -8,10 +8,11 @@ import { BillingModal } from "@/components/settings/billing-modal";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Sparkles, Film, Inbox,
+  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Sparkles, Film, Inbox, Pencil,
 } from "lucide-react";
 import { GitHubExportModal } from "@/components/builder/github-export-modal";
 import { LeadsModal } from "@/components/builder/leads-modal";
+import { ContentEditor } from "@/components/builder/content-editor";
 import { GenerationOverlay } from "@/components/builder/generation-overlay";
 import { renderDocumentBody, renderDocumentCss } from "@shared/renderer";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +47,8 @@ export default function Builder() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [showGithub, setShowGithub] = useState(false);
   const [showLeads, setShowLeads] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [savingContent, setSavingContent] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
@@ -184,6 +187,38 @@ export default function Builder() {
       toast({ title: "Video failed", description: e.message, variant: "destructive" });
     } finally {
       setVideoPct(null);
+    }
+  };
+
+  // CMS: persist the owner's edited document (re-render locally, save server-side
+  // so the published site reflects it). Creates the project first if needed.
+  const saveContent = async (updated: any) => {
+    setSavingContent(true);
+    setDoc(updated);
+    setHtml(renderDocumentBody(updated));
+    setCss(renderDocumentCss(updated));
+    try {
+      let id = projectId;
+      if (!id) {
+        const r = await fetch("/api/projects", {
+          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+          body: JSON.stringify({ html: renderDocumentBody(updated), css: renderDocumentCss(updated), name: updated.meta?.name ?? projectName, prompt: lastPrompt }),
+        });
+        id = (await r.json()).id;
+        setProjectId(id);
+      }
+      const res = await fetch(`/api/projects/${id}/document`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ document: updated }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Save failed");
+      if (updated.meta?.name) setProjectName(updated.meta.name);
+      toast({ title: "Saved", description: "Your edits are live on your site." });
+      setShowEditor(false);
+    } catch (e: any) {
+      toast({ title: "Save failed", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingContent(false);
     }
   };
 
@@ -338,6 +373,9 @@ export default function Builder() {
           <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowLeads(true)} disabled={!hasGenerated}>
             <Inbox className="h-4 w-4" />Leads
           </Button>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowEditor(true)} disabled={!hasGenerated}>
+            <Pencil className="h-4 w-4" />Edit
+          </Button>
           <Button size="sm" className="gap-1.5 rounded-full bg-gold px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(191,166,105,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>
@@ -426,6 +464,7 @@ export default function Builder() {
       <AuthModal open={showAuth} onOpenChange={setShowAuth} defaultMode="register" />
       <GitHubExportModal open={showGithub} onOpenChange={setShowGithub} name={projectName} html={html} css={css} />
       <LeadsModal open={showLeads} onOpenChange={setShowLeads} projectId={projectId} />
+      <ContentEditor open={showEditor} onOpenChange={setShowEditor} doc={doc} onSave={saveContent} saving={savingContent} />
     </div>
   );
 }

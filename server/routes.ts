@@ -231,6 +231,29 @@ export async function registerRoutes(
     }
   });
 
+  // CMS: persist an owner's edited document (re-renders + saves both the doc
+  // version and the project html/css so every serve path reflects the edit).
+  app.put("/api/projects/:id/document", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ error: "Not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const parsed = siteDocumentSchema.safeParse(req.body?.document);
+      if (!parsed.success) return res.status(400).json({ error: "Valid document is required" });
+      const document = parsed.data;
+      const html = renderDocumentBody(document);
+      const css = renderDocumentCss(document);
+      await storage.saveDocumentVersion(req.params.id, document);
+      await storage.updateProject(req.params.id, { html, css, name: document.meta.name });
+      return res.json({ ok: true, html, css });
+    } catch (error: any) {
+      log(`Document save error: ${error.message}`);
+      return res.status(500).json({ error: "Save failed", details: error.message });
+    }
+  });
+
   // OWNER INBOX: list a project's submissions (auth + ownership).
   app.get("/api/projects/:projectId/submissions", requireAuth, async (req: Request, res: Response) => {
     try {
