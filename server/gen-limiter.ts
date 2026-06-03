@@ -22,9 +22,11 @@ export interface LimiterOpts {
 
 interface Waiter {
   grant: () => void;
-  fail: (e: unknown) => void;
   timer: unknown;
 }
+
+const BATCH_ROUND_TRIP_MS = 8000; // rough Azure gen latency per queued batch turn
+const MIN_HINT_MS = 2000;
 
 export function makeLimiter(opts: LimiterOpts) {
   const setTimer = opts.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
@@ -35,7 +37,7 @@ export function makeLimiter(opts: LimiterOpts) {
   // Rough client hint: how long until a slot likely frees.
   function retryHintMs(): number {
     const ahead = queue.length + 1;
-    return Math.max(2000, Math.min(opts.maxWaitMs, Math.ceil(ahead / opts.maxConcurrent) * 8000));
+    return Math.max(MIN_HINT_MS, Math.min(opts.maxWaitMs, Math.ceil(ahead / opts.maxConcurrent) * BATCH_ROUND_TRIP_MS));
   }
 
   function acquire(): Promise<void> {
@@ -49,7 +51,6 @@ export function makeLimiter(opts: LimiterOpts) {
     return new Promise<void>((resolve, reject) => {
       const waiter: Waiter = {
         grant: () => { clearTimer(waiter.timer); resolve(); },
-        fail: reject,
         timer: setTimer(() => {
           const i = queue.indexOf(waiter);
           if (i >= 0) queue.splice(i, 1);
