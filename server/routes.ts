@@ -73,7 +73,7 @@ export async function registerRoutes(
         quota,
       });
     } catch (error: any) {
-      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
       log(`Document generation error: ${error.message}`);
       return res.status(500).json({ error: "Failed to generate site", details: error.message });
     }
@@ -90,7 +90,7 @@ export async function registerRoutes(
       const outline = await runLimited(() => generateOutline(prompt));
       return res.json({ outline, html: renderOutlineBody(outline), css: renderOutlineCss(outline) });
     } catch (error: any) {
-      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
       log(`Outline error: ${error.message}`);
       return res.status(500).json({ error: "Failed to outline site", details: error.message });
     }
@@ -117,7 +117,7 @@ export async function registerRoutes(
         quota,
       });
     } catch (error: any) {
-      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
       log(`Fill error: ${error.message}`);
       return res.status(500).json({ error: "Failed to generate site", details: error.message });
     }
@@ -146,7 +146,7 @@ export async function registerRoutes(
         quota,
       });
     } catch (error: any) {
-      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
       log(`Refine error: ${error.message}`);
       return res.status(500).json({ error: "Failed to refine site", details: error.message });
     }
@@ -314,7 +314,7 @@ export async function registerRoutes(
         quota,
       });
     } catch (error: any) {
-      if (error?.name === "AtCapacityError") return sendCapacity(res, error as AtCapacityError);
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
       log(`Generation error: ${error.message}`);
       return res.status(500).json({
         error: "Failed to generate website",
