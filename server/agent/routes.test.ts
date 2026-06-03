@@ -1,0 +1,105 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import express from "express";
+import { MemStorage } from "../storage";
+import { FakeVerifier } from "./payments";
+import { registerAgentRoutes } from "./routes";
+import type { SiteDocument } from "@shared/site-document";
+
+const fakeDoc = {
+  version: 1,
+  meta: { name: "Acme" },
+  theme: { preset: "modern-minimal", radius: "medium" },
+  sections: [{ type: "hero", layout: "centered", headline: "Welcome to Acme" }],
+} as unknown as SiteDocument;
+
+function appWith(storage: MemStorage, verifier: FakeVerifier, generate: any) {
+  const app = express();
+  app.use(express.json());
+  registerAgentRoutes(app, { storage, verifier, generate, prices: { build: 1, refine: 0.25 } });
+  return app;
+}
+
+async function call(app: any, method: string, path: string, headers: Record<string,string> = {}, body?: any) {
+  const { createServer } = await import("http");
+  const server = createServer(app).listen(0);
+  const port = (server.address() as any).port;
+  const res = await fetch(`http://127.0.0.1:${port}${path}`, {
+    method, headers: { "content-type": "application/json", ...headers },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json().catch(() => null);
+  await new Promise<void>((r) => server.close(() => r()));
+  return { status: res.status, json };
+}
+
+describe("agent routes", () => {
+  let storage: MemStorage; let verifier: FakeVerifier; let generate: any;
+  beforeEach(() => { storage = new MemStorage(); verifier = new FakeVerifier(); generate = vi.fn().mockResolvedValue(fakeDoc); });
+
+  it("POST /v1/agent/sites unpaid -> 402", async () => {
+    const r = await call(appWith(storage, verifier, generate), "POST", "/v1/agent/sites", {}, { prompt: "cafe" });
+    expect(r.status).toBe(402);
+    expect(verifier.settled).toBe(0);
+  });
+
+  it("POST /v1/agent/sites paid -> 200 url+token+doc, settles once", async () => {
+    const r = await call(appWith(storage, verifier, generate), "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    expect(r.status).toBe(200);
+    expect(r.json.siteUrl).toContain(r.json.slug);
+    expect(r.json.claimToken).toMatch(/^[0-9a-f]{64}$/);
+    expect(verifier.settled).toBe(1);
+  });
+
+  it("at-capacity -> 503 and DOES NOT settle", async () => {
+    const { AtCapacityError } = await import("../gen-limiter");
+    generate = vi.fn().mockRejectedValue(new AtCapacityError(8000));
+    const r = await call(appWith(storage, verifier, generate), "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    expect(r.status).toBe(503);
+    expect(r.json.error).toBe("at_capacity");
+    expect(verifier.settled).toBe(0);
+  });
+
+  it("claim binds ownership; second claim 409", async () => {
+    const app = appWith(storage, verifier, generate);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const id = built.json.projectId;
+    const ok = await call(app, "POST", `/v1/agent/sites/${id}/claim`, {}, { token: built.json.claimToken, identity: "crowe-id:mike" });
+    expect(ok.status).toBe(200);
+    const again = await call(app, "POST", `/v1/agent/sites/${id}/claim`, {}, { token: built.json.claimToken, identity: "crowe-id:mike" });
+    expect(again.status).toBe(409);
+  });
+
+  it("GET /v1/agent/sites/:id returns public status", async () => {
+    const app = appWith(storage, verifier, generate);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const r = await call(app, "GET", `/v1/agent/sites/${built.json.projectId}`);
+    expect(r.status).toBe(200);
+    expect(r.json.isPublished).toBe(true);
+  });
+
+  it("GET /v1/agent/sites/:id/leads with valid token -> 200 leads array", async () => {
+    const app = appWith(storage, verifier, generate);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const id = built.json.projectId;
+    const token = built.json.claimToken;
+    const r = await call(app, "GET", `/v1/agent/sites/${id}/leads`, { "x-claim-token": token });
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.json.leads)).toBe(true);
+  });
+
+  it("GET /v1/agent/sites/:id/leads without token -> 403", async () => {
+    const app = appWith(storage, verifier, generate);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const id = built.json.projectId;
+    const r = await call(app, "GET", `/v1/agent/sites/${id}/leads`);
+    expect(r.status).toBe(403);
+  });
+
+  it("GET /v1/agent/sites/:id/leads with wrong token -> 403", async () => {
+    const app = appWith(storage, verifier, generate);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const id = built.json.projectId;
+    const r = await call(app, "GET", `/v1/agent/sites/${id}/leads`, { "x-claim-token": "a".repeat(64) });
+    expect(r.status).toBe(403);
+  });
+});

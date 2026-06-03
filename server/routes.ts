@@ -23,6 +23,8 @@ import { registerBillingRoutes } from "./billing";
 import { registerPublishRoutes, renderFullHtml } from "./publish";
 import { registerGrowthRoutes } from "./growth-routes";
 import { registerExportRoutes } from "./github-export";
+import { registerAgentRoutes } from "./agent/routes";
+import { DisabledVerifier } from "./agent/payments";
 import { log } from "./log";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
@@ -48,6 +50,19 @@ export async function registerRoutes(
 
   // Export the generated site to GitHub (transient PAT, no OAuth app).
   registerExportRoutes(app);
+
+  // Agent API — /v1/agent/* routes (build, refine, claim, status, leads).
+  // DisabledVerifier is a safe placeholder until Task 8 wires the real x402
+  // verifier via makeVerifier(); it rejects every request with 503 so no free
+  // sites can be built in production before the payment path is live.
+  registerAgentRoutes(app, {
+    storage,
+    verifier: new DisabledVerifier(),
+    prices: {
+      build: Number(process.env.AGENT_PRICE_BUILD_USDC ?? "1"),
+      refine: Number(process.env.AGENT_PRICE_REFINE_USDC ?? "0.25"),
+    },
+  });
 
   // List of tappable refine intents for the UI.
   app.get("/api/refine/intents", (_req: Request, res: Response) => {
