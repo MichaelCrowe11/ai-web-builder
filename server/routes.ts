@@ -210,6 +210,42 @@ export async function registerRoutes(
     }
   });
 
+  // LEAD CAPTURE: a published site's contact/booking form posts here (public).
+  // Honeypot + field/size caps; stores the submission for the owner's inbox.
+  app.post("/api/forms/:projectId/submit", async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ error: "Site not found" });
+      const body = req.body ?? {};
+      if (body.website || body._hp) return res.json({ ok: true }); // honeypot: silently accept, drop
+      const data: Record<string, string> = {};
+      for (const [k, v] of Object.entries(body)) {
+        if (typeof v === "string" && k.length < 60) data[k] = v.slice(0, 5000);
+      }
+      if (Object.keys(data).length === 0) return res.status(400).json({ error: "Empty submission" });
+      await storage.saveSubmission(req.params.projectId, data);
+      return res.json({ ok: true });
+    } catch (error: any) {
+      log(`Form submit error: ${error.message}`);
+      return res.status(500).json({ error: "Could not submit" });
+    }
+  });
+
+  // OWNER INBOX: list a project's submissions (auth + ownership).
+  app.get("/api/projects/:projectId/submissions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ error: "Not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const submissions = await storage.listSubmissions(req.params.projectId);
+      return res.json({ submissions });
+    } catch (error: any) {
+      return res.status(500).json({ error: "Failed to load submissions" });
+    }
+  });
+
   // AI Generation endpoint (legacy raw HTML/CSS — kept during transition)
   app.post("/api/generate", enforceQuota, async (req: Request, res: Response) => {
     try {

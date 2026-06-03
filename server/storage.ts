@@ -11,6 +11,7 @@ import {
   telemetryEvents,
   experiments,
   decisionLog,
+  formSubmissions,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -61,6 +62,9 @@ export interface IStorage {
   listDecisions(siteId: string, limit?: number): Promise<Array<{ ts: number; kind: string; detail: unknown }>>;
   // Growth scheduler
   projectsWithGoals(): Promise<string[]>;
+  // Lead capture (form submissions)
+  saveSubmission(projectId: string, data: unknown): Promise<void>;
+  listSubmissions(projectId: string, limit?: number): Promise<Array<{ id: string; data: unknown; createdAt: Date | null }>>;
 }
 
 // In-memory storage for development/fallback
@@ -278,6 +282,16 @@ export class MemStorage implements IStorage {
   async projectsWithGoals(): Promise<string[]> {
     return Array.from(this.goalsMap.keys());
   }
+
+  private submissionsMap = new Map<string, Array<{ id: string; data: unknown; createdAt: Date }>>();
+  async saveSubmission(projectId: string, data: unknown): Promise<void> {
+    const arr = this.submissionsMap.get(projectId) ?? [];
+    arr.unshift({ id: randomUUID(), data, createdAt: new Date() });
+    this.submissionsMap.set(projectId, arr);
+  }
+  async listSubmissions(projectId: string, limit = 100): Promise<Array<{ id: string; data: unknown; createdAt: Date | null }>> {
+    return (this.submissionsMap.get(projectId) ?? []).slice(0, limit);
+  }
 }
 
 // PostgreSQL storage implementation
@@ -477,6 +491,19 @@ export class PostgresStorage implements IStorage {
   async projectsWithGoals(): Promise<string[]> {
     const rows = await this.db.select({ id: siteGoals.projectId }).from(siteGoals);
     return rows.map((r) => r.id);
+  }
+
+  async saveSubmission(projectId: string, data: unknown): Promise<void> {
+    await this.db.insert(formSubmissions).values({ projectId, data } as any);
+  }
+  async listSubmissions(projectId: string, limit = 100): Promise<Array<{ id: string; data: unknown; createdAt: Date | null }>> {
+    const rows = await this.db
+      .select()
+      .from(formSubmissions)
+      .where(eq(formSubmissions.projectId, projectId))
+      .orderBy(desc(formSubmissions.createdAt))
+      .limit(limit);
+    return rows.map((r) => ({ id: r.id, data: r.data, createdAt: r.createdAt }));
   }
 }
 

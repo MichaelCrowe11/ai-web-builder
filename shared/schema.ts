@@ -131,3 +131,14 @@ export const decisionLog = pgTable("decision_log", {
   bySite: index("decision_log_site_idx").on(t.siteId, t.ts),
 }));
 export type DecisionLogRow = typeof decisionLog.$inferSelect;
+
+// Lead capture: a published site's form submissions land here, viewable by the owner.
+export const formSubmissions = pgTable("form_submissions", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 36 }).notNull(),
+  data: jsonb("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  byProject: index("form_submissions_project_idx").on(t.projectId, t.createdAt),
+}));
+export type FormSubmissionRow = typeof formSubmissions.$inferSelect;

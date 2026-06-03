@@ -8,9 +8,10 @@ import { BillingModal } from "@/components/settings/billing-modal";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Sparkles, Film,
+  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Sparkles, Film, Inbox,
 } from "lucide-react";
 import { GitHubExportModal } from "@/components/builder/github-export-modal";
+import { LeadsModal } from "@/components/builder/leads-modal";
 import { GenerationOverlay } from "@/components/builder/generation-overlay";
 import { renderDocumentBody, renderDocumentCss } from "@shared/renderer";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +45,7 @@ export default function Builder() {
   const [showAuth, setShowAuth] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showGithub, setShowGithub] = useState(false);
+  const [showLeads, setShowLeads] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
@@ -333,6 +335,9 @@ export default function Builder() {
           <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowGithub(true)} disabled={!hasGenerated}>
             <Github className="h-4 w-4" />GitHub
           </Button>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowLeads(true)} disabled={!hasGenerated}>
+            <Inbox className="h-4 w-4" />Leads
+          </Button>
           <Button size="sm" className="gap-1.5 rounded-full bg-gold px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(191,166,105,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>
@@ -420,6 +425,7 @@ export default function Builder() {
       <BillingModal open={showBilling} onOpenChange={setShowBilling} />
       <AuthModal open={showAuth} onOpenChange={setShowAuth} defaultMode="register" />
       <GitHubExportModal open={showGithub} onOpenChange={setShowGithub} name={projectName} html={html} css={css} />
+      <LeadsModal open={showLeads} onOpenChange={setShowLeads} projectId={projectId} />
     </div>
   );
 }
