@@ -17,6 +17,7 @@ import { GenerationOverlay } from "@/components/builder/generation-overlay";
 import { renderDocumentBody, renderDocumentCss } from "@shared/renderer";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { postWithCapacityRetry } from "@/lib/generate-fetch";
 import { CroweHexC } from "@/components/brand/crowe-hex-c";
 
 // Clean, modern workspace empty state (rarely seen - arriving from the home
@@ -33,6 +34,7 @@ export default function Builder() {
   const [css, setCss] = useState(INITIAL_CSS);
   const [isGenerating, setIsGenerating] = useState(false);
   const [filling, setFilling] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [imaging, setImaging] = useState(false);
   const [videoPct, setVideoPct] = useState<number | null>(null); // null = idle, else rendering %
   const [isSaving, setIsSaving] = useState(false);
@@ -73,13 +75,6 @@ export default function Builder() {
   const handleGenerate = async (prompt: string) => {
     setIsGenerating(true);
     setFilling(false);
-    const post = (url: string, body: any) =>
-      fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
     const gate = (status: number, data: any, label: string) => {
       if (status === 402) {
         toast({ title: "You're out of free generations", description: data.details || data.error, variant: "destructive" });
@@ -91,7 +86,8 @@ export default function Builder() {
     };
     try {
       // Phase 1: outline -> instant themed skeleton.
-      const oRes = await post("/api/generate/outline", { prompt });
+      const oRes = await postWithCapacityRetry("/api/generate/outline", { prompt }, { onQueued: () => setQueued(true) });
+      setQueued(false);
       const oData = await oRes.json();
       if (gate(oRes.status, oData, "Generation failed")) return;
       setHtml(oData.html);
@@ -100,7 +96,8 @@ export default function Builder() {
       setFilling(true); // skeleton is now visible; copy is filling in
 
       // Phase 2: expand the outline into the full document.
-      const fRes = await post("/api/generate/fill", { prompt, outline: oData.outline });
+      const fRes = await postWithCapacityRetry("/api/generate/fill", { prompt, outline: oData.outline }, { onQueued: () => setQueued(true) });
+      setQueued(false);
       const fData = await fRes.json();
       if (gate(fRes.status, fData, "Generation failed")) return;
       setDoc(fData.document);
@@ -117,6 +114,7 @@ export default function Builder() {
     } finally {
       setIsGenerating(false);
       setFilling(false);
+      setQueued(false);
     }
   };
 
@@ -405,7 +403,7 @@ export default function Builder() {
       <div className="relative flex-1 overflow-hidden">
         <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
 
-        {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} />}
+        {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} queued={queued} />}
         {filling && (
           <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />

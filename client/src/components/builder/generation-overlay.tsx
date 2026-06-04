@@ -12,7 +12,7 @@ const STAGES = [
 // Lively, staged feedback during generation so a multi-second wait never feels
 // hung. Stages advance on a timer (purely cosmetic); the real result swaps in
 // when the request resolves.
-export function GenerationOverlay({ refining }: { refining: boolean }) {
+export function GenerationOverlay({ refining, queued }: { refining: boolean; queued?: boolean }) {
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
@@ -28,12 +28,12 @@ export function GenerationOverlay({ refining }: { refining: boolean }) {
         <div className="flex items-center gap-2.5">
           <Sparkles className="h-4 w-4 animate-pulse text-gold" />
           <span className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-gold/90">
-            {refining ? "Applying your change" : "Building your site"}
+            {queued ? "High demand" : refining ? "Applying your change" : "Building your site"}
           </span>
         </div>
 
         <p className="mt-3 text-lg font-semibold tracking-tight text-parchment">
-          {refining ? "Updating…" : `${STAGES[stage]}…`}
+          {queued ? "High demand right now — your site is queued. Hang tight…" : refining ? "Updating…" : `${STAGES[stage]}…`}
         </p>
 
         {/* indeterminate sweep */}
