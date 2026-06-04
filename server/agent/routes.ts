@@ -13,6 +13,7 @@ import { refineDocument } from "../document-gen";
 import { renderDocumentBody, renderDocumentCss } from "../renderer";
 import { tokensMatch } from "./claim-tokens";
 import { log } from "../log";
+import { registerDiscoveryRoutes } from "./discovery";
 
 export interface AgentRouteDeps {
   storage: IStorage;
@@ -140,4 +141,11 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
     const leads = await storage.listSubmissions(req.params.id);
     return res.json({ projectId: req.params.id, leads });
   });
+
+  // ── Discovery surfaces (/llms.txt, /openapi.json, /.well-known/*) ───────────
+  // Static, no-DB endpoints that let agents discover, price, and pay for the
+  // service with no human in the loop. Registered inside registerAgentRoutes so
+  // they are mounted before the SPA catch-all in serveStatic (index.ts calls
+  // registerRoutes → registerAgentRoutes BEFORE serveStatic is set up).
+  registerDiscoveryRoutes(app, prices, process.env.X402_PAY_TO_ADDRESS ?? "");
 }
