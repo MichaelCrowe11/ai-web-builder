@@ -111,7 +111,8 @@ describe("agent routes", () => {
     const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
     expect(built.status).toBe(200);
     const id = built.json.projectId;
-    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-payment": "fake-ok" }, { instruction: "make it bold" });
+    const claimToken = built.json.claimToken;
+    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-payment": "fake-ok", "x-claim-token": claimToken }, { instruction: "make it bold" });
     expect(r.status).toBe(200);
     expect(r.json.document).toBeDefined();
     expect(r.json.projectId).toBe(id);
@@ -124,16 +125,18 @@ describe("agent routes", () => {
     const app = appWith(storage, verifier, generate, fakeRefine);
     const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
     const id = built.json.projectId;
+    const claimToken = built.json.claimToken;
     const settledAfterBuild = verifier.settled;
-    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, {}, { instruction: "make it bold" });
+    // correct token but no payment → ownership passes, payment gate fires
+    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-claim-token": claimToken }, { instruction: "make it bold" });
     expect(r.status).toBe(402);
     expect(verifier.settled).toBe(settledAfterBuild);
   });
 
-  it("refine on unknown site (no document) -> 404, no settle", async () => {
+  it("refine on unknown site (no claim token row) -> 404, no settle", async () => {
     const fakeRefine = vi.fn().mockResolvedValue(fakeDoc);
     const app = appWith(storage, verifier, generate, fakeRefine);
-    const r = await call(app, "POST", "/v1/agent/sites/nonexistent-id/refine", { "x-payment": "fake-ok" }, { instruction: "make it bold" });
+    const r = await call(app, "POST", "/v1/agent/sites/nonexistent-id/refine", { "x-payment": "fake-ok", "x-claim-token": "a".repeat(64) }, { instruction: "make it bold" });
     expect(r.status).toBe(404);
     expect(r.json.error).toBe("site_not_found");
     expect(verifier.settled).toBe(0);
@@ -145,10 +148,46 @@ describe("agent routes", () => {
     const app = appWith(storage, verifier, generate, fakeRefine);
     const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
     const id = built.json.projectId;
+    const claimToken = built.json.claimToken;
     const settledAfterBuild = verifier.settled;
-    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-payment": "fake-ok" }, { instruction: "make it bold" });
+    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-payment": "fake-ok", "x-claim-token": claimToken }, { instruction: "make it bold" });
     expect(r.status).toBe(503);
     expect(r.json.error).toBe("at_capacity");
     expect(verifier.settled).toBe(settledAfterBuild);
+  });
+
+  // ── refine ownership gate tests ───────────────────────────────────────────────
+
+  it("refine WITHOUT X-Claim-Token -> 403 bad_token, verifier not settled", async () => {
+    const fakeRefine = vi.fn().mockResolvedValue(fakeDoc);
+    const app = appWith(storage, verifier, generate, fakeRefine);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const id = built.json.projectId;
+    const settledAfterBuild = verifier.settled;
+    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-payment": "fake-ok" }, { instruction: "make it bold" });
+    expect(r.status).toBe(403);
+    expect(r.json.error).toBe("bad_token");
+    expect(verifier.settled).toBe(settledAfterBuild);
+  });
+
+  it("refine WITH wrong X-Claim-Token -> 403 bad_token, verifier not settled", async () => {
+    const fakeRefine = vi.fn().mockResolvedValue(fakeDoc);
+    const app = appWith(storage, verifier, generate, fakeRefine);
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    const id = built.json.projectId;
+    const settledAfterBuild = verifier.settled;
+    const r = await call(app, "POST", `/v1/agent/sites/${id}/refine`, { "x-payment": "fake-ok", "x-claim-token": "b".repeat(64) }, { instruction: "make it bold" });
+    expect(r.status).toBe(403);
+    expect(r.json.error).toBe("bad_token");
+    expect(verifier.settled).toBe(settledAfterBuild);
+  });
+
+  it("refine on unknown project id (no token row) -> 404 site_not_found", async () => {
+    const fakeRefine = vi.fn().mockResolvedValue(fakeDoc);
+    const app = appWith(storage, verifier, generate, fakeRefine);
+    const r = await call(app, "POST", "/v1/agent/sites/no-such-project/refine", { "x-payment": "fake-ok", "x-claim-token": "c".repeat(64) }, { instruction: "make it bold" });
+    expect(r.status).toBe(404);
+    expect(r.json.error).toBe("site_not_found");
+    expect(verifier.settled).toBe(0);
   });
 });

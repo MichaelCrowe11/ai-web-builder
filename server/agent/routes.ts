@@ -2,7 +2,7 @@
 // after the work succeeds — a 503 (at-capacity) or 500 (build error) never
 // charges the agent. Registration uses DisabledVerifier by default; Task 8
 // swaps in the real x402 verifier via makeVerifier().
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import type { IStorage } from "../storage";
 import type { PaymentVerifier } from "./payments";
 import type { SiteDocument } from "@shared/site-document";
@@ -28,6 +28,18 @@ function sendCapacity(res: Response, err: AtCapacityError): Response {
   const { retryAfterSeconds, body } = makeCapacityPayload(err);
   res.setHeader("Retry-After", String(retryAfterSeconds));
   return res.status(503).json(body);
+}
+
+// Proof-of-ownership gate: caller must present the site's one-time claim token
+// (the bearer credential returned at build) in X-Claim-Token. Used by refine + leads.
+function requireClaimToken(storage: IStorage) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const row = await storage.getClaimTokenByProject(req.params.id);
+    if (!row) return res.status(404).json({ error: "site_not_found" });
+    const token = req.header("x-claim-token");
+    if (!token || !tokensMatch(token, row.tokenHash)) return res.status(403).json({ error: "bad_token" });
+    next();
+  };
 }
 
 export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
@@ -64,8 +76,10 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
 
   // ── POST /v1/agent/sites/:id/refine ─────────────────────────────────────────
   // Apply a scoped instruction to an existing document. Settles ONLY on success.
+  // Ownership is checked BEFORE payment so a non-owner is never asked to pay.
   app.post(
     "/v1/agent/sites/:id/refine",
+    requireClaimToken(storage),
     requirePayment(() => prices.refine, verifier),
     async (req: Request, res: Response) => {
       const { instruction } = req.body ?? {};
@@ -112,7 +126,10 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
     }
     const ok = await storage.claimToken(row.tokenHash, identity);
     if (!ok) return res.status(409).json({ error: "already_claimed" });
-    await storage.updateProject(req.params.id, { userId: identity } as any);
+    // Ownership is recorded in agent_claim_tokens.claimedBy. We do NOT set
+    // projects.userId here: it has an FK to users.id, and an external
+    // Crowe-ID/agent identity is not necessarily a users row. Mapping a claimed
+    // identity to a dashboard user is deferred to the Crowe ID integration.
     return res.json({ ok: true, projectId: req.params.id, owner: identity });
   });
 
@@ -131,13 +148,7 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
 
   // ── GET /v1/agent/sites/:id/leads ────────────────────────────────────────────
   // Owner-only lead inbox, gated by the claim token in X-Claim-Token header.
-  app.get("/v1/agent/sites/:id/leads", async (req: Request, res: Response) => {
-    const row = await storage.getClaimTokenByProject(req.params.id);
-    if (!row) return res.status(404).json({ error: "no_claim_token" });
-    const token = req.header("x-claim-token");
-    if (!token || !tokensMatch(token, row.tokenHash)) {
-      return res.status(403).json({ error: "bad_token" });
-    }
+  app.get("/v1/agent/sites/:id/leads", requireClaimToken(storage), async (req: Request, res: Response) => {
     const leads = await storage.listSubmissions(req.params.id);
     return res.json({ projectId: req.params.id, leads });
   });
