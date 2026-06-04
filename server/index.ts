@@ -28,6 +28,10 @@ app.post(
 
 app.use(
   express.json({
+    // Pro sites embed generated images as base64 data-URIs in the SiteDocument,
+    // so a saved/published doc can be several MB. The 100kb default silently 413s
+    // those PUT /document saves (images then vanish from the published site).
+    limit: "16mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
