@@ -4,6 +4,7 @@ import {
   type Project,
   type InsertProject,
   type ExperimentRow,
+  type AgentClaimTokenRow,
   users,
   projects,
   siteDocuments,
@@ -13,10 +14,11 @@ import {
   decisionLog,
   formSubmissions,
   siteMedia,
+  agentClaimTokens,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, isNull } from "drizzle-orm";
 import postgres from "postgres";
 import type { SiteDocument } from "@shared/site-document";
 import type { SiteGoal } from "@shared/site-goal";
@@ -69,6 +71,11 @@ export interface IStorage {
   // Durable media (generated video/image blobs)
   saveMedia(id: string, mime: string, data: Buffer): Promise<void>;
   getMedia(id: string): Promise<{ mime: string; data: Buffer } | undefined>;
+  // Agent claim tokens
+  createClaimToken(tokenHash: string, projectId: string): Promise<void>;
+  getClaimTokenByHash(tokenHash: string): Promise<AgentClaimTokenRow | undefined>;
+  getClaimTokenByProject(projectId: string): Promise<AgentClaimTokenRow | undefined>;
+  claimToken(tokenHash: string, claimedBy: string): Promise<boolean>;
 }
 
 // In-memory storage for development/fallback
@@ -304,6 +311,30 @@ export class MemStorage implements IStorage {
   async getMedia(id: string): Promise<{ mime: string; data: Buffer } | undefined> {
     return this.mediaMap.get(id);
   }
+
+  private claimTokens = new Map<string, { projectId: string; claimedBy: string | null; createdAt: Date; claimedAt: Date | null }>();
+
+  async createClaimToken(tokenHash: string, projectId: string): Promise<void> {
+    this.claimTokens.set(tokenHash, { projectId, claimedBy: null, createdAt: new Date(), claimedAt: null });
+  }
+  async getClaimTokenByHash(tokenHash: string): Promise<AgentClaimTokenRow | undefined> {
+    const r = this.claimTokens.get(tokenHash);
+    if (!r) return undefined;
+    return { tokenHash, projectId: r.projectId, claimedBy: r.claimedBy, createdAt: r.createdAt, claimedAt: r.claimedAt } as AgentClaimTokenRow;
+  }
+  async getClaimTokenByProject(projectId: string): Promise<AgentClaimTokenRow | undefined> {
+    const entry = Array.from(this.claimTokens.entries()).find(([, r]) => r.projectId === projectId);
+    if (!entry) return undefined;
+    const [tokenHash, r] = entry;
+    return { tokenHash, projectId: r.projectId, claimedBy: r.claimedBy, createdAt: r.createdAt, claimedAt: r.claimedAt } as AgentClaimTokenRow;
+  }
+  async claimToken(tokenHash: string, claimedBy: string): Promise<boolean> {
+    const r = this.claimTokens.get(tokenHash);
+    if (!r || r.claimedBy) return false;
+    r.claimedBy = claimedBy;
+    r.claimedAt = new Date();
+    return true;
+  }
 }
 
 // PostgreSQL storage implementation
@@ -524,6 +555,25 @@ export class PostgresStorage implements IStorage {
   async getMedia(id: string): Promise<{ mime: string; data: Buffer } | undefined> {
     const rows = await this.db.select().from(siteMedia).where(eq(siteMedia.id, id)).limit(1);
     return rows[0] ? { mime: rows[0].mime, data: rows[0].data } : undefined;
+  }
+
+  async createClaimToken(tokenHash: string, projectId: string): Promise<void> {
+    await this.db.insert(agentClaimTokens).values({ tokenHash, projectId });
+  }
+  async getClaimTokenByHash(tokenHash: string): Promise<AgentClaimTokenRow | undefined> {
+    const r = await this.db.select().from(agentClaimTokens).where(eq(agentClaimTokens.tokenHash, tokenHash)).limit(1);
+    return r[0];
+  }
+  async getClaimTokenByProject(projectId: string): Promise<AgentClaimTokenRow | undefined> {
+    const r = await this.db.select().from(agentClaimTokens).where(eq(agentClaimTokens.projectId, projectId)).limit(1);
+    return r[0];
+  }
+  async claimToken(tokenHash: string, claimedBy: string): Promise<boolean> {
+    const r = await this.db.update(agentClaimTokens)
+      .set({ claimedBy, claimedAt: new Date() })
+      .where(and(eq(agentClaimTokens.tokenHash, tokenHash), isNull(agentClaimTokens.claimedBy)))
+      .returning();
+    return r.length > 0;
   }
 }
 

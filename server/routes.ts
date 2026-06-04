@@ -23,7 +23,9 @@ import { registerBillingRoutes } from "./billing";
 import { registerPublishRoutes, renderFullHtml } from "./publish";
 import { registerGrowthRoutes } from "./growth-routes";
 import { registerExportRoutes } from "./github-export";
-import { log } from "./index";
+import { registerAgentRoutes } from "./agent/routes";
+import { makeVerifier } from "./agent/x402-verifier";
+import { log } from "./log";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
 export async function registerRoutes(
@@ -48,6 +50,19 @@ export async function registerRoutes(
 
   // Export the generated site to GitHub (transient PAT, no OAuth app).
   registerExportRoutes(app);
+
+  // Agent API — /v1/agent/* routes (build, refine, claim, status, leads).
+  // makeVerifier() returns X402Verifier when X402_PAY_TO_ADDRESS + X402_FACILITATOR_URL
+  // are set; otherwise returns DisabledVerifier (503 payments_unavailable) so no
+  // free sites can be built in production before a wallet/facilitator is configured.
+  registerAgentRoutes(app, {
+    storage,
+    verifier: makeVerifier(),
+    prices: {
+      build: Number(process.env.AGENT_PRICE_BUILD_USDC ?? "1"),
+      refine: Number(process.env.AGENT_PRICE_REFINE_USDC ?? "0.25"),
+    },
+  });
 
   // List of tappable refine intents for the UI.
   app.get("/api/refine/intents", (_req: Request, res: Response) => {

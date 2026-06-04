@@ -6,6 +6,8 @@ import { handleStripeWebhook } from "./billing";
 import { publishedSiteMiddleware } from "./publish";
 import { startGrowthScheduler } from "./growth-scheduler";
 import { createServer } from "http";
+import { log } from "./log";
+export { log } from "./log";
 
 const app = express();
 const httpServer = createServer(app);
@@ -36,17 +38,6 @@ app.use(express.urlencoded({ extended: false }));
 
 // Session middleware (cookie-based auth). Must be registered before routes.
 setupSession(app);
-
-export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
 
 app.use((req, res, next) => {
   const start = Date.now();

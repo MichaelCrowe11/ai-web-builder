@@ -159,3 +159,15 @@ export const siteMedia = pgTable("site_media", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 export type SiteMediaRow = typeof siteMedia.$inferSelect;
+
+// One-time claim tokens binding an agent-built site to a principal.
+export const agentClaimTokens = pgTable("agent_claim_tokens", {
+  tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+  projectId: varchar("project_id", { length: 36 }).notNull().references(() => projects.id),
+  claimedBy: varchar("claimed_by", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  claimedAt: timestamp("claimed_at"),
+}, (t) => ({
+  byProject: index("agent_claim_tokens_project_idx").on(t.projectId),
+}));
+export type AgentClaimTokenRow = typeof agentClaimTokens.$inferSelect;
