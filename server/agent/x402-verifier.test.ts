@@ -46,8 +46,21 @@ describe("X402Verifier", () => {
   });
 
   it("settle throws when facilitator reports failure", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) });
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
     const v = new X402Verifier(cfg, fetchImpl);
-    await expect(v.settle({ proof: "PROOF", priceUsdc: 1 })).rejects.toThrow();
+    await expect(v.settle({ proof: "PROOF", priceUsdc: 1 })).rejects.toThrow("x402 settle failed");
+  });
+
+  it("verify returns null (does NOT throw) when the facilitator responds with ok: false", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
+    const v = new X402Verifier(cfg, fetchImpl);
+    expect(await v.verify(reqWith("PROOF"), 1)).toBeNull();
+  });
+
+  it("challenge atomic conversion is consistent across prices", () => {
+    const v = new X402Verifier(cfg, vi.fn());
+    expect(v.challenge(0.25, "/v1/agent/sites").maxAmountRequired).toBe("250000");
+    expect(v.challenge(1, "/v1/agent/sites").maxAmountRequired).toBe("1000000");
+    expect(v.challenge(1.5, "/v1/agent/sites").maxAmountRequired).toBe("1500000");
   });
 });

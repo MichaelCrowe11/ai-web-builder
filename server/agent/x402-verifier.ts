@@ -44,7 +44,10 @@ export interface X402Config {
 
 // Narrow fetch-alike so tests can inject a vi.fn() without needing the full
 // global fetch signature. The real fetch satisfies this shape.
-type FetchLike = (url: string, init: RequestInit) => Promise<{ ok: boolean; json: () => Promise<any> }>;
+type FetchLike = (
+  url: string,
+  init: RequestInit,
+) => Promise<{ ok: boolean; status?: number; json: () => Promise<any> }>;
 
 export class X402Verifier implements PaymentVerifier {
   constructor(
@@ -56,15 +59,13 @@ export class X402Verifier implements PaymentVerifier {
   // request before any network I/O, just to assemble the 402 response body if
   // payment is absent. No facilitator contact here.
   challenge(priceUsdc: number, resource: string): PaymentChallenge {
-    // Convert to micro-USDC (integer string). E.g. 1.5 USDC -> "1500000".
-    const maxAmountRequired = String(Math.round(priceUsdc * 10 ** USDC_DECIMALS));
     return {
       priceUsdc,
       payTo: this.cfg.payTo,
       resource,
       network: this.cfg.network,
       asset: this.cfg.asset,
-      maxAmountRequired,
+      maxAmountRequired: this.toAtomic(priceUsdc),
     };
   }
 
@@ -82,10 +83,9 @@ export class X402Verifier implements PaymentVerifier {
       body: JSON.stringify({ payment, paymentRequirements }),
     });
 
-    const body = await res.json();
-    if (!res.ok || !body.isValid) return null;
-
-    return { proof: payment, priceUsdc };
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    return data?.isValid ? { proof: payment, priceUsdc } : null;
   }
 
   // settle() is called ONLY after the work (site build) has succeeded, so a
@@ -102,10 +102,15 @@ export class X402Verifier implements PaymentVerifier {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(
-        `x402 settle failed: HTTP ${res.ok ? "ok" : "error"} — ${JSON.stringify(body)}`,
-      );
+      throw new Error(`x402 settle failed: HTTP ${res.status ?? "?"} — ${JSON.stringify(body)}`);
     }
+  }
+
+  // Convert a USDC price to a micro-USDC atomic integer string.
+  // Single source of truth — used by both challenge() and buildRequirements().
+  // E.g. 1.5 USDC → "1500000", 0.25 USDC → "250000".
+  private toAtomic(priceUsdc: number): string {
+    return String(Math.round(priceUsdc * 10 ** USDC_DECIMALS));
   }
 
   // Shared payment requirements object sent on both /verify and /settle.
@@ -115,7 +120,7 @@ export class X402Verifier implements PaymentVerifier {
       network: this.cfg.network,
       asset: this.cfg.asset,
       payTo: this.cfg.payTo,
-      maxAmountRequired: String(Math.round(priceUsdc * 10 ** USDC_DECIMALS)),
+      maxAmountRequired: this.toAtomic(priceUsdc),
     };
   }
 }
