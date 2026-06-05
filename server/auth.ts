@@ -35,11 +35,31 @@ export function setupSession(app: Express) {
   let store: session.Store;
   if (dbUrl) {
     const PgStore = connectPgSimple(session);
-    store = new PgStore({
-      conString: dbUrl,
+    // Cloud Run reaches Cloud SQL over a unix socket, not TCP. There DATABASE_URL
+    // carries host=localhost (creds + db name only) and the socket dir lives in
+    // DB_SOCKET_PATH — the same colon-free symlink storage.ts connects through.
+    // node-postgres (which connect-pg-simple uses) switches to socket mode when
+    // host starts with "/", so when DB_SOCKET_PATH is set we hand it a conObject
+    // with that socket host instead of the localhost conString. Unset on
+    // Railway/local, so it falls back to conString and behavior is unchanged.
+    const socketPath = process.env.DB_SOCKET_PATH;
+    const pgOptions: Record<string, unknown> = {
       tableName: "user_sessions",
       createTableIfMissing: true,
-    });
+    };
+    if (socketPath) {
+      const u = new URL(dbUrl);
+      pgOptions.conObject = {
+        host: socketPath,
+        port: 5432,
+        user: decodeURIComponent(u.username),
+        password: decodeURIComponent(u.password),
+        database: u.pathname.replace(/^\//, ""),
+      };
+    } else {
+      pgOptions.conString = dbUrl;
+    }
+    store = new PgStore(pgOptions as never);
   } else {
     const MemoryStore = createMemoryStore(session);
     store = new MemoryStore({ checkPeriod: 86_400_000 }); // prune daily
