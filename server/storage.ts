@@ -342,15 +342,16 @@ export class PostgresStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
   constructor(connectionString: string) {
-    // Cloud SQL (Cloud Run) connects over a unix socket dir whose name contains
-    // colons (/cloudsql/PROJECT:REGION:INSTANCE). postgres-js splits a string
-    // host on ":" (host:port), which mangles that path — so when DB_SOCKET_PATH
-    // is set we pass host/port as ARRAYS (postgres-js leaves array entries
-    // intact) and keep the URL only for credentials + db name. On Railway/local
-    // DB_SOCKET_PATH is unset, so behavior is unchanged.
+    // Cloud SQL (Cloud Run) connects over a unix socket. postgres-js only uses
+    // socket mode for a STRING host starting with "/" and containing no ":"
+    // (a colon means host:port; an array means TCP failover targets — both
+    // wrong here). The real socket dir /cloudsql/PROJECT:REGION:INSTANCE is full
+    // of colons, so the container entrypoint symlinks it to a colon-free path
+    // and exposes that via DB_SOCKET_PATH. The URL then carries only creds + db.
+    // On Railway/local DB_SOCKET_PATH is unset, so behavior is unchanged.
     const socketPath = process.env.DB_SOCKET_PATH;
     const client = socketPath
-      ? postgres(connectionString, { host: [socketPath], port: [5432] } as any)
+      ? postgres(connectionString, { host: socketPath })
       : postgres(connectionString);
     this.db = drizzle(client);
   }
