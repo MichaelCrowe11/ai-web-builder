@@ -432,16 +432,17 @@ export async function registerRoutes(
     }
   });
 
-  // Current authenticated user (from session)
+  // Current authenticated user (from session). Anonymous is a valid state,
+  // not an error — return 200 null so unauthenticated page loads don't 401.
   app.get("/api/auth/me", async (req: Request, res: Response) => {
     if (!req.session.userId) {
-      return res.status(401).json({ error: "Not authenticated" });
+      return res.json(null);
     }
     const user = await storage.getUser(req.session.userId);
     if (!user) {
       // Stale session pointing at a deleted user — clear it.
       req.session.destroy(() => {});
-      return res.status(401).json({ error: "Not authenticated" });
+      return res.json(null);
     }
     return res.json(publicUser(user));
   });

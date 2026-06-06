@@ -23,7 +23,7 @@ import { CroweHexC } from "@/components/brand/crowe-hex-c";
 // Clean, modern workspace empty state (rarely seen - arriving from the home
 // prompt auto-builds). Crowe gold-on-graphite, clean sans.
 const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Describe a website to begin.</h1><p class="sub">Type what you want in the bar below — a business, a vibe, a few details — and the workspace builds it live.</p></div>`;
-const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:center;background:#0b0b0c;color:#e8e2cf;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 17rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(191,166,105,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#bfa669;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:rgba(232,226,207,0.5);max-width:24rem}`;
+const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:end center;background:#0b0b0c;color:#e8e2cf;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 13rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(191,166,105,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#bfa669;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:rgba(232,226,207,0.5);max-width:24rem}`;
 
 interface RefineIntent { label: string; instruction: string; }
 
@@ -358,22 +358,28 @@ export default function Builder() {
           {user?.plan !== "pro" && (
             <button onClick={() => setShowBilling(true)} className="rounded-full border border-gold px-3 py-1.5 text-sm font-semibold text-gold transition-colors hover:bg-gold/10">Upgrade</button>
           )}
-          <div className="mx-1 h-5 w-px bg-gold/20" />
-          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={saveProject} disabled={isSaving || !hasGenerated}>
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={handleExport} disabled={!hasGenerated}>
-            <Download className="h-4 w-4" />Export
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowGithub(true)} disabled={!hasGenerated}>
-            <Github className="h-4 w-4" />GitHub
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowLeads(true)} disabled={!hasGenerated}>
-            <Inbox className="h-4 w-4" />Leads
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowEditor(true)} disabled={!hasGenerated}>
-            <Pencil className="h-4 w-4" />Edit
-          </Button>
+          {/* Utility actions only exist once there's a site to act on — before
+              that they'd just clutter the empty state as a row of grey buttons. */}
+          {hasGenerated && (
+            <>
+              <div className="mx-1 h-5 w-px bg-gold/20" />
+              <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={saveProject} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={handleExport}>
+                <Download className="h-4 w-4" />Export
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowGithub(true)}>
+                <Github className="h-4 w-4" />GitHub
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowLeads(true)}>
+                <Inbox className="h-4 w-4" />Leads
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={() => setShowEditor(true)}>
+                <Pencil className="h-4 w-4" />Edit
+              </Button>
+            </>
+          )}
           <Button size="sm" className="gap-1.5 rounded-full bg-gold px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(191,166,105,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>

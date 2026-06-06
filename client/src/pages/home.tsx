@@ -101,7 +101,7 @@ export default function Home() {
         </section>
 
         {/* ============ HOW IT WORKS (clean, compact) ============ */}
-        <section className="border-t border-gold/10 py-20">
+        <section id="how-it-works" className="scroll-mt-20 border-t border-gold/10 py-20">
           <div className="container mx-auto px-6">
             <div className="grid gap-px overflow-hidden rounded-2xl border border-gold/15 bg-gold/15 md:grid-cols-3">
               {[
