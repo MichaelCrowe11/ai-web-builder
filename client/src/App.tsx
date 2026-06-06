@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Builder from "@/pages/builder";
 import Pricing from "@/pages/pricing";
+import { PrivacyPage, TermsPage } from "@/pages/legal";
 import GrowthPage from "@/pages/growth";
 
 function Router() {
@@ -16,6 +17,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/builder" component={Builder} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/terms" component={TermsPage} />
       <Route path="/projects/:projectId/growth" component={GrowthPage} />
       <Route component={NotFound} />
     </Switch>

@@ -144,7 +144,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="border-t border-gold/15 bg-graphite-soft py-12 mt-20">
-        <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
+        <div className="container mx-auto px-4 grid md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
               <CroweHexC size={24} />
@@ -169,6 +169,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <h4 className="text-xs tracking-eyebrow uppercase text-gold-dim mb-4">Company</h4>
             <ul className="space-y-2 text-sm text-parchment-dim">
               <li><a href="https://www.crowelogic.com" target="_blank" rel="noreferrer" className="transition-colors hover:text-gold">About Crowe Logic</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-xs tracking-eyebrow uppercase text-gold-dim mb-4">Legal</h4>
+            <ul className="space-y-2 text-sm text-parchment-dim">
+              <li><Link href="/privacy" className="transition-colors hover:text-gold">Privacy</Link></li>
+              <li><Link href="/terms" className="transition-colors hover:text-gold">Terms</Link></li>
             </ul>
           </div>
         </div>
