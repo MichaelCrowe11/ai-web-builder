@@ -16,6 +16,10 @@ export interface AzureChatOpts {
   baseDelayMs?: number; // default 600
   fetchImpl?: typeof fetch; // injectable for tests
   sleep?: (ms: number) => Promise<void>; // injectable for tests
+  /** When set, the request streams and content fragments are forwarded here as
+   *  they arrive. Deltas are OPTIMISTIC: a mid-stream retry/fallback re-emits —
+   *  callers must treat the returned (assembled) message as authoritative. */
+  onDelta?: (text: string) => void;
 }
 
 export interface ToolDef {
@@ -41,7 +45,7 @@ interface RawAssistantMessage {
 
 const isGpt5 = (model: string) => /^gpt-5/i.test(model);
 
-function buildBody(model: string, messages: unknown[], maxTokens: number, tools?: ToolDef[]) {
+function buildBody(model: string, messages: unknown[], maxTokens: number, tools?: ToolDef[], stream?: boolean) {
   const body: Record<string, unknown> = { messages };
   if (isGpt5(model)) {
     // gpt-5 family rejects max_tokens and a custom temperature.
@@ -54,7 +58,64 @@ function buildBody(model: string, messages: unknown[], maxTokens: number, tools?
     body.tools = tools;
     body.tool_choice = "auto";
   }
+  if (stream) body.stream = true;
   return body;
+}
+
+// Read an OpenAI-style SSE stream: forward content deltas, accumulate
+// fragmented tool_calls by index, return the assembled assistant message.
+async function readSseStream(
+  body: ReadableStream<Uint8Array>,
+  onDelta: (text: string) => void,
+): Promise<RawAssistantMessage> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let content = "";
+  let sawContent = false;
+  const calls = new Map<number, { id?: string; name?: string; arguments: string }>();
+
+  const handleLine = (line: string) => {
+    if (!line.startsWith("data: ")) return;
+    const payload = line.slice(6).trim();
+    if (payload === "[DONE]") return;
+    let chunk: any;
+    try { chunk = JSON.parse(payload); } catch { return; } // skip malformed keep-alives
+    const delta = chunk.choices?.[0]?.delta;
+    if (!delta) return; // Azure emits content-filter preludes with empty choices
+    if (typeof delta.content === "string" && delta.content.length) {
+      content += delta.content;
+      sawContent = true;
+      onDelta(delta.content);
+    }
+    for (const tc of delta.tool_calls ?? []) {
+      const idx = typeof tc.index === "number" ? tc.index : 0;
+      const cur = calls.get(idx) ?? { arguments: "" };
+      if (tc.id) cur.id = tc.id;
+      if (tc.function?.name) cur.name = tc.function.name;
+      if (typeof tc.function?.arguments === "string") cur.arguments += tc.function.arguments;
+      calls.set(idx, cur);
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      handleLine(buf.slice(0, nl).replace(/\r$/, ""));
+      buf = buf.slice(nl + 1);
+    }
+  }
+  if (buf) handleLine(buf);
+
+  return {
+    content: sawContent ? content : null,
+    tool_calls: Array.from(calls.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([, c]) => ({ id: c.id, function: { name: c.name, arguments: c.arguments } })),
+  };
 }
 
 function isRetryable(status: number): boolean {
@@ -89,6 +150,7 @@ async function azureCompletion(
     baseDelayMs = 600,
     fetchImpl = fetch,
     sleep = defaultSleep,
+    onDelta,
   } = opts;
 
   if (!endpoint || !apiKey) {
@@ -107,7 +169,7 @@ async function azureCompletion(
         res = await fetchImpl(url, {
           method: "POST",
           headers: { "Content-Type": "application/json", "api-key": apiKey },
-          body: JSON.stringify(buildBody(model, messages, maxTokens, tools)),
+          body: JSON.stringify(buildBody(model, messages, maxTokens, tools, Boolean(onDelta))),
         });
       } catch (e) {
         // Network/transport error: treat as retryable.
@@ -120,8 +182,20 @@ async function azureCompletion(
       }
 
       if (res.ok) {
-        const data = await res.json();
-        return data.choices?.[0]?.message ?? {};
+        try {
+          if (onDelta && res.body) return await readSseStream(res.body, onDelta);
+          const data = await res.json();
+          return data.choices?.[0]?.message ?? {};
+        } catch (e) {
+          // Mid-stream death is retryable; already-emitted deltas duplicate,
+          // which callers reconcile (the final reply replaces streamed text).
+          lastErr = e as Error;
+          if (attempt < maxRetriesPerModel) {
+            await sleep(backoffMs(null, attempt, baseDelayMs));
+            continue;
+          }
+          break;
+        }
       }
 
       const detail = await res.text().catch(() => "");

@@ -147,3 +147,90 @@ describe("azureChatTools", () => {
     expect(out.toolCalls).toEqual([{ id: "call_3", name: "read_section", arguments: "{}" }]);
   });
 });
+
+// ---- streaming (onDelta) ----
+
+// Build a fake streaming Response whose body yields the given SSE frames.
+function streamResp(frames: string[], failAfter?: number) {
+  const enc = new TextEncoder();
+  let i = 0;
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (failAfter !== undefined && i >= failAfter) {
+        controller.error(new Error("stream died mid-read"));
+        return;
+      }
+      if (i >= frames.length) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(enc.encode(frames[i++]));
+    },
+  });
+  return {
+    ok: true,
+    status: 200,
+    headers: { get: () => null },
+    body,
+    json: async () => { throw new Error("streaming response: use body"); },
+    text: async () => "",
+  } as unknown as Response;
+}
+
+const sse = (obj: unknown) => `data: ${JSON.stringify(obj)}\n\n`;
+const contentChunk = (text: string) => sse({ choices: [{ delta: { content: text } }] });
+
+describe("azureChatTools streaming", () => {
+  it("forwards content deltas and returns the assembled reply", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(streamResp([
+      contentChunk("Tight"),
+      contentChunk("ened the headline."),
+      "data: [DONE]\n\n",
+    ]));
+    const deltas: string[] = [];
+    const out = await azureChatTools([{ role: "user", content: "hi" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], fetchImpl, onDelta: (t) => deltas.push(t),
+    });
+    expect(deltas).toEqual(["Tight", "ened the headline."]);
+    expect(out.content).toBe("Tightened the headline.");
+    expect(out.toolCalls).toEqual([]);
+    const body = JSON.parse((fetchImpl.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.stream).toBe(true);
+  });
+
+  it("accumulates fragmented tool_calls across chunks without emitting them as text", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(streamResp([
+      sse({ choices: [{ delta: { tool_calls: [{ index: 0, id: "c1", type: "function", function: { name: "edit_section", arguments: "" } }] } }] }),
+      sse({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{"index"' } }] } }] }),
+      sse({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: ":1}" } }] } }] }),
+      "data: [DONE]\n\n",
+    ]));
+    const deltas: string[] = [];
+    const out = await azureChatTools([{ role: "user", content: "hi" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], fetchImpl, onDelta: (t) => deltas.push(t),
+    });
+    expect(deltas).toEqual([]);
+    expect(out.toolCalls).toEqual([{ id: "c1", name: "edit_section", arguments: '{"index":1}' }]);
+  });
+
+  it("does not request streaming when onDelta is absent", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(okTool("read_site", "{}"));
+    await azureChatTools([{ role: "user", content: "hi" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], fetchImpl,
+    });
+    const body = JSON.parse((fetchImpl.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.stream).toBeUndefined();
+  });
+
+  it("retries a mid-stream failure; duplicate deltas are tolerated (turn_done replaces)", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(streamResp([contentChunk("Tigh")], 1)) // dies after one chunk
+      .mockResolvedValueOnce(streamResp([contentChunk("Done."), "data: [DONE]\n\n"]));
+    const deltas: string[] = [];
+    const out = await azureChatTools([{ role: "user", content: "hi" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], maxRetriesPerModel: 3, fetchImpl, onDelta: (t) => deltas.push(t),
+    });
+    expect(out.content).toBe("Done.");
+    expect(deltas).toEqual(["Tigh", "Done."]); // both attempts' deltas — client reconciles at turn_done
+  });
+});

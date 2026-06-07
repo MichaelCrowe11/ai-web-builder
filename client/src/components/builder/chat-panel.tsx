@@ -190,6 +190,10 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
             toolEvents: (a.toolEvents ?? []).map((t, i, arr) =>
               i === arr.length - 1 && t.running ? { name: data.name, ok: data.ok, detail: data.detail, running: false } : t),
           }));
+        } else if (event === "assistant_delta") {
+          // Optimistic paint: append fragments as they stream. turn_done's
+          // reply REPLACES this, so retry/fallback duplicates self-heal.
+          patchLast((a) => (a.upsell ? a : { ...a, content: a.content + data.text }));
         } else if (event === "upsell") {
           const copy = upgradeCopy(data.feature);
           patchLast((a) => ({

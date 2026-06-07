@@ -137,6 +137,9 @@ export function registerChatRoutes(app: Express) {
           // can carry a full section's copy — 1200 risked truncated tool JSON.
           runLimited(() => azureChatTools(messages, 2000, tools, {
             endpoint: ENDPOINT, apiKey: API_KEY, apiVersion: API_VERSION, models: modelsFromEnv(),
+            // Optimistic streaming: fragments paint as they arrive; turn_done's
+            // reply is authoritative and replaces them (retry-safe).
+            onDelta: (text) => send("assistant_delta", { text }),
           })),
         onEvent: (e) => {
           if (e.type === "doc_updated") {
