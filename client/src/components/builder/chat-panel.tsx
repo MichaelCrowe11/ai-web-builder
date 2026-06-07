@@ -6,12 +6,13 @@ import { Loader2, ArrowUp } from "lucide-react";
 // appear as the agent works; doc_updated swaps the live preview.
 
 interface ToolEvent { name: string; ok: boolean; detail: string; running?: boolean }
-interface ChatMsg { role: "user" | "assistant"; content: string; toolEvents?: ToolEvent[] }
+interface ChatMsg { role: "user" | "assistant"; content: string; toolEvents?: ToolEvent[]; docVersion?: number | null }
 
 interface ChatPanelProps {
   projectId: string;
   onDocUpdate: (document: any, html: string, css: string) => void;
   onQuota: (quota: any) => void;
+  onVideoStarted?: (videoId: string) => void;
 }
 
 // Parse an SSE stream from a fetch body: yields { event, data } frames.
@@ -33,23 +34,56 @@ async function* sseEvents(body: ReadableStream<Uint8Array>) {
   }
 }
 
-export function ChatPanel({ projectId, onDocUpdate, onQuota }: ChatPanelProps) {
+export function ChatPanel({ projectId, onDocUpdate, onQuota, onVideoStarted }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [quota, setQuota] = useState<any | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
 
   // Hydrate the transcript.
   useEffect(() => {
     fetch(`/api/chat/${projectId}/messages`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : { messages: [] }))
-      .then((d) => setMessages((d.messages ?? []).map((m: any) => ({ role: m.role, content: m.content, toolEvents: m.toolEvents ?? undefined }))))
+      .then((d) => setMessages((d.messages ?? []).map((m: any) => ({ role: m.role, content: m.content, toolEvents: m.toolEvents ?? undefined, docVersion: m.docVersion ?? null }))))
       .catch(() => {});
   }, [projectId]);
+
+  // Hydrate the quota pill once on mount.
+  useEffect(() => {
+    fetch("/api/quota", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => d && setQuota(d.quota))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  const undo = async (toVersion: number) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/chat/${projectId}/undo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ toVersion }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        onDocUpdate(d.document, d.html, d.css);
+        setMessages((m) => [...m, { role: "assistant", content: "Reverted to the previous version." }]);
+      } else {
+        setMessages((m) => [...m, { role: "assistant", content: "Could not revert — the version may no longer be available." }]);
+      }
+    } catch {
+      setMessages((m) => [...m, { role: "assistant", content: "Could not revert — connection error." }]);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const send = async () => {
     const message = input.trim();
@@ -85,8 +119,11 @@ export function ChatPanel({ projectId, onDocUpdate, onQuota }: ChatPanelProps) {
         } else if (event === "doc_updated") {
           onDocUpdate(data.document, data.html, data.css);
         } else if (event === "turn_done") {
-          patchLast((a) => ({ ...a, content: data.reply }));
+          patchLast((a) => ({ ...a, content: data.reply, docVersion: data.docVersion ?? null }));
           onQuota(data.quota);
+          setQuota(data.quota);
+        } else if (event === "video_started") {
+          onVideoStarted?.(data.videoId);
         } else if (event === "error") {
           patchLast((a) => ({ ...a, content: data.error }));
         }
@@ -102,6 +139,11 @@ export function ChatPanel({ projectId, onDocUpdate, onQuota }: ChatPanelProps) {
     <div className="flex w-[370px] min-w-[370px] flex-col border-r border-gold/15 bg-graphite-soft">
       <div className="flex items-center justify-between border-b border-gold/10 px-4 py-3">
         <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-parchment/55">Conversation</span>
+        {quota != null && (
+          <span className="rounded-full border border-gold/30 px-2.5 py-0.5 font-mono text-[10px] text-gold">
+            {quota.limit != null ? `${quota.used} / ${quota.limit} today` : "Unlimited"}
+          </span>
+        )}
       </div>
 
       <div ref={streamRef} className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
@@ -126,6 +168,15 @@ export function ChatPanel({ projectId, onDocUpdate, onQuota }: ChatPanelProps) {
                 </div>
               )}
               {m.content || (busy && i === messages.length - 1 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null)}
+              {typeof m.docVersion === "number" && m.docVersion > 1 && (
+                <button
+                  onClick={() => undo(m.docVersion! - 1)}
+                  disabled={busy}
+                  className="mt-1.5 font-mono text-[10.5px] text-parchment/45 hover:text-gold disabled:opacity-40"
+                >
+                  v{m.docVersion! - 1} &rarr; v{m.docVersion} &middot; undo
+                </button>
+              )}
             </div>
           ),
         )}
