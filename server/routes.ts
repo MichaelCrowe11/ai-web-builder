@@ -479,6 +479,12 @@ export async function registerRoutes(
         prompt: prompt || null,
       });
 
+      // Persist the structured document too (when provided) so chat/growth can read it.
+      const parsedDoc = siteDocumentSchema.safeParse(req.body.document);
+      if (parsedDoc.success) {
+        await storage.saveDocumentVersion(project.id, parsedDoc.data);
+      }
+
       log(`Project created: ${project.id}`);
       return res.status(201).json(project);
     } catch (error: any) {
@@ -523,6 +529,12 @@ export async function registerRoutes(
 
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Persist the structured document too (when provided) so chat/growth can read it.
+      const parsedDoc = siteDocumentSchema.safeParse(req.body.document);
+      if (parsedDoc.success) {
+        await storage.saveDocumentVersion(project.id, parsedDoc.data);
       }
 
       log(`Project updated: ${project.id}`);

@@ -258,12 +258,12 @@ export default function Builder() {
       if (projectId) {
         await fetch(`/api/projects/${projectId}`, {
           method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
-          body: JSON.stringify({ html, css, name: projectName }),
+          body: JSON.stringify({ html, css, name: projectName, document: doc }),
         });
       } else {
         const r = await fetch("/api/projects", {
           method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
-          body: JSON.stringify({ html, css, name: projectName, prompt: lastPrompt }),
+          body: JSON.stringify({ html, css, name: projectName, prompt: lastPrompt, document: doc }),
         });
         const p = await r.json();
         setProjectId(p.id);
@@ -274,7 +274,7 @@ export default function Builder() {
     } finally {
       setIsSaving(false);
     }
-  }, [html, css, projectId, projectName, lastPrompt, toast]);
+  }, [html, css, doc, projectId, projectName, lastPrompt, toast]);
 
   const handleExport = useCallback(() => {
     const full = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${projectName}</title><style>${css}</style></head><body>${html}</body></html>`;

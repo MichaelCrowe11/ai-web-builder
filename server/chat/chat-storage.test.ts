@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { MemStorage } from "../storage";
+import { fixtureDoc } from "./fixtures";
 
 describe("chat message storage", () => {
   it("appends and lists messages per project in order", async () => {
@@ -22,5 +23,26 @@ describe("chat message storage", () => {
     }
     const msgs = await s.getChatMessages("p1", 2);
     expect(msgs.map((m) => m.content)).toEqual(["m4", "m5"]);
+  });
+});
+
+describe("document version persistence (required for chat turns)", () => {
+  it("saveDocumentVersion followed by getLatestDocument returns the saved doc", async () => {
+    const s = new MemStorage();
+    const doc = fixtureDoc();
+    // Simulate project creation flow
+    const project = await s.createProject({ userId: null, name: "Test", html: "<p>hi</p>", css: "", prompt: null });
+    await s.saveDocumentVersion(project.id, doc);
+    const latest = await s.getLatestDocument(project.id);
+    expect(latest).toBeDefined();
+    expect(latest!.version).toBe(1);
+    expect(latest!.document.meta.name).toBe("Brava Bakery");
+  });
+
+  it("getLatestDocument returns undefined for a project with no saved version", async () => {
+    const s = new MemStorage();
+    const project = await s.createProject({ userId: null, name: "Empty", html: "<p></p>", css: "", prompt: null });
+    const latest = await s.getLatestDocument(project.id);
+    expect(latest).toBeUndefined();
   });
 });
