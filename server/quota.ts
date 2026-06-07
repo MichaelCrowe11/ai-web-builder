@@ -108,6 +108,57 @@ export async function enforceQuota(req: Request, res: Response, next: NextFuncti
   next();
 }
 
+export interface QuotaSnapshot {
+  ok: boolean;            // false = a mutating generation would be refused
+  state: QuotaState;
+  user?: User;            // present when authenticated
+  reason?: "requiresAuth" | "requiresUpgrade";
+}
+
+/**
+ * Read quota WITHOUT rejecting the request. Used by chat turns: Q&A is always
+ * allowed; ok=false only filters out mutating tools. opts.consume bumps the
+ * anonymous bucket (test hook; real consumption uses consumeGeneration).
+ */
+export async function quotaSnapshot(req: Request, opts: { consume?: boolean } = {}): Promise<QuotaSnapshot> {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    const ip = clientIp(req);
+    const now = Date.now();
+    let bucket = anonBuckets.get(ip);
+    if (!bucket || now > bucket.resetAt) {
+      bucket = { count: 0, resetAt: now + DAY_MS };
+      anonBuckets.set(ip, bucket);
+    }
+    if (opts.consume) bucket.count += 1;
+    const used = bucket.count;
+    const ok = used < ANON_DAILY_LIMIT;
+    return {
+      ok,
+      reason: ok ? undefined : "requiresAuth",
+      state: { plan: "anonymous", used, limit: ANON_DAILY_LIMIT, remaining: Math.max(0, ANON_DAILY_LIMIT - used) },
+    };
+  }
+
+  const user = await storage.getUser(userId);
+  if (!user) return { ok: false, reason: "requiresAuth", state: { plan: "free", used: 0, limit: dailyLimitForPlan("free"), remaining: 0 } };
+
+  let used = user.generationsUsed;
+  if (needsReset(user.generationsResetAt)) {
+    used = 0;
+    await storage.updateUser(user.id, { generationsUsed: 0, generationsResetAt: new Date() });
+  }
+  const limit = dailyLimitForPlan(user.plan);
+  const ok = limit === null || used < limit;
+  return {
+    ok,
+    reason: ok ? undefined : "requiresUpgrade",
+    user: { ...user, generationsUsed: used },
+    state: { plan: user.plan, used, limit, remaining: limit === null ? null : Math.max(0, limit - used) },
+  };
+}
+
 /**
  * Increment the counter after a successful generation. Returns the updated
  * quota state to return to the client. Safe to call for anonymous (bumps IP bucket).
