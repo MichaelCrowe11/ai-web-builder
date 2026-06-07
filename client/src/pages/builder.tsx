@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { PromptInput } from "@/components/builder/prompt-input";
@@ -72,6 +72,15 @@ export default function Builder() {
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Ref mirrors of `doc` / `projectId` for long-running async flows (pollVideo
+  // runs for minutes; handleGenerate spans two requests). Reading these refs
+  // avoids stale closures without putting side effects inside state updaters
+  // (React updater functions must be pure — they can be re-invoked on rebase).
+  const docRef = useRef<any | null>(null);
+  useEffect(() => { docRef.current = doc; }, [doc]);
+  const projectIdRef = useRef<string | null>(null);
+  useEffect(() => { projectIdRef.current = projectId; }, [projectId]);
 
   // Load the tappable refine suggestions once.
   useEffect(() => {
@@ -178,33 +187,30 @@ export default function Builder() {
         const sd = await (await fetch(`/api/generate/video/status/${id}`, { credentials: "include" })).json();
         if (typeof sd.progress === "number") setVideoPct(sd.progress);
         if (sd.status === "completed") {
-          // Build `updated` from current doc state via the setter callback to
-          // avoid a stale closure on `doc` (the poll loop runs for minutes).
-          setDoc((currentDoc: any) => {
-            if (!currentDoc) return currentDoc;
+          // Read the CURRENT doc via the ref (not the closure — the poll loop
+          // runs for minutes and the user may have chatted meanwhile).
+          const currentDoc = docRef.current;
+          if (currentDoc) {
             const updated = {
               ...currentDoc,
               sections: (currentDoc.sections as any[]).map((s: any) =>
                 s.type === "hero" ? { ...s, videoUrl: `/api/video/${id}` } : s,
               ),
             };
+            setDoc(updated);
             setHtml(renderDocumentBody(updated as any));
             setCss(renderDocumentCss(updated as any));
-            // Silently persist the videoUrl — inline PATCH using the freshly
-            // built updated doc so we never read from (possibly stale) state.
-            setProjectId((pid) => {
-              if (pid) {
-                fetch(`/api/projects/${pid}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "include",
-                  body: JSON.stringify({ document: updated }),
-                }).catch(() => {});
-              }
-              return pid;
-            });
-            return updated;
-          });
+            // Silently persist the videoUrl so it survives a page reload.
+            const pid = projectIdRef.current;
+            if (pid) {
+              fetch(`/api/projects/${pid}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ document: updated }),
+              }).catch(() => {});
+            }
+          }
           toast({ title: "Hero video added", description: "A generated background video is on your hero." });
           return;
         }
