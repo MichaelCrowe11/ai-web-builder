@@ -14,4 +14,13 @@ describe("chat message storage", () => {
     expect(msgs[1].docVersion).toBe(2);
     expect(await s.getChatMessages("p2")).toHaveLength(1);
   });
+
+  it("limit returns the most recent N messages, oldest-first", async () => {
+    const s = new MemStorage();
+    for (let i = 1; i <= 5; i++) {
+      await s.addChatMessage({ projectId: "p1", role: "user", content: `m${i}`, toolEvents: null, docVersion: null });
+    }
+    const msgs = await s.getChatMessages("p1", 2);
+    expect(msgs.map((m) => m.content)).toEqual(["m4", "m5"]);
+  });
 });

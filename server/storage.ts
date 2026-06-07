@@ -21,7 +21,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, and, desc, asc, isNull } from "drizzle-orm";
+import { eq, and, desc, isNull } from "drizzle-orm";
 import postgres from "postgres";
 import type { SiteDocument } from "@shared/site-document";
 import type { SiteGoal } from "@shared/site-goal";
@@ -613,11 +613,13 @@ export class PostgresStorage implements IStorage {
     return row;
   }
 
+  // Last N messages (the transcript tail), returned oldest-first for replay.
   async getChatMessages(projectId: string, limit = 200): Promise<ChatMessageRow[]> {
-    return this.db.select().from(chatMessages)
+    const rows = await this.db.select().from(chatMessages)
       .where(eq(chatMessages.projectId, projectId))
-      .orderBy(asc(chatMessages.createdAt))
+      .orderBy(desc(chatMessages.createdAt))
       .limit(limit);
+    return rows.reverse();
   }
 }
 
