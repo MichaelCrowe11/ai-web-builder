@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, ArrowUp } from "lucide-react";
+import { nextFlash, type SectionFlash } from "@/lib/section-flash";
 
 // Conversational builder side panel (C1, behind ?chat=1). Talks to
 // POST /api/chat/:projectId/turns and renders the SSE stream: tool chips
@@ -27,6 +28,9 @@ interface ChatPanelProps {
   onQuota: (quota: any) => void;
   onVideoStarted?: (videoId: string) => void;
   onUpgrade?: () => void;
+  /** Preview section-flash: called with the section being touched while a
+   *  section-addressed tool runs, and null when it should stop flashing. */
+  onSectionFlash?: (flash: SectionFlash | null) => void;
 }
 
 // Parse an SSE stream from a fetch body: yields { event, data } frames.
@@ -58,7 +62,7 @@ function upgradeCopy(feature?: string | null) {
   };
 }
 
-export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuota, onVideoStarted, onUpgrade }: ChatPanelProps) {
+export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuota, onVideoStarted, onUpgrade, onSectionFlash }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -176,6 +180,8 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
         return;
       }
       for await (const { event, data } of sseEvents(res.body)) {
+        const flash = nextFlash(event, data);
+        if (flash !== undefined) onSectionFlash?.(flash);
         if (event === "tool_start") {
           patchLast((a) => ({ ...a, toolEvents: [...(a.toolEvents ?? []), { name: data.name, ok: true, detail: data.label, running: true }] }));
         } else if (event === "tool_result") {
@@ -211,6 +217,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
     } catch {
       patchLast((a) => ({ ...a, content: "Connection dropped — the change may still have applied. Reload to see the latest." }));
     } finally {
+      onSectionFlash?.(null); // never leave a stale flash on the preview
       setBusy(false);
     }
   };

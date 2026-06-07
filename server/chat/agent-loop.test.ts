@@ -275,4 +275,35 @@ describe("runTurn", () => {
     expect(systemMsg.role).toBe("system");
     expect(systemMsg.content).not.toContain("TEST-NOTE");
   });
+
+  it("tags tool_start with the section key for section-addressed tools", async () => {
+    const { fn } = scripted([
+      toolCall("c1", "edit_section", { index: 1, patch: { title: "New story" } }),
+      finalText("Done."),
+    ]);
+    const { events, onEvent } = collectEvents();
+    await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "edit the about section",
+      allowMutations: true, chatFn: fn, onEvent,
+    });
+    const start = events.find((e) => e.type === "tool_start") as any;
+    expect(start.target).toBe("1:about"); // preview flashes [data-section-key="1:about"]
+  });
+
+  it("omits target on tool_start for non-section tools and invalid indexes", async () => {
+    const { fn } = scripted([
+      toolCall("c1", "set_theme", { preset: "warm-bakery" }),
+      toolCall("c2", "edit_section", { index: 99, patch: { title: "x" } }),
+      finalText("Done."),
+    ]);
+    const { events, onEvent } = collectEvents();
+    await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "restyle",
+      allowMutations: true, chatFn: fn, onEvent,
+    });
+    const starts = events.filter((e) => e.type === "tool_start") as any[];
+    expect(starts).toHaveLength(2);
+    expect(starts[0].target).toBeUndefined(); // set_theme touches no single section
+    expect(starts[1].target).toBeUndefined(); // out-of-range index resolves to nothing
+  });
 });

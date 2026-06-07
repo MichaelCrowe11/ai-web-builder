@@ -1,17 +1,46 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Monitor, Smartphone, Tablet, Eye, Code2, Copy, Check } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { SectionFlash } from "@/lib/section-flash";
 
 interface PreviewFrameProps {
   html: string;
   css: string;
   device: "desktop" | "tablet" | "mobile";
   onDeviceChange: (device: "desktop" | "tablet" | "mobile") => void;
+  /** Section being touched by the chat agent: gold outline + badge on the
+   *  matching [data-section-key] inside the iframe while a tool runs. */
+  flash?: SectionFlash | null;
 }
 
-export function PreviewFrame({ html, css, device, onDeviceChange }: PreviewFrameProps) {
+// Tool-theater styles injected into the preview document. The srcDoc iframe is
+// same-origin, so the flash effect toggles the class directly on the section.
+const FLASH_CSS = `
+[data-section-key].cw-flash { position: relative; outline: 2px solid #bfa669; outline-offset: -2px; animation: cw-flash-pulse 1.4s ease-in-out infinite; }
+[data-section-key].cw-flash::before { content: attr(data-cw-flash-label); position: absolute; top: 12px; left: 12px; z-index: 60; padding: 5px 11px; border: 1px solid #bfa669; border-radius: 999px; background: rgba(20, 18, 12, 0.92); color: #bfa669; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; }
+@keyframes cw-flash-pulse { 0%, 100% { outline-color: rgba(191, 166, 105, 0.95); } 50% { outline-color: rgba(191, 166, 105, 0.4); } }
+`;
+
+export function PreviewFrame({ html, css, device, onDeviceChange, flash }: PreviewFrameProps) {
   const [view, setView] = useState<"preview" | "code">("preview");
   const [copied, setCopied] = useState<string | null>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
+
+  // Apply/remove the flash inside the live iframe without reloading it.
+  useEffect(() => {
+    const doc = frameRef.current?.contentDocument;
+    if (!doc) return;
+    doc.querySelectorAll(".cw-flash").forEach((el) => {
+      el.classList.remove("cw-flash");
+      el.removeAttribute("data-cw-flash-label");
+    });
+    if (!flash) return;
+    const el = doc.querySelector(`[data-section-key="${flash.target}"]`);
+    if (!el) return; // structure changed mid-turn — degrade to no flash
+    el.setAttribute("data-cw-flash-label", flash.label || "Updating");
+    el.classList.add("cw-flash");
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [flash]);
 
   const srcDoc = useMemo(
     () => `<!DOCTYPE html>
@@ -24,6 +53,7 @@ export function PreviewFrame({ html, css, device, onDeviceChange }: PreviewFrame
       * { box-sizing: border-box; }
       body { margin: 0; font-family: system-ui, sans-serif; }
       ${css}
+      ${FLASH_CSS}
     </style>
   </head>
   <body>
@@ -103,6 +133,7 @@ export function PreviewFrame({ html, css, device, onDeviceChange }: PreviewFrame
             style={{ width, height: device === "desktop" ? "100%" : "800px", minHeight: "100%" }}
           >
             <iframe
+              ref={frameRef}
               title="Preview"
               srcDoc={srcDoc}
               className="h-full w-full border-none"

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { PromptInput } from "@/components/builder/prompt-input";
 import { PreviewFrame } from "@/components/builder/preview-frame";
+import type { SectionFlash } from "@/lib/section-flash";
 import { JourneyRail, JourneyNudge, type JourneyStep } from "@/components/builder/journey-rail";
 import { BillingModal } from "@/components/settings/billing-modal";
 import { AuthModal } from "@/components/auth/auth-modal";
@@ -60,6 +61,7 @@ export default function Builder() {
   const [projectName, setProjectName] = useState("Untitled site");
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [sectionFlash, setSectionFlash] = useState<SectionFlash | null>(null);
   const [step, setStep] = useState<JourneyStep>("describe");
   const [refineIntents, setRefineIntents] = useState<RefineIntent[]>([]);
   const [showBilling, setShowBilling] = useState(false);
@@ -526,10 +528,11 @@ export default function Builder() {
             onQuota={() => {}}
             onVideoStarted={(id) => { setVideoPct(0); void pollVideo(id); }}
             onUpgrade={() => setShowBilling(true)}
+            onSectionFlash={setSectionFlash}
           />
         )}
         <div className="relative flex-1 overflow-hidden">
-          <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
+          <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} flash={sectionFlash} />
 
           {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} queued={queued} />}
           {filling && (

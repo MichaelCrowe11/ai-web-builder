@@ -3,6 +3,7 @@
 // Caps: maxToolCalls (default 8) and deadlineMs (default 60s). Two consecutive
 // failures of the same tool abandon it for the rest of the turn.
 import type { SiteDocument } from "@shared/site-document";
+import { sectionKey } from "@shared/section-key";
 import type { AssistantToolTurn, ToolDef, ToolWireMessage } from "../azure-chat";
 import { applyTool, compactOutline, MUTATING_TOOLS, TOOL_DEFS, ToolInputError } from "./site-tools";
 
@@ -14,8 +15,10 @@ export interface ServiceTools {
 }
 
 // detail/label are UI strings for the panel; the model receives JSON.stringify(result) separately.
+// target is the section key (`index:type`) for section-addressed tools, so the
+// preview can flash the matching [data-section-key] while the tool runs.
 export type TurnEvent =
-  | { type: "tool_start"; name: string; label: string }
+  | { type: "tool_start"; name: string; label: string; target?: string }
   | { type: "tool_result"; name: string; ok: boolean; detail: string }
   | { type: "doc_updated"; doc: SiteDocument }
   | { type: "assistant"; text: string };
@@ -82,6 +85,17 @@ function toolLabel(name: string, args: any, doc: SiteDocument): string {
   }
 }
 
+// Section-addressed tools resolve their index arg to a stable section key
+// (matching shared/section-key.ts and the renderer's data-section-key).
+const SECTION_ADDRESSED = new Set(["read_section", "edit_section", "remove_section"]);
+
+function sectionTarget(name: string, args: any, doc: SiteDocument): string | undefined {
+  if (!SECTION_ADDRESSED.has(name)) return undefined;
+  const i = args?.index;
+  if (!Number.isInteger(i) || i < 0 || i >= doc.sections.length) return undefined;
+  return sectionKey(doc, i);
+}
+
 function upgradeReply(feature: string | undefined): string {
   return typeof feature === "string" && feature.toLowerCase().includes("video")
     ? "Hero video comes with Pro."
@@ -140,7 +154,8 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
       try { args = JSON.parse(call.arguments || "{}"); } catch { /* malformed args = tool error below */ }
 
       const label = toolLabel(call.name, args, doc);
-      onEvent({ type: "tool_start", name: call.name, label });
+      const target = sectionTarget(call.name, args, doc);
+      onEvent({ type: "tool_start", name: call.name, label, ...(target ? { target } : {}) });
 
       // Cumulative cap: a call that would push total executions past maxToolCalls
       // is refused but still answers its tool_call_id (protocol invariant).
