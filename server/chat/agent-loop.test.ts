@@ -7,7 +7,7 @@ import type { AssistantToolTurn } from "../azure-chat";
 function scripted(responses: AssistantToolTurn[]) {
   const calls: any[] = [];
   const fn = vi.fn(async (messages: any[], _tools: any[]) => {
-    calls.push(messages);
+    calls.push([...messages]);
     const next = responses.shift();
     if (!next) throw new Error("script exhausted");
     return next;
@@ -106,5 +106,45 @@ describe("runTurn", () => {
     });
     const roles = calls[0].map((m: any) => m.role);
     expect(roles.slice(0, 4)).toEqual(["system", "user", "assistant", "user"]);
+  });
+
+  it("refuses parallel tool calls that exceed the cap but answers every tool_call_id", async () => {
+    const batch: AssistantToolTurn = { content: null, toolCalls: [
+      { id: "p1", name: "read_site", arguments: "{}" },
+      { id: "p2", name: "read_site", arguments: "{}" },
+      { id: "p3", name: "read_site", arguments: "{}" },
+    ] };
+    const { fn, calls } = scripted([batch, finalText("done")]);
+    const out = await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "x", allowMutations: true,
+      chatFn: fn, onEvent: () => {}, maxToolCalls: 2,
+    });
+    expect(out.reply).toBe("done");
+    const toolMsgs = calls[1].filter((m: any) => m.role === "tool");
+    expect(toolMsgs).toHaveLength(3); // every id answered
+    expect(toolMsgs[2].content).toMatch(/limit/i);
+  });
+
+  it("returns CAP_REPLY when the deadline expires (fake clock)", async () => {
+    let t = 0;
+    const { fn } = scripted([toolCall("c1", "read_site", {})]);
+    const { events, onEvent } = collectEvents();
+    const out = await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "x", allowMutations: true,
+      chatFn: async (...a) => { t += 61_000; return fn(...a); }, onEvent,
+      deadlineMs: 60_000, now: () => t,
+    });
+    expect(out.reply).toMatch(/limit/i);
+    expect(events.filter((e) => e.type === "assistant")).toHaveLength(1); // cap path emits too
+  });
+
+  it("feeds malformed JSON arguments to the tool as an error the model can correct", async () => {
+    const { fn, calls } = scripted([
+      { content: null, toolCalls: [{ id: "c1", name: "edit_section", arguments: "{not json" }] },
+      finalText("ok"),
+    ]);
+    await runTurn({ doc: fixtureDoc(), history: [], userMessage: "x", allowMutations: true, chatFn: fn, onEvent: () => {} });
+    const toolMsg = calls[1].filter((m: any) => m.role === "tool")[0];
+    expect(toolMsg.content).toMatch(/Error:/);
   });
 });

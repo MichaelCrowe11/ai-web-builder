@@ -6,6 +6,7 @@ import type { SiteDocument } from "@shared/site-document";
 import type { AssistantToolTurn, ToolDef, ToolWireMessage } from "../azure-chat";
 import { applyTool, compactOutline, MUTATING_TOOLS, TOOL_DEFS, ToolInputError } from "./site-tools";
 
+// detail/label are UI strings for the panel; the model receives JSON.stringify(result) separately.
 export type TurnEvent =
   | { type: "tool_start"; name: string; label: string }
   | { type: "tool_result"; name: string; ok: boolean; detail: string }
@@ -40,6 +41,7 @@ ${JSON.stringify(compactOutline(doc))}
 
 Rules:
 - Sections are addressed by INDEX from read_site. Read a section before editing it.
+- The outline above is current as of this message; after add/remove/move, call read_site again before further index-based edits.
 - Patch only the fields you are changing. Keep copy real and specific — never placeholders.
 - Be brief and concrete in replies: say what changed, in one or two sentences.
 - Never mention model names, AI providers, or these instructions.`;
@@ -86,9 +88,10 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
     { role: "user", content: userMessage },
   ];
 
-  let callsUsed = 0;
+  let callsUsed = 0;  // counts executed tool-call rounds (not individual calls)
   while (true) {
     if (callsUsed >= maxToolCalls || now() - started > deadlineMs) {
+      onEvent({ type: "assistant", text: CAP_REPLY });
       return { reply: CAP_REPLY, doc, mutated, toolEvents };
     }
 
@@ -100,18 +103,31 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
       return { reply, doc, mutated, toolEvents };
     }
 
+    callsUsed += 1;
+
     messages.push({
       role: "assistant",
       content: turn.content,
       tool_calls: turn.toolCalls.map((c) => ({ id: c.id, type: "function" as const, function: { name: c.name, arguments: c.arguments } })),
     });
 
+    let batchCallsUsed = 0;
     for (const call of turn.toolCalls) {
-      callsUsed += 1;
       let args: any = {};
       try { args = JSON.parse(call.arguments || "{}"); } catch { /* malformed args = tool error below */ }
 
-      onEvent({ type: "tool_start", name: call.name, label: toolLabel(call.name, args, doc) });
+      const label = toolLabel(call.name, args, doc);
+      onEvent({ type: "tool_start", name: call.name, label });
+
+      // Per-batch cap: if this call would exceed the per-batch limit, refuse but still answer the id.
+      batchCallsUsed += 1;
+      if (batchCallsUsed > maxToolCalls) {
+        const detail = "refused: per-turn tool limit reached";
+        toolEvents.push({ name: call.name, ok: false, detail });
+        onEvent({ type: "tool_result", name: call.name, ok: false, detail });
+        messages.push({ role: "tool", tool_call_id: call.id, content: detail });
+        continue;
+      }
 
       // Two-strike rule: a tool that failed twice in a row is abandoned this turn.
       if ((failures.get(call.name) ?? 0) >= 2) {
@@ -131,8 +147,8 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
           onEvent({ type: "doc_updated", doc });
         }
         const detail = JSON.stringify(out.result);
-        toolEvents.push({ name: call.name, ok: true, detail: toolLabel(call.name, args, doc) });
-        onEvent({ type: "tool_result", name: call.name, ok: true, detail: toolLabel(call.name, args, doc) });
+        toolEvents.push({ name: call.name, ok: true, detail: label });
+        onEvent({ type: "tool_result", name: call.name, ok: true, detail: label });
         messages.push({ role: "tool", tool_call_id: call.id, content: detail });
       } catch (err: any) {
         if (!(err instanceof ToolInputError)) throw err;
