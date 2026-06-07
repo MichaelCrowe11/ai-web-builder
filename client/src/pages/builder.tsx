@@ -26,12 +26,29 @@ import { ChatPanel } from "@/components/builder/chat-panel";
 const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Describe a website to begin.</h1><p class="sub">Type what you want in the bar below — a business, a vibe, a few details — and the workspace builds it live.</p></div>`;
 const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:end center;background:#0b0b0c;color:#e8e2cf;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 13rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(191,166,105,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#bfa669;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:rgba(232,226,207,0.5);max-width:24rem}`;
 
+// C1/C2 feature flag: side-panel chat. ?chat=1 in any environment, or
+// VITE_CHAT_PANEL=1 at build time. Removed when C3 makes the panel default.
+// Hoisted to module scope so it's stable before any state is declared and
+// so the initial useState for html can branch on it without a condition hook.
+// Guard typeof window for SSR safety.
+const chatEnabled =
+  typeof window !== "undefined" &&
+  (new URLSearchParams(window.location.search).has("chat") ||
+    import.meta.env.VITE_CHAT_PANEL === "1");
+
+// When the chat panel is visible, the empty-state copy points to the panel
+// rather than the bottom dock (which is hidden when chatEnabled).
+const CHAT_INITIAL_HTML = INITIAL_HTML.replace(
+  "in the bar below",
+  "in the conversation panel",
+);
+
 interface RefineIntent { label: string; instruction: string; }
 
 export default function Builder() {
   const { user } = useAuth();
   const [doc, setDoc] = useState<any | null>(null);
-  const [html, setHtml] = useState(INITIAL_HTML);
+  const [html, setHtml] = useState(chatEnabled ? CHAT_INITIAL_HTML : INITIAL_HTML);
   const [css, setCss] = useState(INITIAL_CSS);
   const [isGenerating, setIsGenerating] = useState(false);
   const [filling, setFilling] = useState(false);
@@ -108,6 +125,12 @@ export default function Builder() {
       if (fData.document?.meta?.name) setProjectName(fData.document.meta.name);
       setStep("refine");
       toast({ title: "Here's your site", description: "Tweak it with a suggestion, or publish." });
+      // When the chat panel is active and no project exists yet, silently create
+      // one so the panel can start a conversation immediately. Pass the freshly
+      // generated document directly to avoid a stale-closure read of `doc` state
+      // (setDoc above is async and may not have settled by the time createProject
+      // runs within the same synchronous continuation).
+      if (chatEnabled && !projectId) void createProject(fData.document);
       // Pro: generate real images in the background (best-effort) and swap them in.
       if (user?.plan === "pro") void generateImages(fData.document);
     } catch (error: any) {
@@ -144,8 +167,60 @@ export default function Builder() {
     }
   };
 
+  // Poll an in-progress video render by id and apply the result to the hero
+  // when it completes. Used by both the dock path (generateHeroVideo) and the
+  // chat path (onVideoStarted prop). After a successful apply, silently persists
+  // the updated document so the videoUrl survives a page reload.
+  const pollVideo = async (id: string) => {
+    try {
+      for (let i = 0; i < 80; i++) {
+        await new Promise((res) => setTimeout(res, 4000));
+        const sd = await (await fetch(`/api/generate/video/status/${id}`, { credentials: "include" })).json();
+        if (typeof sd.progress === "number") setVideoPct(sd.progress);
+        if (sd.status === "completed") {
+          // Build `updated` from current doc state via the setter callback to
+          // avoid a stale closure on `doc` (the poll loop runs for minutes).
+          setDoc((currentDoc: any) => {
+            if (!currentDoc) return currentDoc;
+            const updated = {
+              ...currentDoc,
+              sections: (currentDoc.sections as any[]).map((s: any) =>
+                s.type === "hero" ? { ...s, videoUrl: `/api/video/${id}` } : s,
+              ),
+            };
+            setHtml(renderDocumentBody(updated as any));
+            setCss(renderDocumentCss(updated as any));
+            // Silently persist the videoUrl — inline PATCH using the freshly
+            // built updated doc so we never read from (possibly stale) state.
+            setProjectId((pid) => {
+              if (pid) {
+                fetch(`/api/projects/${pid}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ document: updated }),
+                }).catch(() => {});
+              }
+              return pid;
+            });
+            return updated;
+          });
+          toast({ title: "Hero video added", description: "A generated background video is on your hero." });
+          return;
+        }
+        if (sd.status === "failed") throw new Error("Video render failed");
+      }
+      throw new Error("Video timed out");
+    } catch (e: any) {
+      toast({ title: "Video failed", description: e.message, variant: "destructive" });
+    } finally {
+      setVideoPct(null);
+    }
+  };
+
   // Pro-only: render a Sora hero background video (~1 min), poll, then swap it in
   // (re-rendered client-side via the shared renderer). Free users hit the paywall.
+  // Dock path: starts the render then delegates to pollVideo.
   const generateHeroVideo = async () => {
     if (!doc) return;
     const hero = (doc.sections as any[]).find((s) => s.type === "hero");
@@ -163,28 +238,9 @@ export default function Builder() {
         if (d.requiresUpgrade) { setShowBilling(true); return; }
         throw new Error(d.error || "Could not start video");
       }
-      const id = d.videoId;
-      for (let i = 0; i < 80; i++) {
-        await new Promise((res) => setTimeout(res, 4000));
-        const sd = await (await fetch(`/api/generate/video/status/${id}`, { credentials: "include" })).json();
-        if (typeof sd.progress === "number") setVideoPct(sd.progress);
-        if (sd.status === "completed") {
-          const updated = {
-            ...doc,
-            sections: (doc.sections as any[]).map((s) => (s.type === "hero" ? { ...s, videoUrl: `/api/video/${id}` } : s)),
-          };
-          setDoc(updated);
-          setHtml(renderDocumentBody(updated as any));
-          setCss(renderDocumentCss(updated as any));
-          toast({ title: "Hero video added", description: "A generated background video is on your hero." });
-          return;
-        }
-        if (sd.status === "failed") throw new Error("Video render failed");
-      }
-      throw new Error("Video timed out");
+      await pollVideo(d.videoId);
     } catch (e: any) {
       toast({ title: "Video failed", description: e.message, variant: "destructive" });
-    } finally {
       setVideoPct(null);
     }
   };
@@ -252,6 +308,32 @@ export default function Builder() {
     }
   };
 
+  // Create a new project and return its id. Accepts a docOverride so callers
+  // (e.g. handleGenerate's turn-zero path) can pass the freshly generated doc
+  // without relying on possibly-stale state closure values.
+  const createProject = async (docOverride?: any): Promise<string | null> => {
+    const docToSave = docOverride ?? doc;
+    try {
+      const r = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          html,
+          css,
+          name: projectName,
+          prompt: lastPrompt,
+          document: docToSave,
+        }),
+      });
+      const p = await r.json();
+      setProjectId(p.id);
+      return p.id as string;
+    } catch {
+      return null;
+    }
+  };
+
   const saveProject = useCallback(async () => {
     setIsSaving(true);
     try {
@@ -261,12 +343,7 @@ export default function Builder() {
           body: JSON.stringify({ html, css, name: projectName, document: doc }),
         });
       } else {
-        const r = await fetch("/api/projects", {
-          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
-          body: JSON.stringify({ html, css, name: projectName, prompt: lastPrompt, document: doc }),
-        });
-        const p = await r.json();
-        setProjectId(p.id);
+        await createProject();
       }
       toast({ title: "Saved" });
     } catch {
@@ -274,6 +351,7 @@ export default function Builder() {
     } finally {
       setIsSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html, css, doc, projectId, projectName, lastPrompt, toast]);
 
   const handleExport = useCallback(() => {
@@ -330,11 +408,6 @@ export default function Builder() {
   }, []);
 
   const hasGenerated = doc !== null;
-
-  // C1 feature flag: side-panel chat. ?chat=1 in any environment, or
-  // VITE_CHAT_PANEL=1 at build time. Removed when C2 makes the panel default.
-  const chatEnabled = typeof window !== "undefined" &&
-    (new URLSearchParams(window.location.search).has("chat") || import.meta.env.VITE_CHAT_PANEL === "1");
 
   return (
     <div className="h-screen flex flex-col bg-graphite font-sans overflow-hidden text-parchment">
@@ -413,11 +486,18 @@ export default function Builder() {
 
       {/* Workspace */}
       <div className="flex flex-1 overflow-hidden">
-        {chatEnabled && hasGenerated && projectId && (
+        {/* Chat panel: when the flag is on, mount immediately (even pre-generation)
+            so the user can type their first message. The panel skips transcript /
+            quota fetches while projectId is empty and routes the first message
+            through handleGenerate via onFirstMessage instead of the turn endpoint. */}
+        {chatEnabled && (
           <ChatPanel
-            projectId={projectId}
+            projectId={projectId ?? ""}
+            ready={Boolean(hasGenerated && projectId)}
+            onFirstMessage={async (text) => { await handleGenerate(text); }}
             onDocUpdate={(document, newHtml, newCss) => { setDoc(document); setHtml(newHtml); setCss(newCss); }}
             onQuota={() => {}}
+            onVideoStarted={(id) => { setVideoPct(0); void pollVideo(id); }}
           />
         )}
         <div className="relative flex-1 overflow-hidden">
@@ -437,45 +517,48 @@ export default function Builder() {
             </div>
           )}
 
-          {/* Bottom dock: nudge + (refine chips OR prompt) */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 px-4">
-            <div className="pointer-events-auto mx-auto max-w-2xl">
-              {/* Nudge only when there's nothing behind it to overlap */}
-              {!hasGenerated && (
-                <div className="mb-2 inline-block rounded-full bg-graphite/80 px-4 py-1 backdrop-blur-sm">
-                  <JourneyNudge current={step} />
-                </div>
-              )}
+          {/* Bottom dock: nudge + (refine chips OR prompt). Hidden when the chat
+              panel is active — the panel owns all text input in that mode. */}
+          {!chatEnabled && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 px-4">
+              <div className="pointer-events-auto mx-auto max-w-2xl">
+                {/* Nudge only when there's nothing behind it to overlap */}
+                {!hasGenerated && (
+                  <div className="mb-2 inline-block rounded-full bg-graphite/80 px-4 py-1 backdrop-blur-sm">
+                    <JourneyNudge current={step} />
+                  </div>
+                )}
 
-              {!hasGenerated ? (
-                <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
-              ) : (
-                <div className="rounded-2xl border border-gold/25 bg-graphite-soft p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
-                  <div className="mb-2 flex items-center gap-2 px-1">
-                    <Wand2 className="h-3.5 w-3.5 text-gold" />
-                    <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/55">Refine — tap to apply</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {refineIntents.map((r) => (
-                      <button key={r.label} onClick={() => handleRefine(r.instruction)} disabled={isGenerating}
-                        className="rounded-full border border-gold/20 bg-graphite-soft px-3 py-1.5 text-sm font-medium text-parchment/85 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
-                        {r.label}
+                {!hasGenerated ? (
+                  <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
+                ) : (
+                  <div className="rounded-2xl border border-gold/25 bg-graphite-soft p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
+                    <div className="mb-2 flex items-center gap-2 px-1">
+                      <Wand2 className="h-3.5 w-3.5 text-gold" />
+                      <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/55">Refine — tap to apply</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {refineIntents.map((r) => (
+                        <button key={r.label} onClick={() => handleRefine(r.instruction)} disabled={isGenerating}
+                          className="rounded-full border border-gold/20 bg-graphite-soft px-3 py-1.5 text-sm font-medium text-parchment/85 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
+                          {r.label}
+                        </button>
+                      ))}
+                      <button onClick={generateHeroVideo} disabled={isGenerating || videoPct !== null}
+                        className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-sm font-medium text-gold transition-colors hover:bg-gold/20 disabled:opacity-50">
+                        <Film className="h-3.5 w-3.5" />
+                        {videoPct !== null ? `Rendering ${videoPct}%` : "Hero video"}
                       </button>
-                    ))}
-                    <button onClick={generateHeroVideo} disabled={isGenerating || videoPct !== null}
-                      className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-sm font-medium text-gold transition-colors hover:bg-gold/20 disabled:opacity-50">
-                      <Film className="h-3.5 w-3.5" />
-                      {videoPct !== null ? `Rendering ${videoPct}%` : "Hero video"}
-                    </button>
-                    <button onClick={() => { setDoc(null); setHtml(INITIAL_HTML); setCss(INITIAL_CSS); setStep("describe"); }}
-                      className="rounded-full px-3 py-1.5 text-sm font-medium text-parchment/50 hover:text-parchment/80">
-                      Start over
-                    </button>
+                      <button onClick={() => { setDoc(null); setHtml(INITIAL_HTML); setCss(INITIAL_CSS); setStep("describe"); }}
+                        className="rounded-full px-3 py-1.5 text-sm font-medium text-parchment/50 hover:text-parchment/80">
+                        Start over
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

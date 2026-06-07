@@ -10,6 +10,11 @@ interface ChatMsg { role: "user" | "assistant"; content: string; toolEvents?: To
 
 interface ChatPanelProps {
   projectId: string;
+  /** True once a site has been generated and saved (projectId is non-empty and
+   *  the document exists). While false, the first message routes through
+   *  onFirstMessage instead of the turn endpoint. */
+  ready: boolean;
+  onFirstMessage?: (text: string) => Promise<void>;
   onDocUpdate: (document: any, html: string, css: string) => void;
   onQuota: (quota: any) => void;
   onVideoStarted?: (videoId: string) => void;
@@ -34,28 +39,31 @@ async function* sseEvents(body: ReadableStream<Uint8Array>) {
   }
 }
 
-export function ChatPanel({ projectId, onDocUpdate, onQuota, onVideoStarted }: ChatPanelProps) {
+export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuota, onVideoStarted }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [quota, setQuota] = useState<any | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
 
-  // Hydrate the transcript.
+  // Hydrate the transcript. Skip when projectId is empty (pre-generation turn-zero
+  // state) — there is no project to fetch against yet.
   useEffect(() => {
+    if (!projectId) return;
     fetch(`/api/chat/${projectId}/messages`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : { messages: [] }))
       .then((d) => setMessages((d.messages ?? []).map((m: any) => ({ role: m.role, content: m.content, toolEvents: m.toolEvents ?? undefined, docVersion: m.docVersion ?? null }))))
       .catch(() => {});
   }, [projectId]);
 
-  // Hydrate the quota pill once on mount.
+  // Hydrate the quota pill once on mount. Skip pre-generation (no session yet).
   useEffect(() => {
+    if (!projectId) return;
     fetch("/api/quota", { credentials: "include" })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => d && setQuota(d.quota))
       .catch(() => {});
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: "smooth" });
@@ -90,6 +98,41 @@ export function ChatPanel({ projectId, onDocUpdate, onQuota, onVideoStarted }: C
     if (!message || busy) return;
     setInput("");
     setBusy(true);
+
+    // Turn-zero: the panel is visible before any site exists. Route the first
+    // message through onFirstMessage (which calls handleGenerate in the parent)
+    // rather than POSTing to the turn endpoint (there is no project yet).
+    // These exchanges are client-side only — not persisted to the transcript.
+    // C3 will move generation server-side so the turn endpoint handles this too.
+    if (!ready && onFirstMessage) {
+      setMessages((m) => [
+        ...m,
+        { role: "user", content: message },
+        { role: "assistant", content: "Building your site — watch the preview…" },
+      ]);
+      try {
+        await onFirstMessage(message);
+        setMessages((m) =>
+          m.map((msg, i) =>
+            i === m.length - 1
+              ? { ...msg, content: "Here’s the first draft. Tell me what to change." }
+              : msg,
+          ),
+        );
+      } catch {
+        setMessages((m) =>
+          m.map((msg, i) =>
+            i === m.length - 1
+              ? { ...msg, content: "Something went wrong generating the site. Try describing it again." }
+              : msg,
+          ),
+        );
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     setMessages((m) => [...m, { role: "user", content: message }, { role: "assistant", content: "", toolEvents: [] }]);
 
     const patchLast = (fn: (a: ChatMsg) => ChatMsg) =>
@@ -182,7 +225,9 @@ export function ChatPanel({ projectId, onDocUpdate, onQuota, onVideoStarted }: C
         )}
         {messages.length === 0 && (
           <p className="mt-6 text-center text-sm text-parchment/45">
-            Tell the builder what to change — copy, sections, style.
+            {ready
+              ? "Tell the builder what to change — copy, sections, style."
+              : "Describe the site you want — the builder does the rest."}
           </p>
         )}
       </div>
@@ -193,7 +238,7 @@ export function ChatPanel({ projectId, onDocUpdate, onQuota, onVideoStarted }: C
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder="Tell the builder what to change…"
+            placeholder={ready ? "Tell the builder what to change…" : "Describe the site you want…"}
             rows={1}
             className="max-h-[120px] min-h-[36px] w-full resize-none border-none bg-transparent py-1.5 text-[13.5px] placeholder:text-parchment/45 focus:outline-none"
           />
