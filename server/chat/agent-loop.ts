@@ -31,6 +31,7 @@ export interface RunTurnOpts {
   deadlineMs?: number;
   now?: () => number; // injectable clock
   serviceTools?: ServiceTools;
+  systemNote?: string; // appended as an extra rule line; leave undefined to omit
 }
 
 export interface TurnResult {
@@ -83,7 +84,7 @@ function toolLabel(name: string, args: any, doc: SiteDocument): string {
 export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
   const {
     doc: initialDoc, history, userMessage, allowMutations, chatFn, onEvent,
-    maxToolCalls = 8, deadlineMs = 60_000, now = Date.now, serviceTools,
+    maxToolCalls = 8, deadlineMs = 60_000, now = Date.now, serviceTools, systemNote,
   } = opts;
 
   let doc = initialDoc;
@@ -96,8 +97,11 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
   const tools = [...base, ...(serviceTools?.defs ?? [])];
   const serviceNames = new Set(serviceTools?.defs.map((d) => d.function.name) ?? []);
 
+  const sysContent = systemNote
+    ? `${systemPrompt(initialDoc, allowMutations)}\n- ${systemNote}`
+    : systemPrompt(initialDoc, allowMutations);
   const messages: ToolWireMessage[] = [
-    { role: "system", content: systemPrompt(initialDoc, allowMutations) },
+    { role: "system", content: sysContent },
     ...history.map((m) => ({ role: m.role, content: m.content }) as ToolWireMessage),
     { role: "user", content: userMessage },
   ];

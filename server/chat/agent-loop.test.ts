@@ -233,4 +233,27 @@ describe("runTurn", () => {
     expect(out.toolEvents).toHaveLength(1);
     expect(out.toolEvents[0]).toMatchObject({ name: "generate_image", ok: true });
   });
+
+  it("appends systemNote as a rule line in the system message when provided", async () => {
+    const { fn, calls } = scripted([finalText("ok")]);
+    await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "hi",
+      allowMutations: true, chatFn: fn, onEvent: () => {},
+      systemNote: "TEST-NOTE",
+    });
+    const systemMsg = calls[0][0];
+    expect(systemMsg.role).toBe("system");
+    expect(systemMsg.content).toContain("TEST-NOTE");
+  });
+
+  it("omits the systemNote rule line when systemNote is not provided", async () => {
+    const { fn, calls } = scripted([finalText("ok")]);
+    await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "hi",
+      allowMutations: true, chatFn: fn, onEvent: () => {},
+    });
+    const systemMsg = calls[0][0];
+    expect(systemMsg.role).toBe("system");
+    expect(systemMsg.content).not.toContain("TEST-NOTE");
+  });
 });

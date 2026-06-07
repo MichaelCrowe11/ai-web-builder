@@ -146,6 +146,9 @@ export function registerChatRoutes(app: Express) {
           }
         },
         serviceTools,
+        systemNote: isPro
+          ? undefined
+          : "Photo and video generation are Pro features the user's plan does not include. If they ask for imagery, do NOT edit imageHint as a substitute (it has no visible effect) — explain warmly that AI photography and hero video come with Pro and suggest upgrading.",
       });
 
       let docVersion: number | null = null;
