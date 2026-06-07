@@ -61,6 +61,9 @@ export function registerChatRoutes(app: Express) {
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     });
+    // If the client disconnects mid-turn, res.write becomes a silent no-op but
+    // the turn still completes: doc version + transcript persist, quota is
+    // consumed, and the client rehydrates via GET /messages on reconnect.
     const send = (event: string, data: unknown) => res.write(sseFrame(event, data));
 
     try {
@@ -75,7 +78,9 @@ export function registerChatRoutes(app: Express) {
         userMessage: message,
         allowMutations: quota.ok,
         chatFn: (messages: ToolWireMessage[], tools: ToolDef[]) =>
-          runLimited(() => azureChatTools(messages, 1200, tools, {
+          // 2000 tokens: replies are 1-2 sentences, but edit_section arguments
+          // can carry a full section's copy — 1200 risked truncated tool JSON.
+          runLimited(() => azureChatTools(messages, 2000, tools, {
             endpoint: ENDPOINT, apiKey: API_KEY, apiVersion: API_VERSION, models: modelsFromEnv(),
           })),
         onEvent: (e) => {
