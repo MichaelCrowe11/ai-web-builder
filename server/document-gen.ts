@@ -44,7 +44,7 @@ export function extractJson(text: string): any {
   return JSON.parse(raw);
 }
 
-const SCHEMA_GUIDE = `You design websites as a STRUCTURED JSON DOCUMENT (never HTML or code).
+export const SCHEMA_GUIDE = `You design websites as a STRUCTURED JSON DOCUMENT (never HTML or code).
 
 Output ONLY a JSON object with this shape:
 {
