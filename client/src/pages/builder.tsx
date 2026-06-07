@@ -430,6 +430,38 @@ export default function Builder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Reopening a saved project (/builder?project=<id>) restores the workspace:
+  // the structured doc re-renders the preview (falling back to stored html/css
+  // for legacy doc-less projects), and projectId landing makes the chat panel
+  // hydrate the persisted transcript — cross-device continuity (C3).
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("project");
+    if (!id) return;
+    (async () => {
+      try {
+        const r = await fetch(`/api/projects/${id}`, { credentials: "include" });
+        if (!r.ok) return; // unknown id: stay in turn-zero state
+        const p = await r.json();
+        setProjectId(p.id);
+        setProjectName(p.name ?? "Untitled site");
+        if (p.prompt) setLastPrompt(p.prompt);
+        if (p.document) {
+          setDoc(p.document);
+          setHtml(renderDocumentBody(p.document));
+          setCss(renderDocumentCss(p.document));
+        } else {
+          setHtml(p.html ?? "");
+          setCss(p.css ?? "");
+        }
+        setStep("refine");
+      } catch {
+        // network hiccup: leave the builder in its default state
+      }
+    })();
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const hasGenerated = doc !== null;
 
   return (

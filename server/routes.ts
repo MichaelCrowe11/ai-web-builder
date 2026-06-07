@@ -17,6 +17,7 @@ const stockOpts = () => ({
 });
 import { enforceQuota, consumeGeneration } from "./quota";
 import { runLimited, AtCapacityError, makeCapacityPayload } from "./gen-limiter";
+import { seedTurnZeroTranscript } from "./chat/seed";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { registerBillingRoutes } from "./billing";
@@ -483,6 +484,10 @@ export async function registerRoutes(
       const parsedDoc = siteDocumentSchema.safeParse(req.body.document);
       if (parsedDoc.success) {
         await storage.saveDocumentVersion(project.id, parsedDoc.data);
+        // Doc + prompt = a generated site: record the founding exchange so the
+        // chat transcript survives reload and other devices (C3). Best-effort —
+        // a transcript hiccup must not fail project creation.
+        if (prompt) await seedTurnZeroTranscript(storage, project.id, prompt).catch(() => {});
       }
 
       log(`Project created: ${project.id}`);
@@ -500,7 +505,11 @@ export async function registerRoutes(
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
-      return res.json(project);
+      // Include the latest structured document (additive) so reopening a
+      // project restores the full workspace — chat turns and refine need the
+      // doc, not just rendered html/css. Null for legacy doc-less projects.
+      const latest = await storage.getLatestDocument(project.id).catch(() => undefined);
+      return res.json({ ...project, document: latest?.document ?? null });
     } catch (error: any) {
       return res.status(500).json({ error: "Failed to get project" });
     }

@@ -71,8 +71,8 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
 
   // Hydrate the transcript. Skip when projectId is empty (pre-generation turn-zero
   // state) — there is no project to fetch against yet. When projectId appears
-  // right after turn-zero, the server transcript is empty (turn-zero isn't
-  // persisted); keep the local client-side exchange instead of wiping it.
+  // right after turn-zero, the server transcript holds the seeded founding
+  // exchange (project creation records it); an empty fetch keeps local state.
   useEffect(() => {
     if (!projectId) return;
     fetch(`/api/chat/${projectId}/messages`, { credentials: "include" })
@@ -131,8 +131,9 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
     // Turn-zero: the panel is visible before any site exists. Route the first
     // message through onFirstMessage (which calls handleGenerate in the parent)
     // rather than POSTing to the turn endpoint (there is no project yet).
-    // These exchanges are client-side only — not persisted to the transcript.
-    // C3 will move generation server-side so the turn endpoint handles this too.
+    // The exchange renders client-side here; the server records it durably when
+    // the project is created (seedTurnZeroTranscript), so reloads/other devices
+    // see the same founding messages.
     if (!ready && onFirstMessage) {
       setMessages((m) => [
         ...m,
