@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { runTurn, type TurnEvent } from "./agent-loop";
 import { fixtureDoc } from "./fixtures";
+import { ToolInputError } from "./site-tools";
 import type { AssistantToolTurn } from "../azure-chat";
 
 // Script the model: each call to chatFn pops the next canned response.
@@ -171,5 +172,45 @@ describe("runTurn", () => {
     await runTurn({ doc: fixtureDoc(), history: [], userMessage: "x", allowMutations: true, chatFn: fn, onEvent: () => {} });
     const toolMsg = calls[1].filter((m: any) => m.role === "tool")[0];
     expect(toolMsg.content).toMatch(/Error:/);
+  });
+
+  it("dispatches a serviceTool, awaits it, and treats its outcome like applyTool's", async () => {
+    const { fn } = scripted([
+      toolCall("c1", "generate_image", { index: 0, hint: "sourdough loaf" }),
+      finalText("Added a photo."),
+    ]);
+    const { events, onEvent } = collectEvents();
+    const out = await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "photo on the hero",
+      allowMutations: true, chatFn: fn, onEvent,
+      serviceTools: {
+        defs: [{ type: "function", function: { name: "generate_image", description: "x", parameters: { type: "object", properties: {} } } }],
+        run: async (doc, name, args) => ({
+          doc: { ...doc, sections: doc.sections.map((s: any, i: number) => i === args.index ? { ...s, image: { url: "data:image/jpeg;base64,x", alt: args.hint } } : s) } as any,
+          result: { ok: true }, mutated: true,
+        }),
+      },
+    });
+    expect(out.mutated).toBe(true);
+    expect((out.doc.sections[0] as any).image.alt).toBe("sourdough loaf");
+    expect(events.filter((e) => e.type === "doc_updated")).toHaveLength(1);
+  });
+
+  it("a serviceTool rejection is fed back as a tool error, not a crash", async () => {
+    const { fn, calls } = scripted([
+      toolCall("c1", "generate_image", { index: 0, hint: "x" }),
+      finalText("Couldn't generate that image."),
+    ]);
+    const out = await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "photo", allowMutations: true,
+      chatFn: fn, onEvent: () => {},
+      serviceTools: {
+        defs: [{ type: "function", function: { name: "generate_image", description: "x", parameters: { type: "object", properties: {} } } }],
+        run: async () => { throw new ToolInputError("image generation is unavailable right now"); },
+      },
+    });
+    expect(out.mutated).toBe(false);
+    const toolMsg = calls[1].filter((m: any) => m.role === "tool")[0];
+    expect(toolMsg.content).toMatch(/unavailable/);
   });
 });

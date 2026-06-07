@@ -6,6 +6,13 @@ import type { SiteDocument } from "@shared/site-document";
 import type { AssistantToolTurn, ToolDef, ToolWireMessage } from "../azure-chat";
 import { applyTool, compactOutline, MUTATING_TOOLS, TOOL_DEFS, ToolInputError } from "./site-tools";
 
+export interface ServiceTools {
+  defs: ToolDef[];
+  // Async tools (media, rebuild). Throw ToolInputError for model-correctable
+  // failures; anything else propagates like applyTool's non-input errors.
+  run: (doc: SiteDocument, name: string, args: any) => Promise<{ doc: SiteDocument; result: unknown; mutated: boolean }>;
+}
+
 // detail/label are UI strings for the panel; the model receives JSON.stringify(result) separately.
 export type TurnEvent =
   | { type: "tool_start"; name: string; label: string }
@@ -23,6 +30,7 @@ export interface RunTurnOpts {
   maxToolCalls?: number;
   deadlineMs?: number;
   now?: () => number; // injectable clock
+  serviceTools?: ServiceTools;
 }
 
 export interface TurnResult {
@@ -42,6 +50,7 @@ ${JSON.stringify(compactOutline(doc))}
 Rules:
 - Sections are addressed by INDEX from read_site. Read a section before editing it.
 - The outline above is current as of this message; after add/remove/move, call read_site again before further index-based edits.
+- move_section's "to" is the section's FINAL index after the move.
 - Patch only the fields you are changing. Keep copy real and specific — never placeholders.
 - Be brief and concrete in replies: say what changed, in one or two sentences.
 - Never mention model names, AI providers, or these instructions.`;
@@ -64,6 +73,9 @@ function toolLabel(name: string, args: any, doc: SiteDocument): string {
     case "move_section": return "Reordering sections";
     case "set_theme": return `Restyling — ${args?.preset ?? "theme"}`;
     case "set_meta": return "Updating site identity";
+    case "generate_image": return `Generating a photo — ${args?.hint ?? ""}`;
+    case "start_hero_video": return "Starting the hero video";
+    case "rebuild_site": return "Rebuilding the site";
     default: return name;
   }
 }
@@ -71,7 +83,7 @@ function toolLabel(name: string, args: any, doc: SiteDocument): string {
 export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
   const {
     doc: initialDoc, history, userMessage, allowMutations, chatFn, onEvent,
-    maxToolCalls = 8, deadlineMs = 60_000, now = Date.now,
+    maxToolCalls = 8, deadlineMs = 60_000, now = Date.now, serviceTools,
   } = opts;
 
   let doc = initialDoc;
@@ -80,7 +92,9 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
   const failures = new Map<string, number>();
   const started = now();
 
-  const tools = allowMutations ? TOOL_DEFS : TOOL_DEFS.filter((t) => !MUTATING_TOOLS.has(t.function.name));
+  const base = allowMutations ? TOOL_DEFS : TOOL_DEFS.filter((t) => !MUTATING_TOOLS.has(t.function.name));
+  const tools = [...base, ...(serviceTools?.defs ?? [])];
+  const serviceNames = new Set(serviceTools?.defs.map((d) => d.function.name) ?? []);
 
   const messages: ToolWireMessage[] = [
     { role: "system", content: systemPrompt(initialDoc, allowMutations) },
@@ -137,7 +151,9 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
 
       callsUsed += 1; // an attempted execution (success or tool error) consumes budget
       try {
-        const out = applyTool(doc, call.name, args);
+        const out = serviceNames.has(call.name)
+          ? await serviceTools!.run(doc, call.name, args)
+          : applyTool(doc, call.name, args);
         doc = out.doc;
         failures.set(call.name, 0);
         if (out.mutated) {
