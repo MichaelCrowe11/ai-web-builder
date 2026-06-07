@@ -47,18 +47,24 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
   const streamRef = useRef<HTMLDivElement>(null);
 
   // Hydrate the transcript. Skip when projectId is empty (pre-generation turn-zero
-  // state) — there is no project to fetch against yet.
+  // state) — there is no project to fetch against yet. When projectId appears
+  // right after turn-zero, the server transcript is empty (turn-zero isn't
+  // persisted); keep the local client-side exchange instead of wiping it.
   useEffect(() => {
     if (!projectId) return;
     fetch(`/api/chat/${projectId}/messages`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : { messages: [] }))
-      .then((d) => setMessages((d.messages ?? []).map((m: any) => ({ role: m.role, content: m.content, toolEvents: m.toolEvents ?? undefined, docVersion: m.docVersion ?? null }))))
+      .then((d) => {
+        const fetched: ChatMsg[] = (d.messages ?? []).map((m: any) => ({ role: m.role, content: m.content, toolEvents: m.toolEvents ?? undefined, docVersion: m.docVersion ?? null }));
+        setMessages((m) => (fetched.length === 0 ? m : fetched));
+      })
       .catch(() => {});
   }, [projectId]);
 
-  // Hydrate the quota pill once on mount. Skip pre-generation (no session yet).
+  // Hydrate the quota pill: on mount (the endpoint is projectId-independent, so
+  // turn-zero users see their allowance immediately) and again once the project
+  // exists (generation consumed quota in between).
   useEffect(() => {
-    if (!projectId) return;
     fetch("/api/quota", { credentials: "include" })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => d && setQuota(d.quota))

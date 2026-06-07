@@ -99,7 +99,9 @@ export default function Builder() {
 
   // First generation, two-phase: a fast outline paints a themed skeleton in ~2s,
   // then the full document fills in (the user watches it build instead of waiting).
-  const handleGenerate = async (prompt: string) => {
+  // Returns true on success so the chat panel's turn-zero path can report
+  // failure honestly (errors are toasted here, never thrown).
+  const handleGenerate = async (prompt: string): Promise<boolean> => {
     setIsGenerating(true);
     setFilling(false);
     const gate = (status: number, data: any, label: string) => {
@@ -116,7 +118,7 @@ export default function Builder() {
       const oRes = await postWithCapacityRetry("/api/generate/outline", { prompt }, { onQueued: () => setQueued(true) });
       setQueued(false);
       const oData = await oRes.json();
-      if (gate(oRes.status, oData, "Generation failed")) return;
+      if (gate(oRes.status, oData, "Generation failed")) return false;
       setHtml(oData.html);
       setCss(oData.css);
       if (oData.outline?.meta?.name) setProjectName(oData.outline.meta.name);
@@ -126,7 +128,7 @@ export default function Builder() {
       const fRes = await postWithCapacityRetry("/api/generate/fill", { prompt, outline: oData.outline }, { onQueued: () => setQueued(true) });
       setQueued(false);
       const fData = await fRes.json();
-      if (gate(fRes.status, fData, "Generation failed")) return;
+      if (gate(fRes.status, fData, "Generation failed")) return false;
       setDoc(fData.document);
       setHtml(fData.html);
       setCss(fData.css);
@@ -138,12 +140,16 @@ export default function Builder() {
       // one so the panel can start a conversation immediately. Pass the freshly
       // generated document directly to avoid a stale-closure read of `doc` state
       // (setDoc above is async and may not have settled by the time createProject
-      // runs within the same synchronous continuation).
-      if (chatEnabled && !projectId) void createProject(fData.document);
+      // runs within the same synchronous continuation). AWAITED so the panel's
+      // `ready` flips before its busy flag clears — otherwise a fast second
+      // message could re-route through onFirstMessage and regenerate the site.
+      if (chatEnabled && !projectIdRef.current) await createProject(fData.document, prompt);
       // Pro: generate real images in the background (best-effort) and swap them in.
       if (user?.plan === "pro") void generateImages(fData.document);
+      return true;
     } catch (error: any) {
       toast({ title: "Generation failed", description: error.message, variant: "destructive" });
+      return false;
     } finally {
       setIsGenerating(false);
       setFilling(false);
@@ -247,6 +253,10 @@ export default function Builder() {
       await pollVideo(d.videoId);
     } catch (e: any) {
       toast({ title: "Video failed", description: e.message, variant: "destructive" });
+    } finally {
+      // Covers the requiresUpgrade early return too (otherwise videoPct stays
+      // at 0 and the dock button reads "Rendering 0%" forever). Redundant after
+      // pollVideo's own finally, but setVideoPct(null) is idempotent.
       setVideoPct(null);
     }
   };
@@ -314,10 +324,12 @@ export default function Builder() {
     }
   };
 
-  // Create a new project and return its id. Accepts a docOverride so callers
-  // (e.g. handleGenerate's turn-zero path) can pass the freshly generated doc
-  // without relying on possibly-stale state closure values.
-  const createProject = async (docOverride?: any): Promise<string | null> => {
+  // Create a new project and return its id. Accepts a docOverride (plus the
+  // prompt) so callers like handleGenerate's turn-zero path can pass the
+  // freshly generated doc without relying on stale state closure values —
+  // when docOverride is given, html/css/name are derived from IT rather than
+  // from state (which hasn't re-rendered into this closure yet).
+  const createProject = async (docOverride?: any, promptOverride?: string): Promise<string | null> => {
     const docToSave = docOverride ?? doc;
     try {
       const r = await fetch("/api/projects", {
@@ -325,10 +337,10 @@ export default function Builder() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          html,
-          css,
-          name: projectName,
-          prompt: lastPrompt,
+          html: docOverride ? renderDocumentBody(docOverride) : html,
+          css: docOverride ? renderDocumentCss(docOverride) : css,
+          name: docOverride?.meta?.name ?? projectName,
+          prompt: promptOverride ?? lastPrompt,
           document: docToSave,
         }),
       });
@@ -349,7 +361,10 @@ export default function Builder() {
           body: JSON.stringify({ html, css, name: projectName, document: doc }),
         });
       } else {
-        await createProject();
+        // createProject swallows its own errors (silent turn-zero path);
+        // here a null id must surface as "Save failed", matching pre-refactor
+        // behavior where the fetch rejected into this catch.
+        if ((await createProject()) === null) throw new Error("Could not create project");
       }
       toast({ title: "Saved" });
     } catch {
@@ -500,7 +515,13 @@ export default function Builder() {
           <ChatPanel
             projectId={projectId ?? ""}
             ready={Boolean(hasGenerated && projectId)}
-            onFirstMessage={async (text) => { await handleGenerate(text); }}
+            onFirstMessage={async (text) => {
+              // handleGenerate toasts its own errors and resolves; throw here
+              // so the panel patches its stub to the failure copy instead of
+              // claiming a draft exists.
+              const ok = await handleGenerate(text);
+              if (!ok) throw new Error("Generation failed");
+            }}
             onDocUpdate={(document, newHtml, newCss) => { setDoc(document); setHtml(newHtml); setCss(newCss); }}
             onQuota={() => {}}
             onVideoStarted={(id) => { setVideoPct(0); void pollVideo(id); }}
