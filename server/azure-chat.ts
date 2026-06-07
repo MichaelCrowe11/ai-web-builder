@@ -5,6 +5,7 @@
 // Throws only when every model is exhausted. This is pure transport: callers
 // own the prompt and the parsing. Replaces the prior single-shot fetch that
 // surfaced any 429 as a user-facing "Failed to generate site".
+// Two entry points: azureChat (text) and azureChatTools (OpenAI-style tool calling).
 
 export interface AzureChatOpts {
   endpoint: string;
@@ -31,6 +32,11 @@ export type ToolWireMessage =
 export interface AssistantToolTurn {
   content: string | null;
   toolCalls: Array<{ id: string; name: string; arguments: string }>;
+}
+
+interface RawAssistantMessage {
+  content?: string | null;
+  tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string } }>;
 }
 
 const isGpt5 = (model: string) => /^gpt-5/i.test(model);
@@ -73,7 +79,7 @@ async function azureCompletion(
   maxTokens: number,
   opts: AzureChatOpts,
   tools?: ToolDef[],
-): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
+): Promise<RawAssistantMessage> {
   const {
     endpoint,
     apiKey,
@@ -88,7 +94,7 @@ async function azureCompletion(
   if (!endpoint || !apiKey) {
     throw new Error("Azure not configured: set AZURE_CORE_ENDPOINT and AZURE_CORE_API_KEY");
   }
-  if (!models.length) throw new Error("azureChat: no models provided");
+  if (!models.length) throw new Error("azureCompletion: no models provided");
 
   let lastErr: Error | null = null;
 
@@ -129,7 +135,7 @@ async function azureCompletion(
     }
   }
 
-  throw lastErr ?? new Error("azureChat: all models failed");
+  throw lastErr ?? new Error("azureCompletion: all models failed");
 }
 
 export async function azureChat(
@@ -150,9 +156,13 @@ export async function azureChatTools(
   const msg = await azureCompletion(messages, maxTokens, opts, tools);
   return {
     content: msg.content ?? null,
-    toolCalls: (msg.tool_calls ?? []).map((c: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-      id: c.id, name: c.function?.name ?? "", arguments: c.function?.arguments ?? "{}",
-    })),
+    toolCalls: (msg.tool_calls ?? [])
+      .filter((c) => c.id != null && c.function?.name != null)
+      .map((c) => ({
+        id: c.id as string,
+        name: c.function!.name as string,
+        arguments: c.function?.arguments ?? "{}",
+      })),
   };
 }
 

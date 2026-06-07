@@ -125,7 +125,7 @@ describe("azureChatTools", () => {
     expect(body.tool_choice).toBe("auto");
   });
 
-  it("retries 429 then falls back across models, same as azureChat", async () => {
+  it("retries a 429 with the same retry semantics as azureChat", async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(rate())
       .mockResolvedValueOnce(okTool("read_site", "{}"));
@@ -133,5 +133,17 @@ describe("azureChatTools", () => {
       ...baseOpts, models: ["gpt-4o"], maxRetriesPerModel: 3, fetchImpl,
     });
     expect(out.toolCalls).toHaveLength(1);
+  });
+
+  it("drops malformed tool calls (missing id or name) instead of emitting broken entries", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(resp(200, { choices: [{ message: { content: null, tool_calls: [
+      { type: "function", function: { name: "read_site", arguments: "{}" } },              // no id
+      { id: "call_2", type: "function", function: { arguments: "{}" } },                    // no name
+      { id: "call_3", type: "function", function: { name: "read_section" } },               // no arguments
+    ] } }] }));
+    const out = await azureChatTools([{ role: "user", content: "hi" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], fetchImpl,
+    });
+    expect(out.toolCalls).toEqual([{ id: "call_3", name: "read_section", arguments: "{}" }]);
   });
 });
