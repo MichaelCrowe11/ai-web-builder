@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, ArrowUp } from "lucide-react";
 import { nextFlash, type SectionFlash } from "@/lib/section-flash";
 
-// Conversational builder side panel (C1, behind ?chat=1). Talks to
+// Conversational builder side panel (the default interface; ?chat=0 restores
+// the legacy dock). Talks to
 // POST /api/chat/:projectId/turns and renders the SSE stream: tool chips
 // appear as the agent works; doc_updated swaps the live preview.
 

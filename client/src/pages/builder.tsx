@@ -27,15 +27,15 @@ import { ChatPanel } from "@/components/builder/chat-panel";
 const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Describe a website to begin.</h1><p class="sub">Type what you want in the bar below — a business, a vibe, a few details — and the workspace builds it live.</p></div>`;
 const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:end center;background:#0b0b0c;color:#e8e2cf;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 13rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(191,166,105,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#bfa669;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:rgba(232,226,207,0.5);max-width:24rem}`;
 
-// C1/C2 feature flag: side-panel chat. ?chat=1 in any environment, or
-// VITE_CHAT_PANEL=1 at build time. Removed when C3 makes the panel default.
+// The conversational builder is the DEFAULT interface (C3 complete, flag
+// flipped 2026-06-07). ?chat=0 is the escape hatch back to the legacy dock —
+// keep it until the dock is deleted outright.
 // Hoisted to module scope so it's stable before any state is declared and
 // so the initial useState for html can branch on it without a condition hook.
 // Guard typeof window for SSR safety.
 const chatEnabled =
   typeof window !== "undefined" &&
-  (new URLSearchParams(window.location.search).has("chat") ||
-    import.meta.env.VITE_CHAT_PANEL === "1");
+  new URLSearchParams(window.location.search).get("chat") !== "0";
 
 // When the chat panel is visible, the empty-state copy points to the panel
 // rather than the bottom dock (which is hidden when chatEnabled).
