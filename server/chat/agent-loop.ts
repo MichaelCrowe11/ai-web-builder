@@ -88,7 +88,7 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
     { role: "user", content: userMessage },
   ];
 
-  let callsUsed = 0;  // counts executed tool-call rounds (not individual calls)
+  let callsUsed = 0; // counts every executed tool call, cumulative across rounds
   while (true) {
     if (callsUsed >= maxToolCalls || now() - started > deadlineMs) {
       onEvent({ type: "assistant", text: CAP_REPLY });
@@ -103,15 +103,12 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
       return { reply, doc, mutated, toolEvents };
     }
 
-    callsUsed += 1;
-
     messages.push({
       role: "assistant",
       content: turn.content,
       tool_calls: turn.toolCalls.map((c) => ({ id: c.id, type: "function" as const, function: { name: c.name, arguments: c.arguments } })),
     });
 
-    let batchCallsUsed = 0;
     for (const call of turn.toolCalls) {
       let args: any = {};
       try { args = JSON.parse(call.arguments || "{}"); } catch { /* malformed args = tool error below */ }
@@ -119,9 +116,9 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
       const label = toolLabel(call.name, args, doc);
       onEvent({ type: "tool_start", name: call.name, label });
 
-      // Per-batch cap: if this call would exceed the per-batch limit, refuse but still answer the id.
-      batchCallsUsed += 1;
-      if (batchCallsUsed > maxToolCalls) {
+      // Cumulative cap: a call that would push total executions past maxToolCalls
+      // is refused but still answers its tool_call_id (protocol invariant).
+      if (callsUsed >= maxToolCalls) {
         const detail = "refused: per-turn tool limit reached";
         toolEvents.push({ name: call.name, ok: false, detail });
         onEvent({ type: "tool_result", name: call.name, ok: false, detail });
@@ -138,6 +135,7 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
         continue;
       }
 
+      callsUsed += 1; // an attempted execution (success or tool error) consumes budget
       try {
         const out = applyTool(doc, call.name, args);
         doc = out.doc;

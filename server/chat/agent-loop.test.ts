@@ -114,15 +114,40 @@ describe("runTurn", () => {
       { id: "p2", name: "read_site", arguments: "{}" },
       { id: "p3", name: "read_site", arguments: "{}" },
     ] };
-    const { fn, calls } = scripted([batch, finalText("done")]);
+    // Capture the live (mutated) messages array so we can inspect tool replies
+    // even though the turn ends without another model round.
+    let live: any[] = [];
+    const fn = vi.fn(async (messages: any[], _tools: any[]) => { live = messages; return batch; });
     const out = await runTurn({
       doc: fixtureDoc(), history: [], userMessage: "x", allowMutations: true,
       chatFn: fn, onEvent: () => {}, maxToolCalls: 2,
     });
-    expect(out.reply).toBe("done");
-    const toolMsgs = calls[1].filter((m: any) => m.role === "tool");
-    expect(toolMsgs).toHaveLength(3); // every id answered
+    // The cap counts EXECUTIONS cumulatively: 2 execute, the 3rd is refused,
+    // and the cap being reached ends the turn — no further model round.
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(out.reply).toMatch(/limit/i);
+    expect(out.toolEvents).toHaveLength(3);
+    expect(out.toolEvents.map((e) => e.ok)).toEqual([true, true, false]);
+    const toolMsgs = live.filter((m: any) => m.role === "tool");
+    expect(toolMsgs.map((m: any) => m.tool_call_id)).toEqual(["p1", "p2", "p3"]); // every id answered
     expect(toolMsgs[2].content).toMatch(/limit/i);
+  });
+
+  it("caps cumulative executions across rounds, not per round", async () => {
+    // maxToolCalls=3: a batch of 2 executes (2 used), the next round's batch of 2
+    // gets 1 execution + 1 refusal (3 used), then the cap ends the turn.
+    const batchOf2 = (a: string, b: string): AssistantToolTurn => ({ content: null, toolCalls: [
+      { id: a, name: "read_site", arguments: "{}" },
+      { id: b, name: "read_site", arguments: "{}" },
+    ] });
+    const { fn } = scripted([batchOf2("a1", "a2"), batchOf2("b1", "b2")]);
+    const out = await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "x", allowMutations: true,
+      chatFn: fn, onEvent: () => {}, maxToolCalls: 3,
+    });
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(out.reply).toMatch(/limit/i);
+    expect(out.toolEvents.map((e) => e.ok)).toEqual([true, true, true, false]);
   });
 
   it("returns CAP_REPLY when the deadline expires (fake clock)", async () => {
