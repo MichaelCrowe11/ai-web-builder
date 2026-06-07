@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { azureChat } from "./azure-chat";
+import { azureChat, azureChatTools, type ToolDef } from "./azure-chat";
 
 // Build a fake Response with just the bits azureChat reads.
 function resp(status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -86,5 +86,52 @@ describe("azureChat", () => {
         ...baseOpts, models: ["gpt-4o", "model-router"], maxRetriesPerModel: 1, fetchImpl,
       }),
     ).rejects.toThrow();
+  });
+});
+
+const TOOLS: ToolDef[] = [
+  { type: "function", function: { name: "read_site", description: "Read the site outline", parameters: { type: "object", properties: {} } } },
+];
+
+const okTool = (name: string, args: string) =>
+  resp(200, { choices: [{ message: { content: null, tool_calls: [{ id: "call_1", type: "function", function: { name, arguments: args } }] } }] });
+
+describe("azureChatTools", () => {
+  it("returns tool calls when the model requests them", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(okTool("read_site", "{}"));
+    const out = await azureChatTools([{ role: "user", content: "darker hero" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], fetchImpl,
+    });
+    expect(out.toolCalls).toEqual([{ id: "call_1", name: "read_site", arguments: "{}" }]);
+    expect(out.content).toBeNull();
+  });
+
+  it("returns final text when the model answers without tools", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(ok("All done."));
+    const out = await azureChatTools([{ role: "user", content: "thanks" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], fetchImpl,
+    });
+    expect(out.content).toBe("All done.");
+    expect(out.toolCalls).toEqual([]);
+  });
+
+  it("sends tools and tool_choice in the request body", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(ok("x"));
+    await azureChatTools([{ role: "user", content: "hi" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], fetchImpl,
+    });
+    const body = JSON.parse((fetchImpl.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.tools).toEqual(TOOLS);
+    expect(body.tool_choice).toBe("auto");
+  });
+
+  it("retries 429 then falls back across models, same as azureChat", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(rate())
+      .mockResolvedValueOnce(okTool("read_site", "{}"));
+    const out = await azureChatTools([{ role: "user", content: "hi" }], 500, TOOLS, {
+      ...baseOpts, models: ["gpt-4o"], maxRetriesPerModel: 3, fetchImpl,
+    });
+    expect(out.toolCalls).toHaveLength(1);
   });
 });

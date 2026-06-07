@@ -17,9 +17,25 @@ export interface AzureChatOpts {
   sleep?: (ms: number) => Promise<void>; // injectable for tests
 }
 
+export interface ToolDef {
+  type: "function";
+  function: { name: string; description: string; parameters: Record<string, unknown> };
+}
+
+// OpenAI wire-format messages for tool-calling conversations.
+export type ToolWireMessage =
+  | { role: "system" | "user" | "assistant"; content: string }
+  | { role: "assistant"; content: string | null; tool_calls: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }> }
+  | { role: "tool"; tool_call_id: string; content: string };
+
+export interface AssistantToolTurn {
+  content: string | null;
+  toolCalls: Array<{ id: string; name: string; arguments: string }>;
+}
+
 const isGpt5 = (model: string) => /^gpt-5/i.test(model);
 
-function buildBody(model: string, messages: { role: string; content: string }[], maxTokens: number) {
+function buildBody(model: string, messages: unknown[], maxTokens: number, tools?: ToolDef[]) {
   const body: Record<string, unknown> = { messages };
   if (isGpt5(model)) {
     // gpt-5 family rejects max_tokens and a custom temperature.
@@ -27,6 +43,10 @@ function buildBody(model: string, messages: { role: string; content: string }[],
   } else {
     body.max_tokens = maxTokens;
     body.temperature = 0.6;
+  }
+  if (tools?.length) {
+    body.tools = tools;
+    body.tool_choice = "auto";
   }
   return body;
 }
@@ -45,11 +65,15 @@ function backoffMs(retryAfter: string | null, attempt: number, base: number): nu
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-export async function azureChat(
-  messages: { role: string; content: string }[],
+// Private shared core: runs the full retry/fallback loop and returns the raw
+// message object from the first successful response. Both azureChat and
+// azureChatTools delegate here; the wrappers narrow the return to their types.
+async function azureCompletion(
+  messages: unknown[],
   maxTokens: number,
   opts: AzureChatOpts,
-): Promise<string> {
+  tools?: ToolDef[],
+): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
   const {
     endpoint,
     apiKey,
@@ -77,7 +101,7 @@ export async function azureChat(
         res = await fetchImpl(url, {
           method: "POST",
           headers: { "Content-Type": "application/json", "api-key": apiKey },
-          body: JSON.stringify(buildBody(model, messages, maxTokens)),
+          body: JSON.stringify(buildBody(model, messages, maxTokens, tools)),
         });
       } catch (e) {
         // Network/transport error: treat as retryable.
@@ -91,7 +115,7 @@ export async function azureChat(
 
       if (res.ok) {
         const data = await res.json();
-        return data.choices?.[0]?.message?.content ?? "";
+        return data.choices?.[0]?.message ?? {};
       }
 
       const detail = await res.text().catch(() => "");
@@ -106,6 +130,30 @@ export async function azureChat(
   }
 
   throw lastErr ?? new Error("azureChat: all models failed");
+}
+
+export async function azureChat(
+  messages: { role: string; content: string }[],
+  maxTokens: number,
+  opts: AzureChatOpts,
+): Promise<string> {
+  const msg = await azureCompletion(messages, maxTokens, opts);
+  return msg.content ?? "";
+}
+
+export async function azureChatTools(
+  messages: ToolWireMessage[],
+  maxTokens: number,
+  tools: ToolDef[],
+  opts: AzureChatOpts,
+): Promise<AssistantToolTurn> {
+  const msg = await azureCompletion(messages, maxTokens, opts, tools);
+  return {
+    content: msg.content ?? null,
+    toolCalls: (msg.tool_calls ?? []).map((c: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      id: c.id, name: c.function?.name ?? "", arguments: c.function?.arguments ?? "{}",
+    })),
+  };
 }
 
 // Resolve the model fallback chain from env: primary first, then any fallbacks.
