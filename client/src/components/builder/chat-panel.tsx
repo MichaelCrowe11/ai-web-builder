@@ -67,6 +67,9 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [quota, setQuota] = useState<any | null>(null);
+  // Mobile bottom-sheet expansion; irrelevant on md+ (the md: classes pin the
+  // desktop column layout regardless of this value).
+  const [sheetOpen, setSheetOpen] = useState(false);
   const streamRef = useRef<HTMLDivElement>(null);
 
   // Hydrate the transcript. Skip when projectId is empty (pre-generation turn-zero
@@ -127,6 +130,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
     if (!message || busy) return;
     setInput("");
     setBusy(true);
+    setSheetOpen(true); // mobile: surface the transcript so tool theater is visible
 
     // Turn-zero: the panel is visible before any site exists. Route the first
     // message through onFirstMessage (which calls handleGenerate in the parent)
@@ -228,8 +232,23 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
   };
 
   return (
-    <div className="flex w-[370px] min-w-[370px] flex-col border-r border-gold/15 bg-graphite-soft">
-      <div className="flex items-center justify-between border-b border-gold/10 px-4 py-3">
+    // Desktop: fixed 370px side column. Mobile (<md): a bottom sheet over the
+    // full-bleed preview — collapsed to the slim composer, the handle expands
+    // the transcript; sending a message auto-expands so tool theater is seen.
+    <div
+      className={`flex flex-col bg-graphite-soft fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-gold/25 shadow-[0_-8px_30px_rgba(0,0,0,0.45)] ${
+        sheetOpen ? "h-[72vh]" : ""
+      } md:static md:z-auto md:h-auto md:w-[370px] md:min-w-[370px] md:rounded-none md:border-t-0 md:border-r md:border-gold/15 md:shadow-none`}
+    >
+      <button
+        type="button"
+        aria-label={sheetOpen ? "Collapse conversation" : "Expand conversation"}
+        onClick={() => setSheetOpen((o) => !o)}
+        className="flex w-full items-center justify-center py-2 md:hidden"
+      >
+        <span className="h-1 w-10 rounded-full bg-gold/40" />
+      </button>
+      <div className={`${sheetOpen ? "flex" : "hidden"} items-center justify-between border-b border-gold/10 px-4 py-3 md:flex`}>
         <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-parchment/55">Conversation</span>
         {quota != null && (
           <span className="rounded-full border border-gold/30 px-2.5 py-0.5 font-mono text-[10px] text-gold">
@@ -238,7 +257,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
         )}
       </div>
 
-      <div ref={streamRef} className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+      <div ref={streamRef} className={`${sheetOpen ? "flex" : "hidden"} flex-1 flex-col gap-3.5 overflow-y-auto p-4 md:flex`}>
         {messages.map((m, i) =>
           m.role === "user" ? (
             <div key={i} className="max-w-[85%] self-end rounded-[14px_14px_4px_14px] border border-gold/20 bg-gold/10 px-3 py-2 text-[13.5px] leading-snug">
