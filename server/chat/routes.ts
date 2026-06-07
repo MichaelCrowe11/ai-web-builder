@@ -28,12 +28,18 @@ export function canAccessProject(project: Pick<Project, "userId">, sessionUserId
 }
 
 export function registerChatRoutes(app: Express) {
+  // Express 4 doesn't forward async rejections — every handler must catch its own (a rejection here would crash the single prod instance).
   app.get("/api/chat/:projectId/messages", async (req: Request, res: Response) => {
-    const project = await storage.getProject(req.params.projectId);
-    if (!project) return res.status(404).json({ error: "Project not found" });
-    if (!canAccessProject(project, req.session.userId)) return res.status(403).json({ error: "Not your project" });
-    const messages = await storage.getChatMessages(project.id);
-    return res.json({ messages });
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ error: "Project not found" });
+      if (!canAccessProject(project, req.session.userId)) return res.status(403).json({ error: "Not your project" });
+      const messages = await storage.getChatMessages(project.id);
+      return res.json({ messages });
+    } catch (error: any) {
+      log(`Chat messages error: ${error.message}`);
+      return res.status(500).json({ error: "Could not load messages" });
+    }
   });
 
   app.post("/api/chat/:projectId/turns", async (req: Request, res: Response) => {
@@ -41,17 +47,25 @@ export function registerChatRoutes(app: Express) {
     if (!message) return res.status(400).json({ error: "message is required" });
     if (message.length > 2000) return res.status(400).json({ error: "message too long" });
 
-    const project = await storage.getProject(req.params.projectId);
-    if (!project) return res.status(404).json({ error: "Project not found" });
-    if (!canAccessProject(project, req.session.userId)) return res.status(403).json({ error: "Not your project" });
+    let project: Project | undefined;
+    let latest: Awaited<ReturnType<typeof storage.getLatestDocument>>;
+    let quota: Awaited<ReturnType<typeof quotaSnapshot>>;
+    try {
+      project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ error: "Project not found" });
+      if (!canAccessProject(project, req.session.userId)) return res.status(403).json({ error: "Not your project" });
 
-    const latest = await storage.getLatestDocument(project.id);
-    if (!latest) return res.status(409).json({ error: "Generate a site before chatting about it" });
+      latest = await storage.getLatestDocument(project.id);
+      if (!latest) return res.status(409).json({ error: "Generate a site before chatting about it" });
 
-    const quota = await quotaSnapshot(req);
+      quota = await quotaSnapshot(req);
 
-    // Set quotaUser from snapshot if available so consumeGeneration skips a second fetch.
-    if (quota.user) req.quotaUser = quota.user;
+      // Set quotaUser from snapshot if available so consumeGeneration skips a second fetch.
+      if (quota.user) req.quotaUser = quota.user;
+    } catch (error: any) {
+      log(`Chat turn setup error: ${error.message}`);
+      return res.status(500).json({ error: "Could not start the turn" });
+    }
 
     // Send headers BEFORE any await that can throw — errors after this point go
     // down the stream as error events, never a half-JSON 500.
