@@ -25,6 +25,7 @@ import { registerGrowthRoutes } from "./growth-routes";
 import { registerExportRoutes } from "./github-export";
 import { registerAgentRoutes } from "./agent/routes";
 import { makeVerifier } from "./agent/x402-verifier";
+import { registerChatRoutes } from "./chat/routes";
 import { log } from "./log";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
 
@@ -47,6 +48,9 @@ export async function registerRoutes(
 
   // Growth routes (telemetry sink + Mission Control API)
   registerGrowthRoutes(app);
+
+  // Conversational builder — transcript fetch + SSE turn endpoint.
+  registerChatRoutes(app);
 
   // Export the generated site to GitHub (transient PAT, no OAuth app).
   registerExportRoutes(app);
