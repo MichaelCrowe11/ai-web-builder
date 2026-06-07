@@ -171,3 +171,20 @@ export const agentClaimTokens = pgTable("agent_claim_tokens", {
   byProject: index("agent_claim_tokens_project_idx").on(t.projectId),
 }));
 export type AgentClaimTokenRow = typeof agentClaimTokens.$inferSelect;
+
+// Conversational builder transcript. tool_events records the agent's actions
+// for replay in the panel; doc_version links a mutating turn to the
+// site_documents version it produced (the undo target).
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 36 }).notNull().references(() => projects.id),
+  role: text("role").$type<"user" | "assistant">().notNull(),
+  content: text("content").notNull(),
+  toolEvents: jsonb("tool_events").$type<Array<{ name: string; ok: boolean; detail: string }> | null>(),
+  docVersion: integer("doc_version"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  byProject: index("chat_messages_project_idx").on(t.projectId, t.createdAt),
+}));
+export type ChatMessageRow = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = Omit<ChatMessageRow, "id" | "createdAt">;

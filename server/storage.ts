@@ -5,6 +5,8 @@ import {
   type InsertProject,
   type ExperimentRow,
   type AgentClaimTokenRow,
+  type ChatMessageRow,
+  type InsertChatMessage,
   users,
   projects,
   siteDocuments,
@@ -15,10 +17,11 @@ import {
   formSubmissions,
   siteMedia,
   agentClaimTokens,
+  chatMessages,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, and, desc, isNull } from "drizzle-orm";
+import { eq, and, desc, asc, isNull } from "drizzle-orm";
 import postgres from "postgres";
 import type { SiteDocument } from "@shared/site-document";
 import type { SiteGoal } from "@shared/site-goal";
@@ -76,6 +79,9 @@ export interface IStorage {
   getClaimTokenByHash(tokenHash: string): Promise<AgentClaimTokenRow | undefined>;
   getClaimTokenByProject(projectId: string): Promise<AgentClaimTokenRow | undefined>;
   claimToken(tokenHash: string, claimedBy: string): Promise<boolean>;
+  // Conversational builder transcript
+  addChatMessage(msg: InsertChatMessage): Promise<ChatMessageRow>;
+  getChatMessages(projectId: string, limit?: number): Promise<ChatMessageRow[]>;
 }
 
 // In-memory storage for development/fallback
@@ -335,6 +341,22 @@ export class MemStorage implements IStorage {
     r.claimedAt = new Date();
     return true;
   }
+
+  private chatLog: ChatMessageRow[] = [];
+
+  async addChatMessage(msg: InsertChatMessage): Promise<ChatMessageRow> {
+    const row: ChatMessageRow = {
+      id: `${this.chatLog.length + 1}`,
+      createdAt: new Date(),
+      ...msg,
+    } as ChatMessageRow;
+    this.chatLog.push(row);
+    return row;
+  }
+
+  async getChatMessages(projectId: string, limit = 200): Promise<ChatMessageRow[]> {
+    return this.chatLog.filter((m) => m.projectId === projectId).slice(-limit);
+  }
 }
 
 // PostgreSQL storage implementation
@@ -584,6 +606,18 @@ export class PostgresStorage implements IStorage {
       .where(and(eq(agentClaimTokens.tokenHash, tokenHash), isNull(agentClaimTokens.claimedBy)))
       .returning();
     return r.length > 0;
+  }
+
+  async addChatMessage(msg: InsertChatMessage): Promise<ChatMessageRow> {
+    const [row] = await this.db.insert(chatMessages).values(msg).returning();
+    return row;
+  }
+
+  async getChatMessages(projectId: string, limit = 200): Promise<ChatMessageRow[]> {
+    return this.db.select().from(chatMessages)
+      .where(eq(chatMessages.projectId, projectId))
+      .orderBy(asc(chatMessages.createdAt))
+      .limit(limit);
   }
 }
 
