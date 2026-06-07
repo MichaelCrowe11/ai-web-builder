@@ -8,6 +8,8 @@ import { startGrowthScheduler } from "./growth-scheduler";
 import { createServer } from "http";
 import { log } from "./log";
 export { log } from "./log";
+import { storage, PostgresStorage } from "./storage";
+import { runBootMigrations } from "./boot-migrations";
 
 const app = express();
 const httpServer = createServer(app);
@@ -79,6 +81,15 @@ const APP_HOSTS = (process.env.APP_HOSTS ?? "")
 app.use(publishedSiteMiddleware(APP_HOSTS));
 
 (async () => {
+  // Self-heal additive schema before serving: ships the code and its tables
+  // together so a missed manual migration can't 500 a feature (the
+  // chat_messages incident, 2026-06-07). Loud-fail, never boot-blocking.
+  if (storage instanceof PostgresStorage) {
+    const pg = storage; // narrowed binding survives the closure below
+    const ok = await runBootMigrations((s) => pg.execRaw(s), log);
+    log(ok ? "boot migrations: schema up to date" : "boot migrations: FAILED — see error above");
+  }
+
   await registerRoutes(httpServer, app);
   startGrowthScheduler();
 

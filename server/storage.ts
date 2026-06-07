@@ -21,7 +21,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, and, desc, isNull } from "drizzle-orm";
+import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import postgres from "postgres";
 import type { SiteDocument } from "@shared/site-document";
 import type { SiteGoal } from "@shared/site-goal";
@@ -376,6 +376,11 @@ export class PostgresStorage implements IStorage {
       ? postgres(connectionString, { host: socketPath })
       : postgres(connectionString);
     this.db = drizzle(client);
+  }
+
+  // Raw DDL execution for boot-time additive migrations (boot-migrations.ts).
+  async execRaw(sqlText: string): Promise<void> {
+    await this.db.execute(sql.raw(sqlText));
   }
 
   async getUser(id: string): Promise<User | undefined> {
