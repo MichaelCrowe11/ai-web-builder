@@ -234,6 +234,25 @@ describe("runTurn", () => {
     expect(out.toolEvents[0]).toMatchObject({ name: "generate_image", ok: true });
   });
 
+  it("returns a deterministic upsell reply when suggest_upgrade is used", async () => {
+    const { fn } = scripted([
+      toolCall("c1", "suggest_upgrade", { feature: "photos" }),
+      finalText("I can help upgrade your plan!"),
+    ]);
+    const { events, onEvent } = collectEvents();
+    const out = await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "generate a photo",
+      allowMutations: true, chatFn: fn, onEvent,
+      serviceTools: {
+        defs: [{ type: "function", function: { name: "suggest_upgrade", description: "x", parameters: { type: "object", properties: {} } } }],
+        run: async (doc) => ({ doc, result: { ok: true }, mutated: false }),
+      },
+    });
+    expect(out.reply).toBe("Photo generation comes with Pro.");
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(events.filter((e) => e.type === "assistant")).toHaveLength(1);
+  });
+
   it("appends systemNote as a rule line in the system message when provided", async () => {
     const { fn, calls } = scripted([finalText("ok")]);
     await runTurn({

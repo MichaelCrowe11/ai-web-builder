@@ -525,6 +525,7 @@ export default function Builder() {
             onDocUpdate={(document, newHtml, newCss) => { setDoc(document); setHtml(newHtml); setCss(newCss); }}
             onQuota={() => {}}
             onVideoStarted={(id) => { setVideoPct(0); void pollVideo(id); }}
+            onUpgrade={() => setShowBilling(true)}
           />
         )}
         <div className="relative flex-1 overflow-hidden">

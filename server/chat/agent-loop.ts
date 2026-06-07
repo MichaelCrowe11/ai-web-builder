@@ -77,8 +77,15 @@ function toolLabel(name: string, args: any, doc: SiteDocument): string {
     case "generate_image": return `Generating a photo — ${args?.hint ?? ""}`;
     case "start_hero_video": return "Starting the hero video";
     case "rebuild_site": return "Rebuilding the site";
+    case "suggest_upgrade": return "Checking plan options";
     default: return name;
   }
+}
+
+function upgradeReply(feature: string | undefined): string {
+  return typeof feature === "string" && feature.toLowerCase().includes("video")
+    ? "Hero video comes with Pro."
+    : "Photo generation comes with Pro.";
 }
 
 export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
@@ -92,6 +99,7 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
   const toolEvents: TurnResult["toolEvents"] = [];
   const failures = new Map<string, number>();
   const started = now();
+  let forcedReply: string | null = null;
 
   const base = allowMutations ? TOOL_DEFS : TOOL_DEFS.filter((t) => !MUTATING_TOOLS.has(t.function.name));
   const tools = [...base, ...(serviceTools?.defs ?? [])];
@@ -168,6 +176,10 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
         toolEvents.push({ name: call.name, ok: true, detail: label });
         onEvent({ type: "tool_result", name: call.name, ok: true, detail: label });
         messages.push({ role: "tool", tool_call_id: call.id, content: detail });
+        if (call.name === "suggest_upgrade") {
+          forcedReply = upgradeReply(typeof args?.feature === "string" ? args.feature : undefined);
+          break;
+        }
       } catch (err: any) {
         if (!(err instanceof ToolInputError)) throw err;
         failures.set(call.name, (failures.get(call.name) ?? 0) + 1);
@@ -175,6 +187,11 @@ export async function runTurn(opts: RunTurnOpts): Promise<TurnResult> {
         onEvent({ type: "tool_result", name: call.name, ok: false, detail: err.message });
         messages.push({ role: "tool", tool_call_id: call.id, content: `Error: ${err.message}` });
       }
+    }
+
+    if (forcedReply) {
+      onEvent({ type: "assistant", text: forcedReply });
+      return { reply: forcedReply, doc, mutated, toolEvents };
     }
   }
 }

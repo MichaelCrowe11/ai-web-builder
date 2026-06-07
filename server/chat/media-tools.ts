@@ -13,6 +13,7 @@ export interface MediaDeps {
   startVideo: (prompt: string) => Promise<string>; // returns videoId; throws if disabled
   rebuildDocument: (prompt: string) => Promise<SiteDocument>;
   onVideoStarted: (videoId: string) => void;
+  onUpsell: (feature: string) => void;
 }
 
 // Sections whose schema carries a top-level `image` slot (hero/about/products
@@ -42,10 +43,19 @@ const DEFS: Record<string, ToolDef> = {
       prompt: { type: "string", description: "The new business description" },
     }, required: ["prompt"] },
   } },
+  suggest_upgrade: { type: "function", function: {
+    name: "suggest_upgrade",
+    description: "Offer the user a Pro upgrade. Call this when they ask for photo or video generation, which their current plan does not include. After calling it, reply with ONE short sentence such as: Photo generation comes with Pro.",
+    parameters: { type: "object", properties: {
+      feature: { type: "string", description: "What they asked for, e.g. photos" },
+    } },
+  } },
 };
 
 export function buildServiceTools(isPro: boolean, deps: MediaDeps): ServiceTools {
-  const names = isPro ? ["generate_image", "start_hero_video", "rebuild_site"] : ["rebuild_site"];
+  const names = isPro
+    ? ["generate_image", "start_hero_video", "rebuild_site"]
+    : ["rebuild_site", "suggest_upgrade"];
   const defs = names.map((n) => DEFS[n]);
   const allowed = new Set(names);
 
@@ -53,6 +63,11 @@ export function buildServiceTools(isPro: boolean, deps: MediaDeps): ServiceTools
     defs,
     async run(doc, name, args) {
       if (!allowed.has(name)) throw new ToolInputError(`unknown tool: ${name}`);
+
+      if (name === "suggest_upgrade") {
+        deps.onUpsell(typeof args?.feature === "string" ? args.feature : "media");
+        return { doc, result: { ok: true, shown: "upgrade card" }, mutated: false };
+      }
 
       if (name === "generate_image") {
         const i = args?.index;

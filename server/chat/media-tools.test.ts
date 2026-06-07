@@ -8,15 +8,32 @@ const deps = () => ({
   startVideo: vi.fn(async () => "vid-123"),
   rebuildDocument: vi.fn(async (prompt: string) => ({ ...fixtureDoc(), meta: { ...fixtureDoc().meta, name: `Rebuilt: ${prompt}` } })),
   onVideoStarted: vi.fn(),
+  onUpsell: vi.fn(),
 });
 
 describe("buildServiceTools", () => {
-  it("pro user gets all three defs; free user gets only rebuild_site", () => {
+  it("pro user gets all three defs; free user gets rebuild_site + suggest_upgrade", () => {
     const d = deps();
     expect(buildServiceTools(true, d).defs.map((t) => t.function.name).sort())
       .toEqual(["generate_image", "rebuild_site", "start_hero_video"]);
-    expect(buildServiceTools(false, d).defs.map((t) => t.function.name))
-      .toEqual(["rebuild_site"]);
+    expect(buildServiceTools(false, d).defs.map((t) => t.function.name).sort())
+      .toEqual(["rebuild_site", "suggest_upgrade"]);
+  });
+
+  it("suggest_upgrade invokes onUpsell with the feature and does not mutate the doc", async () => {
+    const d = deps();
+    const tools = buildServiceTools(false, d);
+    const out = await tools.run(fixtureDoc(), "suggest_upgrade", { feature: "photos" });
+    expect(d.onUpsell).toHaveBeenCalledWith("photos");
+    expect(out.mutated).toBe(false);
+    expect((out.result as any).shown).toBe("upgrade card");
+  });
+
+  it("suggest_upgrade falls back to 'media' when feature arg is absent", async () => {
+    const d = deps();
+    const tools = buildServiceTools(false, d);
+    await tools.run(fixtureDoc(), "suggest_upgrade", {});
+    expect(d.onUpsell).toHaveBeenCalledWith("media");
   });
 
   it("generate_image attaches the image to the indexed section", async () => {

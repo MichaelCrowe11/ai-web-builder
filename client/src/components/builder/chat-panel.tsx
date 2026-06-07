@@ -6,7 +6,15 @@ import { Loader2, ArrowUp } from "lucide-react";
 // appear as the agent works; doc_updated swaps the live preview.
 
 interface ToolEvent { name: string; ok: boolean; detail: string; running?: boolean }
-interface ChatMsg { role: "user" | "assistant"; content: string; toolEvents?: ToolEvent[]; docVersion?: number | null }
+// upsell is transient client state — it is not persisted and will not appear on reload (acceptable).
+interface ChatMsg {
+  role: "user" | "assistant";
+  content: string;
+  toolEvents?: ToolEvent[];
+  docVersion?: number | null;
+  upsell?: boolean;
+  upsellFeature?: string | null;
+}
 
 interface ChatPanelProps {
   projectId: string;
@@ -18,6 +26,7 @@ interface ChatPanelProps {
   onDocUpdate: (document: any, html: string, css: string) => void;
   onQuota: (quota: any) => void;
   onVideoStarted?: (videoId: string) => void;
+  onUpgrade?: () => void;
 }
 
 // Parse an SSE stream from a fetch body: yields { event, data } frames.
@@ -39,7 +48,17 @@ async function* sseEvents(body: ReadableStream<Uint8Array>) {
   }
 }
 
-export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuota, onVideoStarted }: ChatPanelProps) {
+function upgradeCopy(feature?: string | null) {
+  const isVideo = typeof feature === "string" && feature.toLowerCase().includes("video");
+  return {
+    headline: isVideo ? "Hero video comes with Pro." : "Photo generation comes with Pro.",
+    body: isVideo
+      ? "Upgrade to unlock hero video, photo generation, unlimited generations, and export code."
+      : "Upgrade to unlock photo and video generation, unlimited generations, and export code.",
+  };
+}
+
+export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuota, onVideoStarted, onUpgrade }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -165,10 +184,22 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
             toolEvents: (a.toolEvents ?? []).map((t, i, arr) =>
               i === arr.length - 1 && t.running ? { name: data.name, ok: data.ok, detail: data.detail, running: false } : t),
           }));
+        } else if (event === "upsell") {
+          const copy = upgradeCopy(data.feature);
+          patchLast((a) => ({
+            ...a,
+            content: copy.headline,
+            upsell: true,
+            upsellFeature: typeof data.feature === "string" ? data.feature : null,
+          }));
         } else if (event === "doc_updated") {
           onDocUpdate(data.document, data.html, data.css);
         } else if (event === "turn_done") {
-          patchLast((a) => ({ ...a, content: data.reply, docVersion: data.docVersion ?? null }));
+          patchLast((a) => ({
+            ...a,
+            content: a.upsell ? upgradeCopy(a.upsellFeature).headline : data.reply,
+            docVersion: data.docVersion ?? null,
+          }));
           onQuota(data.quota);
           setQuota(data.quota);
         } else if (event === "video_started") {
@@ -217,6 +248,26 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
                 </div>
               )}
               {m.content || (busy && i === messages.length - 1 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null)}
+              {m.upsell && (
+                <div className="mt-2 rounded-2xl border border-gold/25 bg-black/35 p-3 shadow-[0_0_0_1px_rgba(191,166,105,0.06)]">
+                  <div className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-gold/70">Pro feature</div>
+                  <div className="mt-1 text-[13px] leading-relaxed text-parchment/92">
+                    {upgradeCopy(m.upsellFeature).headline}
+                  </div>
+                  <div className="mt-1 text-[12px] leading-relaxed text-parchment/60">
+                    {upgradeCopy(m.upsellFeature).body}
+                  </div>
+                  {onUpgrade && (
+                    <button
+                      type="button"
+                      onClick={onUpgrade}
+                      className="mt-3 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-gold transition-colors hover:bg-gold/20"
+                    >
+                      Upgrade to Pro
+                    </button>
+                  )}
+                </div>
+              )}
               {typeof m.docVersion === "number" && m.docVersion > 1 && (
                 <button
                   onClick={() => undo(m.docVersion! - 1)}

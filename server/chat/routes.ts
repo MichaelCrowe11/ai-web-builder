@@ -115,7 +115,11 @@ export function registerChatRoutes(app: Express) {
         return resolveDocumentImages(raw, stockOpts());
       },
       onVideoStarted: (videoId: string) => send("video_started", { videoId }),
+      onUpsell: (feature: string) => send("upsell", { feature }),
     });
+    const turnServiceTools = !isPro && !quota.ok
+      ? { ...serviceTools, defs: serviceTools.defs.filter((d) => d.function.name === "suggest_upgrade") }
+      : serviceTools;
 
     try {
       // Fetch prior history BEFORE persisting the user message so that the
@@ -145,10 +149,10 @@ export function registerChatRoutes(app: Express) {
             send(e.type, e);
           }
         },
-        serviceTools,
+        serviceTools: turnServiceTools,
         systemNote: isPro
           ? undefined
-          : "Photo and video generation are Pro features the user's plan does not include. If they ask for imagery, do NOT edit imageHint as a substitute (it has no visible effect) — explain warmly that AI photography and hero video come with Pro and suggest upgrading.",
+          : "Photo and video generation are Pro features the user's plan does not include. If they ask for imagery, do NOT edit imageHint as a substitute (it has no visible effect). Call suggest_upgrade once, then reply with one short sentence.",
       });
 
       let docVersion: number | null = null;
