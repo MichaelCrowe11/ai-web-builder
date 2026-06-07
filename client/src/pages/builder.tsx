@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { postWithCapacityRetry } from "@/lib/generate-fetch";
 import { CroweHexC } from "@/components/brand/crowe-hex-c";
+import { ChatPanel } from "@/components/builder/chat-panel";
 
 // Clean, modern workspace empty state (rarely seen - arriving from the home
 // prompt auto-builds). Crowe gold-on-graphite, clean sans.
@@ -330,6 +331,11 @@ export default function Builder() {
 
   const hasGenerated = doc !== null;
 
+  // C1 feature flag: side-panel chat. ?chat=1 in any environment, or
+  // VITE_CHAT_PANEL=1 at build time. Removed when C2 makes the panel default.
+  const chatEnabled = typeof window !== "undefined" &&
+    (new URLSearchParams(window.location.search).has("chat") || import.meta.env.VITE_CHAT_PANEL === "1");
+
   return (
     <div className="h-screen flex flex-col bg-graphite font-sans overflow-hidden text-parchment">
       {/* Top bar */}
@@ -406,60 +412,69 @@ export default function Builder() {
       )}
 
       {/* Workspace */}
-      <div className="relative flex-1 overflow-hidden">
-        <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
-
-        {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} queued={queued} />}
-        {filling && (
-          <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
-            <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
-            <span className="font-mono text-xs text-parchment/80">Writing your copy…</span>
-          </div>
+      <div className="flex flex-1 overflow-hidden">
+        {chatEnabled && hasGenerated && projectId && (
+          <ChatPanel
+            projectId={projectId}
+            onDocUpdate={(document, newHtml, newCss) => { setDoc(document); setHtml(newHtml); setCss(newCss); }}
+            onQuota={() => {}}
+          />
         )}
-        {imaging && !filling && (
-          <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
-            <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
-            <span className="font-mono text-xs text-parchment/80">Generating photos…</span>
-          </div>
-        )}
+        <div className="relative flex-1 overflow-hidden">
+          <PreviewFrame html={html} css={css} device={device} onDeviceChange={setDevice} />
 
-        {/* Bottom dock: nudge + (refine chips OR prompt) */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 px-4">
-          <div className="pointer-events-auto mx-auto max-w-2xl">
-            {/* Nudge only when there's nothing behind it to overlap */}
-            {!hasGenerated && (
-              <div className="mb-2 inline-block rounded-full bg-graphite/80 px-4 py-1 backdrop-blur-sm">
-                <JourneyNudge current={step} />
-              </div>
-            )}
+          {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} queued={queued} />}
+          {filling && (
+            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
+              <span className="font-mono text-xs text-parchment/80">Writing your copy…</span>
+            </div>
+          )}
+          {imaging && !filling && (
+            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
+              <span className="font-mono text-xs text-parchment/80">Generating photos…</span>
+            </div>
+          )}
 
-            {!hasGenerated ? (
-              <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
-            ) : (
-              <div className="rounded-2xl border border-gold/25 bg-graphite-soft p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
-                <div className="mb-2 flex items-center gap-2 px-1">
-                  <Wand2 className="h-3.5 w-3.5 text-gold" />
-                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/55">Refine — tap to apply</span>
+          {/* Bottom dock: nudge + (refine chips OR prompt) */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 px-4">
+            <div className="pointer-events-auto mx-auto max-w-2xl">
+              {/* Nudge only when there's nothing behind it to overlap */}
+              {!hasGenerated && (
+                <div className="mb-2 inline-block rounded-full bg-graphite/80 px-4 py-1 backdrop-blur-sm">
+                  <JourneyNudge current={step} />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {refineIntents.map((r) => (
-                    <button key={r.label} onClick={() => handleRefine(r.instruction)} disabled={isGenerating}
-                      className="rounded-full border border-gold/20 bg-graphite-soft px-3 py-1.5 text-sm font-medium text-parchment/85 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
-                      {r.label}
+              )}
+
+              {!hasGenerated ? (
+                <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
+              ) : (
+                <div className="rounded-2xl border border-gold/25 bg-graphite-soft p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
+                  <div className="mb-2 flex items-center gap-2 px-1">
+                    <Wand2 className="h-3.5 w-3.5 text-gold" />
+                    <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/55">Refine — tap to apply</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {refineIntents.map((r) => (
+                      <button key={r.label} onClick={() => handleRefine(r.instruction)} disabled={isGenerating}
+                        className="rounded-full border border-gold/20 bg-graphite-soft px-3 py-1.5 text-sm font-medium text-parchment/85 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
+                        {r.label}
+                      </button>
+                    ))}
+                    <button onClick={generateHeroVideo} disabled={isGenerating || videoPct !== null}
+                      className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-sm font-medium text-gold transition-colors hover:bg-gold/20 disabled:opacity-50">
+                      <Film className="h-3.5 w-3.5" />
+                      {videoPct !== null ? `Rendering ${videoPct}%` : "Hero video"}
                     </button>
-                  ))}
-                  <button onClick={generateHeroVideo} disabled={isGenerating || videoPct !== null}
-                    className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-sm font-medium text-gold transition-colors hover:bg-gold/20 disabled:opacity-50">
-                    <Film className="h-3.5 w-3.5" />
-                    {videoPct !== null ? `Rendering ${videoPct}%` : "Hero video"}
-                  </button>
-                  <button onClick={() => { setDoc(null); setHtml(INITIAL_HTML); setCss(INITIAL_CSS); setStep("describe"); }}
-                    className="rounded-full px-3 py-1.5 text-sm font-medium text-parchment/50 hover:text-parchment/80">
-                    Start over
-                  </button>
+                    <button onClick={() => { setDoc(null); setHtml(INITIAL_HTML); setCss(INITIAL_CSS); setStep("describe"); }}
+                      className="rounded-full px-3 py-1.5 text-sm font-medium text-parchment/50 hover:text-parchment/80">
+                      Start over
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
