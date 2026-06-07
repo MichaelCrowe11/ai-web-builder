@@ -213,4 +213,24 @@ describe("runTurn", () => {
     const toolMsg = calls[1].filter((m: any) => m.role === "tool")[0];
     expect(toolMsg.content).toMatch(/unavailable/);
   });
+
+  it("a serviceTool execution consumes the cumulative call budget like a sync tool", async () => {
+    const { fn } = scripted([
+      toolCall("c1", "generate_image", { index: 0, hint: "x" }),
+      // never reached: spending the budget on the service call ends the turn
+      toolCall("c2", "read_site", {}),
+    ]);
+    const out = await runTurn({
+      doc: fixtureDoc(), history: [], userMessage: "photo", allowMutations: true,
+      chatFn: fn, onEvent: () => {}, maxToolCalls: 1,
+      serviceTools: {
+        defs: [{ type: "function", function: { name: "generate_image", description: "x", parameters: { type: "object", properties: {} } } }],
+        run: async (doc) => ({ doc, result: { ok: true }, mutated: false }),
+      },
+    });
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(out.reply).toMatch(/limit/i);
+    expect(out.toolEvents).toHaveLength(1);
+    expect(out.toolEvents[0]).toMatchObject({ name: "generate_image", ok: true });
+  });
 });
