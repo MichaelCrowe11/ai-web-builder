@@ -1,7 +1,10 @@
 // Fine-grained, zod-guarded operations on a SiteDocument. Pure: every call
 // returns a NEW document (or the same one for reads); the caller owns the
 // working copy. Sections are addressed by array index — the schema has no ids.
-import { siteDocumentSchema, sectionSchema, THEME_PRESETS, SECTION_TYPES, type SiteDocument } from "@shared/site-document";
+// (The UI's shared/section-key.ts addresses sections by stable key; the agent
+// layer deliberately uses bare indices because the model reads the outline fresh
+// each turn.)
+import { siteDocumentSchema, sectionSchema, THEME_PRESETS, SECTION_TYPES, type SiteDocument, type Section } from "@shared/site-document";
 import type { ToolDef } from "../azure-chat";
 
 export class ToolInputError extends Error {}
@@ -12,15 +15,15 @@ export interface ToolOutcome {
   mutated: boolean;
 }
 
-function sectionLabel(s: any): string {
-  return s.headline ?? s.title ?? s.type;
+function sectionLabel(s: Section): string {
+  return ("headline" in s ? s.headline : undefined) ?? ("title" in s ? s.title : undefined) ?? s.type;
 }
 
 export function compactOutline(doc: SiteDocument) {
   return {
     meta: doc.meta,
     theme: doc.theme,
-    sections: doc.sections.map((s: any, index: number) => ({
+    sections: doc.sections.map((s: Section, index: number) => ({
       index, type: s.type, layout: s.layout, label: sectionLabel(s),
     })),
   };
@@ -37,7 +40,8 @@ function requireIndex(doc: SiteDocument, index: unknown): number {
 // ToolInputError the model can read and self-correct from.
 function validated(doc: unknown): SiteDocument {
   const parsed = siteDocumentSchema.safeParse(doc);
-  if (!parsed.success) throw new ToolInputError(`change rejected: ${parsed.error.issues[0]?.message ?? "invalid document"} at ${parsed.error.issues[0]?.path?.join(".")}`);
+  const path = parsed.error?.issues[0]?.path?.join(".");
+  if (!parsed.success) throw new ToolInputError(`change rejected: ${parsed.error.issues[0]?.message ?? "invalid document"}${path ? ` at ${path}` : ""}`);
   return parsed.data;
 }
 
@@ -63,7 +67,7 @@ export function applyTool(doc: SiteDocument, name: string, args: any): ToolOutco
     case "add_section": {
       const parsed = sectionSchema.safeParse(args?.section);
       if (!parsed.success) throw new ToolInputError(`invalid section: ${parsed.error.issues[0]?.message} at ${parsed.error.issues[0]?.path?.join(".")}`);
-      const after = typeof args?.after === "number" ? requireIndex(doc, args.after) : doc.sections.length - 1;
+      const after = args?.after === undefined ? doc.sections.length - 1 : requireIndex(doc, args.after);
       const sections = doc.sections.slice();
       sections.splice(after + 1, 0, parsed.data);
       const next = validated({ ...doc, sections });
@@ -89,18 +93,23 @@ export function applyTool(doc: SiteDocument, name: string, args: any): ToolOutco
     }
 
     case "set_theme": {
+      const changed = (args?.preset && args.preset !== doc.theme.preset) || (args?.radius && args.radius !== doc.theme.radius);
       const theme = { ...doc.theme, ...(args?.preset ? { preset: args.preset } : {}), ...(args?.radius ? { radius: args.radius } : {}) };
       const next = validated({ ...doc, theme });
-      return { doc: next, result: { ok: true, theme: next.theme }, mutated: true };
+      return { doc: next, result: { ok: true, theme: next.theme, ...(changed ? {} : { note: "no change applied" }) }, mutated: Boolean(changed) };
     }
 
     case "set_meta": {
       const meta = { ...doc.meta };
+      let changed = false;
       for (const k of ["name", "tagline", "industry"] as const) {
-        if (typeof args?.[k] === "string" && args[k].trim()) meta[k] = args[k];
+        if (typeof args?.[k] === "string" && args[k].trim() && args[k] !== doc.meta[k]) {
+          meta[k] = args[k];
+          changed = true;
+        }
       }
       const next = validated({ ...doc, meta });
-      return { doc: next, result: { ok: true, meta: next.meta }, mutated: true };
+      return { doc: next, result: { ok: true, meta: next.meta, ...(changed ? {} : { note: "no change applied" }) }, mutated: changed };
     }
 
     default:

@@ -71,9 +71,51 @@ describe("applyTool", () => {
     expect(doc.theme.preset).toBe("nocturne-luxe");
   });
 
+  it("set_theme rejects an invalid preset with an actionable message", () => {
+    expect(() => applyTool(fixtureDoc(), "set_theme", { preset: "vaporwave-neon" })).toThrow(ToolInputError);
+    try {
+      applyTool(fixtureDoc(), "set_theme", { preset: "vaporwave-neon" });
+    } catch (e: any) {
+      expect(e.message).toMatch(/theme\.preset/);
+    }
+  });
+
+  it("set_theme with {} returns mutated: false", () => {
+    const { mutated, result } = applyTool(fixtureDoc(), "set_theme", {});
+    expect(mutated).toBe(false);
+    expect((result as any).note).toBe("no change applied");
+  });
+
   it("set_meta updates name/tagline", () => {
     const { doc } = applyTool(fixtureDoc(), "set_meta", { tagline: "Phoenix's slow-fermented bakery" });
     expect(doc.meta.tagline).toBe("Phoenix's slow-fermented bakery");
+  });
+
+  it("set_meta with { name: '' } returns mutated: false", () => {
+    const { mutated, result } = applyTool(fixtureDoc(), "set_meta", { name: "" });
+    expect(mutated).toBe(false);
+    expect((result as any).note).toBe("no change applied");
+  });
+
+  it("add_section with after: '1' throws ToolInputError", () => {
+    expect(() => applyTool(fixtureDoc(), "add_section", {
+      after: "1",
+      section: {
+        type: "testimonials", layout: "cards", title: "What people say",
+        items: [{ quote: "Best sourdough in Phoenix.", author: "Maria", role: "Regular" }],
+      },
+    })).toThrow(ToolInputError);
+  });
+
+  it("add_section without after appends at the end", () => {
+    const { doc } = applyTool(fixtureDoc(), "add_section", {
+      section: {
+        type: "cta", layout: "band", headline: "Order now",
+        cta: { label: "Order", action: "scroll-contact" },
+      },
+    });
+    expect(doc.sections).toHaveLength(4);
+    expect((doc.sections[doc.sections.length - 1] as any).type).toBe("cta");
   });
 
   it("unknown tool throws ToolInputError", () => {
