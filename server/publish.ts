@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import type { IStorage } from "./storage";
 import { requireAuth } from "./auth";
 import { log } from "./log";
-import type { Project } from "@shared/schema";
+import type { Project, ProjectVersion } from "@shared/schema";
 import { assembleDocumentHtml } from "./serve-document";
 
 const PUBLISH_DOMAIN = process.env.PUBLISH_DOMAIN ?? "ai-webbuilder.com";
@@ -79,6 +79,35 @@ export async function publishProjectRecord(
   return { slug, publishedUrl, project: updated ?? project };
 }
 
+// Version-first deploy: publish a SAVED version's immutable snapshot. The
+// version's html/css/name are written onto the project row (what serveSlug
+// reads), so the live site serves exactly the reviewed snapshot rather than
+// whatever the mutable draft has since become. publishedVersionId records which
+// version is live. ownerUserId folds an anonymous claim into the same write.
+export async function publishProjectVersionRecord(
+  projectId: string,
+  version: ProjectVersion,
+  store: IStorage = storage,
+  ownerUserId?: string,
+): Promise<{ slug: string; publishedUrl: string; project: Project }> {
+  const project = await store.getProject(projectId);
+  if (!project) throw new Error(`publishProjectVersionRecord: project ${projectId} not found`);
+  const slug = await uniqueSlugWith(store, version.name, project.slug ?? null);
+  const publishedUrl = `https://${slug}.${PUBLISH_DOMAIN}`;
+  const patch: Partial<Project> = {
+    name: version.name,
+    html: version.html,
+    css: version.css,
+    slug,
+    isPublished: true,
+    publishedUrl,
+    publishedVersionId: version.id,
+  };
+  if (ownerUserId) patch.userId = ownerUserId;
+  const updated = await store.updateProject(project.id, patch);
+  return { slug, publishedUrl, project: updated ?? project };
+}
+
 export function registerPublishRoutes(app: Express) {
   // Publish a project: require auth + ownership, assign slug, mark published.
   app.post("/api/projects/:id/publish", requireAuth, async (req: Request, res: Response) => {
@@ -121,6 +150,71 @@ export function registerPublishRoutes(app: Express) {
       return res.json({ ok: true });
     } catch (error: any) {
       return res.status(500).json({ error: "Failed to unpublish" });
+    }
+  });
+
+  // --- Version-first publish (save a reviewable version, then deploy it) ---
+
+  // List saved versions, newest first, plus which one is currently live.
+  app.get("/api/projects/:id/versions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ error: "Project not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const versions = await storage.getProjectVersionsByProject(project.id);
+      return res.json({ versions, publishedVersionId: project.publishedVersionId });
+    } catch (error: any) {
+      log(`Version list error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to list versions" });
+    }
+  });
+
+  // Snapshot the current project as an immutable, reviewable version.
+  app.post("/api/projects/:id/versions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ error: "Project not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const latest = (await storage.getProjectVersionsByProject(project.id))[0];
+      const version = await storage.createProjectVersion({
+        projectId: project.id,
+        versionNumber: latest ? latest.versionNumber + 1 : 1,
+        name: project.name,
+        html: project.html,
+        css: project.css,
+        prompt: project.prompt,
+      });
+      return res.status(201).json({ version });
+    } catch (error: any) {
+      log(`Version save error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to save version" });
+    }
+  });
+
+  // Deploy a specific saved version: the live site serves that exact snapshot.
+  app.post("/api/projects/:id/versions/:versionId/deploy", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ error: "Project not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const version = await storage.getProjectVersion(req.params.versionId);
+      if (!version || version.projectId !== project.id) {
+        return res.status(404).json({ error: "Version not found" });
+      }
+      // Fold an anonymous claim into the same write as the publish.
+      const claimOwner = project.userId ? undefined : req.session.userId;
+      const { slug, publishedUrl, project: updated } = await publishProjectVersionRecord(project.id, version, storage, claimOwner);
+      log(`Project ${project.id} deployed version ${version.versionNumber} at ${slug}`);
+      return res.json({ slug, publishedUrl, previewUrl: `/s/${slug}`, version, project: updated });
+    } catch (error: any) {
+      log(`Version deploy error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to deploy version" });
     }
   });
 

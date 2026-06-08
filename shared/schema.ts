@@ -53,6 +53,10 @@ export const projects = pgTable("projects", {
   slug: text("slug").unique(),
   isPublished: boolean("is_published").notNull().default(false),
   publishedUrl: text("published_url"),
+  // The saved version currently deployed (version-first publish). Null until a
+  // version is deployed; references project_versions.id (no hard FK to avoid an
+  // ordering cycle with the table defined below).
+  publishedVersionId: varchar("published_version_id", { length: 36 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -67,6 +71,34 @@ export const insertProjectSchema = createInsertSchema(projects).pick({
 
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
+
+// Immutable saved deployment candidates. Mirrors the OpenAI Sites model:
+// save a version first, then deploy an approved saved version.
+export const projectVersions = pgTable("project_versions", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 36 }).notNull().references(() => projects.id),
+  versionNumber: integer("version_number").notNull(),
+  name: text("name").notNull(),
+  html: text("html").notNull(),
+  css: text("css").notNull(),
+  prompt: text("prompt"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  byProject: index("project_versions_project_idx").on(t.projectId, t.createdAt),
+  byNumber: uniqueIndex("project_versions_project_number_idx").on(t.projectId, t.versionNumber),
+}));
+
+export const insertProjectVersionSchema = createInsertSchema(projectVersions).pick({
+  projectId: true,
+  versionNumber: true,
+  name: true,
+  html: true,
+  css: true,
+  prompt: true,
+});
+
+export type InsertProjectVersion = z.infer<typeof insertProjectVersionSchema>;
+export type ProjectVersion = typeof projectVersions.$inferSelect;
 
 import type { SiteDocument } from "./site-document";
 import type { SiteGoal } from "./site-goal";
