@@ -1,7 +1,15 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
+import { setupSession } from "./auth";
+import { handleStripeWebhook } from "./billing";
+import { publishedSiteMiddleware } from "./publish";
+import { startGrowthScheduler } from "./growth-scheduler";
 import { createServer } from "http";
+import { log } from "./log";
+export { log } from "./log";
+import { storage, PostgresStorage } from "./storage";
+import { runBootMigrations } from "./boot-migrations";
 
 const app = express();
 const httpServer = createServer(app);
@@ -12,8 +20,20 @@ declare module "http" {
   }
 }
 
+// Stripe webhook MUST receive the raw body for signature verification, so it
+// is registered with express.raw() BEFORE the global JSON parser below.
+app.post(
+  "/api/billing/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook,
+);
+
 app.use(
   express.json({
+    // Pro sites embed generated images as base64 data-URIs in the SiteDocument,
+    // so a saved/published doc can be several MB. The 100kb default silently 413s
+    // those PUT /document saves (images then vanish from the published site).
+    limit: "16mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
@@ -22,16 +42,8 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
+// Session middleware (cookie-based auth). Must be registered before routes.
+setupSession(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -59,8 +71,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve published sites on <slug>.ai-webbuilder.com BEFORE the app routes /
+// SPA catch-all, so a published subdomain never falls through to the app.
+// The app's own hosts are excluded so the builder UI keeps working.
+const APP_HOSTS = (process.env.APP_HOSTS ?? "")
+  .split(",")
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+app.use(publishedSiteMiddleware(APP_HOSTS));
+
 (async () => {
+  // Self-heal additive schema before serving: ships the code and its tables
+  // together so a missed manual migration can't 500 a feature (the
+  // chat_messages incident, 2026-06-07). Loud-fail, never boot-blocking.
+  if (storage instanceof PostgresStorage) {
+    const pg = storage; // narrowed binding survives the closure below
+    const ok = await runBootMigrations((s) => pg.execRaw(s), log);
+    log(ok ? "boot migrations: schema up to date" : "boot migrations: FAILED — see error above");
+  }
+
   await registerRoutes(httpServer, app);
+  startGrowthScheduler();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -84,12 +115,11 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
+  const port = parseInt(process.env.PORT || "5050", 10);
   httpServer.listen(
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);

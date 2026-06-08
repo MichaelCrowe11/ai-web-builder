@@ -1,90 +1,127 @@
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
-import { Link } from "wouter";
-import { ArrowRight, Sparkles, Zap, Shield, Code } from "lucide-react";
-import heroBg from "@assets/generated_images/abstract_gradient_mesh_background_with_deep_violet_and_blue_tones.png";
+import { useLocation } from "wouter";
+import { useState } from "react";
+import { Sparkles, Globe, Zap, ShieldCheck, ArrowUp } from "lucide-react";
+
+// Crowe Logic AI Web Builder. Replit-Agent-style: a big central prompt is the
+// hero. You describe a site and land straight in the workspace, building.
+// Crowe identity (gold on graphite, parchment), clean modern sans (no serif).
+const STARTERS = [
+  "A cozy coffee shop in Tucson with a menu and online reservations",
+  "A freelance photographer portfolio",
+  "A local plumbing company with service booking",
+  "An online store for handmade ceramics",
+  "A yoga studio with a class schedule",
+];
 
 export default function Home() {
+  const [, navigate] = useLocation();
+  const [prompt, setPrompt] = useState("");
+
+  const start = (p: string) => {
+    const text = p.trim();
+    if (!text) return;
+    navigate(`/builder?prompt=${encodeURIComponent(text)}`);
+  };
+
   return (
     <Layout>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 pb-32 md:pt-32">
-        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-          <img 
-            src={heroBg} 
-            alt="Background" 
-            className="w-full h-full object-cover"
+      <div className="bg-graphite text-parchment">
+        {/* ============ PROMPT HERO (Replit-Agent style) ============ */}
+        <section className="relative overflow-hidden">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(191,166,105,0.13), transparent 62%)" }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background"></div>
-        </div>
-        
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>AI-Powered Website Builder V2.0 is live</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-            Describe your dream site.<br />
-            <span className="text-primary">We build it instantly.</span>
-          </h1>
-          
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-            Generate production-ready React code, stunning designs, and full copy just by chatting. No coding required, but fully extensible if you want.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
-            <Link href="/builder">
-              <Button size="lg" className="h-12 px-8 text-base shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
-                Start Building Free <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Button size="lg" variant="outline" className="h-12 px-8 text-base">
-              View Showcase
-            </Button>
-          </div>
-        </div>
-      </section>
+          <div className="container relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-20 pt-24 text-center lg:pt-28">
+            <div className="rise mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
+              <span className="h-1 w-1 animate-pulse rounded-full bg-gold" />
+              Crowe Logic · AI Web Builder
+            </div>
 
-      {/* Features Grid */}
-      <section className="py-24 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl font-heading font-bold mb-4">Why WebGen AI?</h2>
-            <p className="text-muted-foreground">
-              We don't just paste code. We architect solutions with a production-ready stack.
+            <h1
+              className="rise text-[clamp(2.2rem,5vw,3.7rem)] font-semibold leading-[1.04] tracking-[-0.03em] text-parchment"
+              style={{ ["--d" as any]: "60ms" }}
+            >
+              What do you want to build?
+            </h1>
+            <p
+              className="rise mt-4 max-w-lg text-[1.05rem] leading-relaxed text-parchment/55"
+              style={{ ["--d" as any]: "140ms" }}
+            >
+              Describe your business in a sentence. We design it, write the copy,
+              and put it live on the web — with your own domain.
             </p>
-          </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Zap,
-                title: "Instant Generation",
-                description: "From prompt to preview in under 30 seconds. Iterate in real-time."
-              },
-              {
-                icon: Code,
-                title: "Clean React Code",
-                description: "Export standard React + Tailwind code. No vendor lock-in."
-              },
-              {
-                icon: Shield,
-                title: "Enterprise Ready",
-                description: "Secure, scalable, and built on modern infrastructure."
-              }
-            ].map((feature, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-shadow">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
-                  <feature.icon className="h-6 w-6" />
+            {/* THE COMPOSER — the hero element */}
+            <div className="rise mt-10 w-full" style={{ ["--d" as any]: "220ms" }}>
+              <div className="group rounded-2xl border border-gold/25 bg-graphite-soft/80 p-2.5 text-left shadow-[0_30px_90px_-36px_rgba(191,166,105,0.5)] backdrop-blur-sm transition-colors focus-within:border-gold/50">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(prompt);
+                  }}
+                  rows={3}
+                  placeholder="e.g. a neighborhood coffee shop in Tucson with a menu and online reservations"
+                  className="w-full resize-none bg-transparent px-3.5 py-3 text-[1.05rem] leading-relaxed text-parchment outline-none placeholder:text-parchment/35"
+                  autoFocus
+                />
+                <div className="flex items-center justify-between px-2 pb-0.5">
+                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/35">
+                    Free to start · no card · ⌘↵ to build
+                  </span>
+                  <Button
+                    onClick={() => start(prompt)}
+                    disabled={!prompt.trim()}
+                    className="h-11 rounded-xl bg-gold px-6 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(191,166,105,0.75)] disabled:opacity-40"
+                  >
+                    <Sparkles className="mr-1.5 h-4 w-4" />
+                    Build it
+                    <ArrowUp className="ml-1 h-4 w-4 rotate-45" />
+                  </Button>
                 </div>
-                <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
               </div>
-            ))}
+
+              {/* starter chips */}
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {STARTERS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => start(s)}
+                    className="rounded-full border border-gold/15 bg-graphite-soft/50 px-3.5 py-1.5 text-xs text-parchment/60 transition-colors hover:border-gold/40 hover:text-gold"
+                  >
+                    {s.length > 42 ? s.slice(0, 40) + "…" : s}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* ============ HOW IT WORKS (clean, compact) ============ */}
+        <section id="how-it-works" className="scroll-mt-20 border-t border-gold/10 py-20">
+          <div className="container mx-auto px-6">
+            <div className="grid gap-px overflow-hidden rounded-2xl border border-gold/15 bg-gold/15 md:grid-cols-3">
+              {[
+                { n: "01", icon: Zap, title: "Describe it", body: "Tell us what your business does in one sentence — or pick a starter above." },
+                { n: "02", icon: Globe, title: "Refine it", body: "A polished site appears in seconds. Adjust the look and copy with a tap in the workspace." },
+                { n: "03", icon: ShieldCheck, title: "Ship it", body: "Publish with one click. Hosting's included. Connect your own domain when you're ready." },
+              ].map((f) => (
+                <div key={f.n} className="group bg-graphite p-8 transition-colors duration-300 hover:bg-graphite-soft">
+                  <div className="flex items-center justify-between">
+                    <f.icon className="h-6 w-6 text-gold" strokeWidth={1.6} />
+                    <span className="font-mono text-xs text-gold/70">{f.n}</span>
+                  </div>
+                  <h3 className="mt-5 text-lg font-semibold tracking-tight text-parchment">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-parchment/55">{f.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
     </Layout>
   );
 }

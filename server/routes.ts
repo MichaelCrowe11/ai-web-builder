@@ -1,49 +1,317 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import Anthropic from "@anthropic-ai/sdk";
-import { log } from "./index";
-import { createHash } from "crypto";
+import { generate, generateStream, parseSite, MODEL } from "./ai";
+import { generateDocument, generateOutline, fillDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
+import { renderDocumentBody, renderDocumentCss, renderOutlineBody, renderOutlineCss } from "./renderer";
+import { resolveDocumentImages, type StockProvider } from "./stock-images";
+import { addGeneratedImages } from "./azure-image";
+import { startVideo, getVideoStatus, downloadVideo } from "./azure-video";
+import { siteDocumentSchema, siteOutlineSchema } from "@shared/site-document";
+
+// Resolve generated imageHints to real stock photos (best-effort; no key => the
+// renderer's gradient placeholders are used). Read env at call time.
+const stockOpts = () => ({
+  apiKey: process.env.STOCK_IMAGE_API_KEY,
+  provider: process.env.STOCK_IMAGE_PROVIDER as StockProvider | undefined,
+});
+import { enforceQuota, consumeGeneration } from "./quota";
+import { runLimited, AtCapacityError, makeCapacityPayload } from "./gen-limiter";
+import { seedTurnZeroTranscript } from "./chat/seed";
+import { publicUser } from "./plan";
+import { hashPassword, verifyPassword, requireAuth } from "./auth";
+import { registerBillingRoutes } from "./billing";
+import { registerPublishRoutes, renderFullHtml } from "./publish";
+import { registerGrowthRoutes } from "./growth-routes";
+import { registerExportRoutes } from "./github-export";
+import { registerAgentRoutes } from "./agent/routes";
+import { makeVerifier } from "./agent/x402-verifier";
+import { registerChatRoutes } from "./chat/routes";
+import { log } from "./log";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
-
-const anthropic = new Anthropic();
-
-// Simple password hashing (use bcrypt in production)
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
-}
-
-const SYSTEM_PROMPT = `You are an expert web designer and developer. Generate clean, modern HTML and CSS code based on user prompts.
-
-IMPORTANT: You must respond with ONLY valid JSON in this exact format:
-{
-  "html": "<your HTML code here>",
-  "css": "<your CSS code here>"
-}
-
-Guidelines:
-- Generate semantic, accessible HTML5
-- Use modern CSS with CSS variables for theming
-- Create visually appealing, professional designs
-- Include responsive design patterns
-- Use the following CSS variable structure for consistency:
-  --primary: (main brand color)
-  --text: (text color)
-  --bg: (background color)
-  --card-bg: (card background)
-  --radius: (border radius)
-- Include Google Fonts references in CSS (use @import at top)
-- Make designs feel premium and polished
-- Include hover states and smooth transitions
-- DO NOT include <html>, <head>, or <body> tags - only the inner content
-- DO NOT include any explanation - ONLY the JSON object`;
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // AI Generation endpoint
-  app.post("/api/generate", async (req: Request, res: Response) => {
+  // Turn an AtCapacityError into a graceful 503 the client auto-retries.
+  const sendCapacity = (res: Response, err: AtCapacityError) => {
+    const { retryAfterSeconds, body } = makeCapacityPayload(err);
+    res.setHeader("Retry-After", String(retryAfterSeconds));
+    return res.status(503).json(body);
+  };
+
+  // Billing routes (Stripe checkout + portal)
+  registerBillingRoutes(app);
+
+  // Publishing routes (publish/unpublish + /s/:slug serving)
+  registerPublishRoutes(app);
+
+  // Growth routes (telemetry sink + Mission Control API)
+  registerGrowthRoutes(app);
+
+  // Conversational builder — transcript fetch + SSE turn endpoint.
+  registerChatRoutes(app);
+
+  // Export the generated site to GitHub (transient PAT, no OAuth app).
+  registerExportRoutes(app);
+
+  // Agent API — /v1/agent/* routes (build, refine, claim, status, leads).
+  // makeVerifier() returns X402Verifier when X402_PAY_TO_ADDRESS + X402_FACILITATOR_URL
+  // are set; otherwise returns DisabledVerifier (503 payments_unavailable) so no
+  // free sites can be built in production before a wallet/facilitator is configured.
+  registerAgentRoutes(app, {
+    storage,
+    verifier: makeVerifier(),
+    prices: {
+      build: Number(process.env.AGENT_PRICE_BUILD_USDC ?? "1"),
+      refine: Number(process.env.AGENT_PRICE_REFINE_USDC ?? "0.25"),
+    },
+  });
+
+  // List of tappable refine intents for the UI.
+  app.get("/api/refine/intents", (_req: Request, res: Response) => {
+    return res.json({ intents: REFINE_INTENTS });
+  });
+
+  // STRUCTURED generation: prompt -> validated Site Document -> rendered HTML/CSS.
+  // The AI never writes markup, so output can't be broken or unsafe.
+  app.post("/api/generate/document", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      log(`Generating document (${MODEL}) for: ${prompt.substring(0, 50)}...`);
+      const raw = await runLimited(() => generateDocument(prompt));
+      const document = await resolveDocumentImages(raw, stockOpts());
+      const quota = await consumeGeneration(req);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+        quota,
+      });
+    } catch (error: any) {
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
+      log(`Document generation error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to generate site", details: error.message });
+    }
+  });
+
+  // TWO-PHASE generation, phase 1: fast outline -> instant themed skeleton.
+  // Gates on quota (enforceQuota) but does NOT consume; the fill consumes.
+  app.post("/api/generate/outline", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const outline = await runLimited(() => generateOutline(prompt));
+      return res.json({ outline, html: renderOutlineBody(outline), css: renderOutlineCss(outline) });
+    } catch (error: any) {
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
+      log(`Outline error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to outline site", details: error.message });
+    }
+  });
+
+  // Phase 2: expand the approved outline into the full document (consumes quota).
+  app.post("/api/generate/fill", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt, outline } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const parsed = siteOutlineSchema.safeParse(outline);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid outline is required" });
+      }
+      const raw = await runLimited(() => fillDocument(parsed.data, prompt));
+      const document = await resolveDocumentImages(raw, stockOpts());
+      const quota = await consumeGeneration(req);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+        quota,
+      });
+    } catch (error: any) {
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
+      log(`Fill error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to generate site", details: error.message });
+    }
+  });
+
+  // SCOPED refine: apply an instruction to an existing document. Counts as a
+  // generation against quota (it's an Azure call), but it's targeted + cheap.
+  app.post("/api/refine", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { document, instruction } = req.body;
+      if (!instruction || typeof instruction !== "string") {
+        return res.status(400).json({ error: "Instruction is required" });
+      }
+      const parsed = siteDocumentSchema.safeParse(document);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid document is required" });
+      }
+      log(`Refining document: ${instruction.substring(0, 50)}...`);
+      const refined = await runLimited(() => refineDocument(parsed.data, instruction));
+      const updated = await resolveDocumentImages(refined, stockOpts());
+      const quota = await consumeGeneration(req);
+      return res.json({
+        document: updated,
+        html: renderDocumentBody(updated),
+        css: renderDocumentCss(updated),
+        quota,
+      });
+    } catch (error: any) {
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
+      log(`Refine error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to refine site", details: error.message });
+    }
+  });
+
+  // PRO image generation (async, after the text site is shown). Generates real
+  // topical images (gpt-image-1) for hero + about. Free tier keeps gradients.
+  app.post("/api/generate/images", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") {
+        return res.status(403).json({ error: "Image generation is a Pro feature.", requiresUpgrade: true });
+      }
+      const parsed = siteDocumentSchema.safeParse(req.body?.document);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid document is required" });
+      }
+      const document = await addGeneratedImages(parsed.data);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+      });
+    } catch (error: any) {
+      log(`Image gen error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to generate images", details: error.message });
+    }
+  });
+
+  // PRO hero video (Sora 2). Start a render job; client polls status; the
+  // finished mp4 streams from /api/video/:id and becomes the hero background.
+  app.post("/api/generate/video/start", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") {
+        return res.status(403).json({ error: "Video generation is a Pro feature.", requiresUpgrade: true });
+      }
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      const videoId = await startVideo(prompt);
+      if (!videoId) return res.status(502).json({ error: "Could not start video generation." });
+      return res.json({ videoId });
+    } catch (error: any) {
+      log(`Video start error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to start video", details: error.message });
+    }
+  });
+
+  app.get("/api/generate/video/status/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || user.plan !== "pro") return res.status(403).json({ error: "Pro feature" });
+      const st = await getVideoStatus(req.params.id);
+      if (!st) return res.status(502).json({ error: "Could not get video status" });
+      return res.json(st);
+    } catch (error: any) {
+      return res.status(500).json({ error: "Status check failed", details: error.message });
+    }
+  });
+
+  // Public: stream the finished mp4. Durable: serves the stored copy if present,
+  // else downloads from Azure ONCE, stores it, and serves it - so published hero
+  // videos survive even after the upstream (Azure) copy expires.
+  app.get("/api/video/:id", async (req: Request, res: Response) => {
+    try {
+      const stored = await storage.getMedia(req.params.id);
+      if (stored) {
+        res.setHeader("Content-Type", stored.mime);
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        return res.send(stored.data);
+      }
+      const buf = await downloadVideo(req.params.id);
+      if (!buf) return res.status(404).send("not found");
+      await storage.saveMedia(req.params.id, "video/mp4", buf).catch(() => {}); // persist durable copy
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return res.send(buf);
+    } catch {
+      return res.status(502).send("error");
+    }
+  });
+
+  // LEAD CAPTURE: a published site's contact/booking form posts here (public).
+  // Honeypot + field/size caps; stores the submission for the owner's inbox.
+  app.post("/api/forms/:projectId/submit", async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ error: "Site not found" });
+      const body = req.body ?? {};
+      if (body.website || body._hp) return res.json({ ok: true }); // honeypot: silently accept, drop
+      const data: Record<string, string> = {};
+      for (const [k, v] of Object.entries(body)) {
+        if (typeof v === "string" && k.length < 60) data[k] = v.slice(0, 5000);
+      }
+      if (Object.keys(data).length === 0) return res.status(400).json({ error: "Empty submission" });
+      await storage.saveSubmission(req.params.projectId, data);
+      return res.json({ ok: true });
+    } catch (error: any) {
+      log(`Form submit error: ${error.message}`);
+      return res.status(500).json({ error: "Could not submit" });
+    }
+  });
+
+  // CMS: persist an owner's edited document (re-renders + saves both the doc
+  // version and the project html/css so every serve path reflects the edit).
+  app.put("/api/projects/:id/document", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ error: "Not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const parsed = siteDocumentSchema.safeParse(req.body?.document);
+      if (!parsed.success) return res.status(400).json({ error: "Valid document is required" });
+      const document = parsed.data;
+      const html = renderDocumentBody(document);
+      const css = renderDocumentCss(document);
+      await storage.saveDocumentVersion(req.params.id, document);
+      await storage.updateProject(req.params.id, { html, css, name: document.meta.name });
+      return res.json({ ok: true, html, css });
+    } catch (error: any) {
+      log(`Document save error: ${error.message}`);
+      return res.status(500).json({ error: "Save failed", details: error.message });
+    }
+  });
+
+  // OWNER INBOX: list a project's submissions (auth + ownership).
+  app.get("/api/projects/:projectId/submissions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) return res.status(404).json({ error: "Not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+      const submissions = await storage.listSubmissions(req.params.projectId);
+      return res.json({ submissions });
+    } catch (error: any) {
+      return res.status(500).json({ error: "Failed to load submissions" });
+    }
+  });
+
+  // AI Generation endpoint (legacy raw HTML/CSS — kept during transition)
+  app.post("/api/generate", enforceQuota, async (req: Request, res: Response) => {
     try {
       const { prompt } = req.body;
 
@@ -51,39 +319,22 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Prompt is required" });
       }
 
-      log(`Generating website for prompt: ${prompt.substring(0, 50)}...`);
+      log(`Generating website (${MODEL}) for prompt: ${prompt.substring(0, 50)}...`);
 
-      const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [
-          {
-            role: "user",
-            content: `Create a website based on this description: ${prompt}`,
-          },
-        ],
-        system: SYSTEM_PROMPT,
-      });
+      const text = await runLimited(() => generate(prompt));
+      const result = parseSite(text);
 
-      const content = message.content[0];
-      if (content.type !== "text") {
-        throw new Error("Unexpected response type");
-      }
-
-      // Parse the JSON response
-      const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("Could not parse response as JSON");
-      }
-
-      const result = JSON.parse(jsonMatch[0]);
+      // Count this generation against the user's quota only on success.
+      const quota = await consumeGeneration(req);
 
       log("Website generated successfully");
       return res.json({
         html: result.html,
         css: result.css,
+        quota,
       });
     } catch (error: any) {
+      if (error instanceof AtCapacityError) return sendCapacity(res, error);
       log(`Generation error: ${error.message}`);
       return res.status(500).json({
         error: "Failed to generate website",
@@ -93,7 +344,7 @@ export async function registerRoutes(
   });
 
   // Streaming generation endpoint for real-time feedback
-  app.post("/api/generate/stream", async (req: Request, res: Response) => {
+  app.post("/api/generate/stream", enforceQuota, async (req: Request, res: Response) => {
     try {
       const { prompt } = req.body;
 
@@ -105,36 +356,17 @@ export async function registerRoutes(
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      log(`Streaming generation for: ${prompt.substring(0, 50)}...`);
+      log(`Streaming generation (${MODEL}) for: ${prompt.substring(0, 50)}...`);
 
-      const stream = await anthropic.messages.stream({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [
-          {
-            role: "user",
-            content: `Create a website based on this description: ${prompt}`,
-          },
-        ],
-        system: SYSTEM_PROMPT,
+      const fullText = await generateStream(prompt, (text) => {
+        res.write(`data: ${JSON.stringify({ type: "chunk", text })}\n\n`);
       });
-
-      let fullText = "";
-
-      for await (const event of stream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          fullText += event.delta.text;
-          res.write(`data: ${JSON.stringify({ type: "chunk", text: event.delta.text })}\n\n`);
-        }
-      }
 
       // Parse final result
       try {
-        const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const result = JSON.parse(jsonMatch[0]);
-          res.write(`data: ${JSON.stringify({ type: "complete", html: result.html, css: result.css })}\n\n`);
-        }
+        const result = parseSite(fullText);
+        const quota = await consumeGeneration(req);
+        res.write(`data: ${JSON.stringify({ type: "complete", html: result.html, css: result.css, quota })}\n\n`);
       } catch (parseError) {
         res.write(`data: ${JSON.stringify({ type: "error", message: "Failed to parse response" })}\n\n`);
       }
@@ -166,22 +398,16 @@ export async function registerRoutes(
         return res.status(409).json({ error: "Username already taken" });
       }
 
-      // Create user with hashed password
+      // Create user with bcrypt-hashed password
       const user = await storage.createUser({
         username,
-        password: hashPassword(password),
+        password: await hashPassword(password),
         email,
       });
 
+      req.session.userId = user.id;
       log(`User registered: ${username}`);
-      return res.status(201).json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        plan: user.plan,
-        generationsUsed: user.generationsUsed,
-        generationsLimit: user.generationsLimit,
-      });
+      return res.status(201).json(publicUser(user));
     } catch (error: any) {
       log(`Registration error: ${error.message}`);
       return res.status(500).json({ error: "Registration failed" });
@@ -198,44 +424,41 @@ export async function registerRoutes(
       }
 
       const user = await storage.getUserByUsername(username);
-      if (!user || user.password !== hashPassword(password)) {
+      if (!user || !(await verifyPassword(password, user.password))) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
+      req.session.userId = user.id;
       log(`User logged in: ${username}`);
-      return res.json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        plan: user.plan,
-        generationsUsed: user.generationsUsed,
-        generationsLimit: user.generationsLimit,
-      });
+      return res.json(publicUser(user));
     } catch (error: any) {
       log(`Login error: ${error.message}`);
       return res.status(500).json({ error: "Login failed" });
     }
   });
 
-  // Get user profile
-  app.get("/api/auth/user/:id", async (req: Request, res: Response) => {
-    try {
-      const user = await storage.getUser(req.params.id);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      return res.json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        plan: user.plan,
-        generationsUsed: user.generationsUsed,
-        generationsLimit: user.generationsLimit,
-      });
-    } catch (error: any) {
-      return res.status(500).json({ error: "Failed to get user" });
+  // Current authenticated user (from session). Anonymous is a valid state,
+  // not an error — return 200 null so unauthenticated page loads don't 401.
+  app.get("/api/auth/me", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.json(null);
     }
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      // Stale session pointing at a deleted user — clear it.
+      req.session.destroy(() => {});
+      return res.json(null);
+    }
+    return res.json(publicUser(user));
+  });
+
+  // Logout: destroy session + clear cookie
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    req.session.destroy((err) => {
+      if (err) return res.status(500).json({ error: "Logout failed" });
+      res.clearCookie("connect.sid");
+      return res.json({ ok: true });
+    });
   });
 
   // ============ PROJECT ROUTES ============
@@ -257,6 +480,16 @@ export async function registerRoutes(
         prompt: prompt || null,
       });
 
+      // Persist the structured document too (when provided) so chat/growth can read it.
+      const parsedDoc = siteDocumentSchema.safeParse(req.body.document);
+      if (parsedDoc.success) {
+        await storage.saveDocumentVersion(project.id, parsedDoc.data);
+        // Doc + prompt = a generated site: record the founding exchange so the
+        // chat transcript survives reload and other devices (C3). Best-effort —
+        // a transcript hiccup must not fail project creation.
+        if (prompt) await seedTurnZeroTranscript(storage, project.id, prompt).catch(() => {});
+      }
+
       log(`Project created: ${project.id}`);
       return res.status(201).json(project);
     } catch (error: any) {
@@ -272,7 +505,11 @@ export async function registerRoutes(
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
-      return res.json(project);
+      // Include the latest structured document (additive) so reopening a
+      // project restores the full workspace — chat turns and refine need the
+      // doc, not just rendered html/css. Null for legacy doc-less projects.
+      const latest = await storage.getLatestDocument(project.id).catch(() => undefined);
+      return res.json({ ...project, document: latest?.document ?? null });
     } catch (error: any) {
       return res.status(500).json({ error: "Failed to get project" });
     }
@@ -296,11 +533,17 @@ export async function registerRoutes(
         ...(name && { name }),
         ...(html && { html }),
         ...(css && { css }),
-        ...(isPublished !== undefined && { isPublished: String(isPublished) }),
+        ...(isPublished !== undefined && { isPublished: Boolean(isPublished) }),
       });
 
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Persist the structured document too (when provided) so chat/growth can read it.
+      const parsedDoc = siteDocumentSchema.safeParse(req.body.document);
+      if (parsedDoc.success) {
+        await storage.saveDocumentVersion(project.id, parsedDoc.data);
       }
 
       log(`Project updated: ${project.id}`);
@@ -332,22 +575,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${project.name}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    ${project.css}
-  </style>
-</head>
-<body>
-  ${project.html}
-</body>
-</html>`;
+      const fullHtml = renderFullHtml(project);
 
       res.setHeader("Content-Type", "text/html");
       res.setHeader("Content-Disposition", `attachment; filename="${project.name.replace(/[^a-z0-9]/gi, '_')}.html"`);
