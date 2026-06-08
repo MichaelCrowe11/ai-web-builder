@@ -46,6 +46,7 @@ export const projects = pgTable("projects", {
   slug: text("slug").unique(),
   isPublished: boolean("is_published").notNull().default(false),
   publishedUrl: text("published_url"),
+  publishedVersionId: varchar("published_version_id", { length: 36 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -60,3 +61,28 @@ export const insertProjectSchema = createInsertSchema(projects).pick({
 
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
+
+// Immutable saved deployment candidates. This mirrors the OpenAI Sites model:
+// save a version first, then deploy an approved saved version.
+export const projectVersions = pgTable("project_versions", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 36 }).notNull().references(() => projects.id),
+  versionNumber: integer("version_number").notNull(),
+  name: text("name").notNull(),
+  html: text("html").notNull(),
+  css: text("css").notNull(),
+  prompt: text("prompt"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertProjectVersionSchema = createInsertSchema(projectVersions).pick({
+  projectId: true,
+  versionNumber: true,
+  name: true,
+  html: true,
+  css: true,
+  prompt: true,
+});
+
+export type InsertProjectVersion = z.infer<typeof insertProjectVersionSchema>;
+export type ProjectVersion = typeof projectVersions.$inferSelect;

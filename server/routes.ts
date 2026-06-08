@@ -1,17 +1,24 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, storageMode } from "./storage";
 import { generate, generateStream, parseSite, MODEL } from "./ai";
-import { generateDocument, refineDocument, REFINE_INTENTS } from "./document-gen";
+import {
+  generateDocument,
+  generateOutline,
+  fillDocument,
+  editSection,
+  addSection,
+  REFINE_INTENTS,
+} from "./document-gen";
 import { renderDocumentBody, renderDocumentCss } from "./renderer";
-import { siteDocumentSchema } from "@shared/site-document";
+import { siteDocumentSchema, siteOutlineSchema, sectionTypeEnum } from "@shared/site-document";
 import { enforceQuota, consumeGeneration } from "./quota";
 import { publicUser } from "./plan";
 import { hashPassword, verifyPassword, requireAuth } from "./auth";
 import { registerBillingRoutes } from "./billing";
 import { registerPublishRoutes, renderFullHtml } from "./publish";
 import { log } from "./index";
-import { insertUserSchema, insertProjectSchema } from "@shared/schema";
+import { insertUserSchema, insertProjectSchema, type Project } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -22,6 +29,17 @@ export async function registerRoutes(
 
   // Publishing routes (publish/unpublish + /s/:slug serving)
   registerPublishRoutes(app);
+
+  // Health + runtime posture. `degraded` is true when running on throwaway
+  // in-memory storage — the client surfaces a "demo mode" banner so users
+  // aren't misled into thinking their work is being saved.
+  app.get("/api/health", (_req: Request, res: Response) => {
+    return res.json({
+      ok: true,
+      storage: storageMode,
+      degraded: storageMode === "memory",
+    });
+  });
 
   // List of tappable refine intents for the UI.
   app.get("/api/refine/intents", (_req: Request, res: Response) => {
@@ -51,20 +69,69 @@ export async function registerRoutes(
     }
   });
 
-  // SCOPED refine: apply an instruction to an existing document. Counts as a
-  // generation against quota (it's an Azure call), but it's targeted + cheap.
-  app.post("/api/refine", enforceQuota, async (req: Request, res: Response) => {
+  // PHASE 1 — Outline only. Cheap + fast so the client can paint a themed
+  // skeleton immediately. Checks quota but does NOT consume it (the matching
+  // /fill call completes the generation and is what counts).
+  app.post("/api/generate/outline", enforceQuota, async (req: Request, res: Response) => {
     try {
-      const { document, instruction } = req.body;
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+      log(`Outlining (${MODEL}) for: ${prompt.substring(0, 50)}...`);
+      const outline = await generateOutline(prompt);
+      return res.json({ outline, quota: req.quotaState });
+    } catch (error: any) {
+      log(`Outline error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to plan site", details: error.message });
+    }
+  });
+
+  // PHASE 2 — Fill an approved outline with copy. Consumes one generation.
+  app.post("/api/generate/fill", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { prompt, outline } = req.body;
+      const parsed = siteOutlineSchema.safeParse(outline);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Valid outline is required" });
+      }
+      log(`Filling outline (${MODEL})...`);
+      const document = await fillDocument(parsed.data, typeof prompt === "string" ? prompt : "");
+      const quota = await consumeGeneration(req);
+      return res.json({
+        document,
+        html: renderDocumentBody(document),
+        css: renderDocumentCss(document),
+        quota,
+      });
+    } catch (error: any) {
+      log(`Fill error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to write site", details: error.message });
+    }
+  });
+
+  // SCOPED refine: edit or add ONE section. Sends only that section to the
+  // model (not the whole document) — ~5-10x less latency/cost per tweak.
+  // Theme tweaks never reach here; the client recomputes CSS locally.
+  app.post("/api/refine/section", enforceQuota, async (req: Request, res: Response) => {
+    try {
+      const { document, mode, target, instruction } = req.body;
       if (!instruction || typeof instruction !== "string") {
         return res.status(400).json({ error: "Instruction is required" });
+      }
+      const targetType = sectionTypeEnum.safeParse(target);
+      if (!targetType.success) {
+        return res.status(400).json({ error: "Valid target section type is required" });
       }
       const parsed = siteDocumentSchema.safeParse(document);
       if (!parsed.success) {
         return res.status(400).json({ error: "Valid document is required" });
       }
-      log(`Refining document: ${instruction.substring(0, 50)}...`);
-      const updated = await refineDocument(parsed.data, instruction);
+      log(`Refine ${mode} ${targetType.data}: ${instruction.substring(0, 40)}...`);
+      const updated =
+        mode === "add"
+          ? await addSection(parsed.data, targetType.data, instruction)
+          : await editSection(parsed.data, targetType.data, instruction);
       const quota = await consumeGeneration(req);
       return res.json({
         document: updated,
@@ -229,6 +296,22 @@ export async function registerRoutes(
 
   // ============ PROJECT ROUTES ============
 
+  async function loadProjectForSession(req: Request, res: Response): Promise<Project | undefined> {
+    const project = await storage.getProject(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return undefined;
+    }
+    if (project.userId && project.userId !== req.session.userId) {
+      res.status(403).json({ error: "Not your project" });
+      return undefined;
+    }
+    if (!project.userId && req.session.userId) {
+      return await storage.updateProject(project.id, { userId: req.session.userId }) ?? project;
+    }
+    return project;
+  }
+
   // Create a new project
   app.post("/api/projects", async (req: Request, res: Response) => {
     try {
@@ -296,6 +379,49 @@ export async function registerRoutes(
       return res.json(project);
     } catch (error: any) {
       return res.status(500).json({ error: "Failed to update project" });
+    }
+  });
+
+  // List saved deployment candidates, newest first. A version is immutable:
+  // save one for review, then deploy that exact snapshot.
+  app.get("/api/projects/:id/versions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await loadProjectForSession(req, res);
+      if (!project) return;
+      const versions = await storage.getProjectVersionsByProject(project.id);
+      return res.json({ versions, publishedVersionId: project.publishedVersionId });
+    } catch (error: any) {
+      log(`Version list error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to list versions" });
+    }
+  });
+
+  // Save the current project as a reviewable deployment candidate. This mirrors
+  // Codex Sites' "save a version" stage before production deployment.
+  app.post("/api/projects/:id/versions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await loadProjectForSession(req, res);
+      if (!project) return;
+      const latest = (await storage.getProjectVersionsByProject(project.id))[0];
+      const version = await storage.createProjectVersion({
+        projectId: project.id,
+        versionNumber: latest ? latest.versionNumber + 1 : 1,
+        name: project.name,
+        html: project.html,
+        css: project.css,
+        prompt: project.prompt,
+      });
+      return res.status(201).json({
+        version,
+        sitesModel: {
+          saved: true,
+          deployable: true,
+          storage: { d1: null, r2: null },
+        },
+      });
+    } catch (error: any) {
+      log(`Version save error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to save version" });
     }
   });
 

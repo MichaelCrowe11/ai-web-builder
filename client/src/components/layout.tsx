@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Cpu, LayoutTemplate, CreditCard, Menu } from "lucide-react";
+import { Cpu, LayoutTemplate, CreditCard, Menu, FolderOpen } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,6 +20,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { label: "Builder", href: "/builder", icon: LayoutTemplate },
+    // "My sites" only makes sense once signed in (projects are per-account).
+    ...(user ? [{ label: "My sites", href: "/projects", icon: FolderOpen }] : []),
     { label: "Pricing", href: "/pricing", icon: CreditCard },
   ];
 

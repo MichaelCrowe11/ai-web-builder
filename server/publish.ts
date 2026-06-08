@@ -76,6 +76,7 @@ export function registerPublishRoutes(app: Express) {
         slug,
         isPublished: true,
         publishedUrl,
+        publishedVersionId: null,
         // Claim ownership for anonymous projects on first publish.
         ...(project.userId ? {} : { userId: req.session.userId }),
       });
@@ -91,6 +92,45 @@ export function registerPublishRoutes(app: Express) {
     } catch (error: any) {
       log(`Publish error: ${error.message}`);
       return res.status(500).json({ error: "Failed to publish" });
+    }
+  });
+
+  // Deploy a specific saved version. This is the production-publish stage that
+  // pairs with /api/projects/:id/versions above.
+  app.post("/api/projects/:id/versions/:versionId/deploy", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      if (!project) return res.status(404).json({ error: "Project not found" });
+      if (project.userId && project.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+
+      const version = await storage.getProjectVersion(req.params.versionId);
+      if (!version || version.projectId !== project.id) {
+        return res.status(404).json({ error: "Version not found" });
+      }
+
+      const slug = await uniqueSlug(version.name, project.slug);
+      const publishedUrl = `https://${slug}.${PUBLISH_DOMAIN}`;
+      const updated = await storage.updateProject(project.id, {
+        slug,
+        isPublished: true,
+        publishedUrl,
+        publishedVersionId: version.id,
+        ...(project.userId ? {} : { userId: req.session.userId }),
+      });
+
+      log(`Project ${project.id} deployed version ${version.versionNumber} at ${slug}`);
+      return res.json({
+        slug,
+        publishedUrl,
+        previewUrl: `/s/${slug}`,
+        version,
+        project: updated,
+      });
+    } catch (error: any) {
+      log(`Version deploy error: ${error.message}`);
+      return res.status(500).json({ error: "Failed to deploy version" });
     }
   });
 
@@ -121,8 +161,12 @@ async function serveSlug(req: Request, res: Response) {
   if (!project || !project.isPublished) {
     return res.status(404).send("Site not found");
   }
+  const version = project.publishedVersionId
+    ? await storage.getProjectVersion(project.publishedVersionId)
+    : undefined;
+  const published = version ?? project;
   res.setHeader("Content-Type", "text/html; charset=utf-8");
-  return res.send(renderFullHtml(project));
+  return res.send(renderFullHtml(published));
 }
 
 // Host-based middleware: if the request Host is <slug>.ai-webbuilder.com,
@@ -145,7 +189,11 @@ export function publishedSiteMiddleware(appHosts: string[]) {
     const project = await storage.getProjectBySlug(sub);
     if (!project || !project.isPublished) return next();
 
+    const version = project.publishedVersionId
+      ? await storage.getProjectVersion(project.publishedVersionId)
+      : undefined;
+    const published = version ?? project;
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(renderFullHtml(project));
+    return res.send(renderFullHtml(published));
   };
 }

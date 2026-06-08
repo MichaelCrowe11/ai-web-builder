@@ -148,6 +148,11 @@ export const sectionSchema = z.discriminatedUnion("type", [
 export type Section = z.infer<typeof sectionSchema>;
 export type SectionType = Section["type"];
 
+// Flat enum of section types (for the lightweight outline phase + add menus).
+export const sectionTypeEnum = z.enum([
+  "hero", "services", "menu", "products", "about", "gallery", "testimonials", "contact", "cta",
+]);
+
 // ---- The document ----
 export const siteDocumentSchema = z.object({
   version: z.literal(1).default(1),
@@ -160,6 +165,23 @@ export const siteDocumentSchema = z.object({
   sections: z.array(sectionSchema).min(1).max(10),
 });
 export type SiteDocument = z.infer<typeof siteDocumentSchema>;
+
+// ---- Lightweight outline (two-phase generation, phase 1) ----
+// Just enough structure to render a themed skeleton instantly, before the
+// model writes each section's copy in phase 2.
+export const siteOutlineSchema = z.object({
+  meta: z.object({
+    name: z.string(),
+    tagline: z.string().optional(),
+    industry: z.string().optional(),
+  }),
+  theme: themeSchema,
+  outline: z
+    .array(z.object({ type: sectionTypeEnum, title: z.string() }))
+    .min(2)
+    .max(10),
+});
+export type SiteOutlineDoc = z.infer<typeof siteOutlineSchema>;
 
 // All section types, for the AI's instructions and the UI's add-section menu.
 export const SECTION_TYPES: SectionType[] = [

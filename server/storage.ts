@@ -3,12 +3,15 @@ import {
   type InsertUser,
   type Project,
   type InsertProject,
+  type ProjectVersion,
+  type InsertProjectVersion,
   users,
-  projects
+  projects,
+  projectVersions,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import postgres from "postgres";
 
 export interface IStorage {
@@ -27,16 +30,23 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, data: Partial<Project>): Promise<Project | undefined>;
   deleteProject(id: string): Promise<boolean>;
+
+  // Version operations
+  getProjectVersion(id: string): Promise<ProjectVersion | undefined>;
+  getProjectVersionsByProject(projectId: string): Promise<ProjectVersion[]>;
+  createProjectVersion(version: InsertProjectVersion): Promise<ProjectVersion>;
 }
 
 // In-memory storage for development/fallback
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private projectsMap: Map<string, Project>;
+  private projectVersionsMap: Map<string, ProjectVersion>;
 
   constructor() {
     this.users = new Map();
     this.projectsMap = new Map();
+    this.projectVersionsMap = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -114,6 +124,7 @@ export class MemStorage implements IStorage {
       slug: null,
       isPublished: false,
       publishedUrl: null,
+      publishedVersionId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -131,7 +142,35 @@ export class MemStorage implements IStorage {
   }
 
   async deleteProject(id: string): Promise<boolean> {
-    return this.projectsMap.delete(id);
+    const deleted = this.projectsMap.delete(id);
+    if (deleted) {
+      this.projectVersionsMap.forEach((version, versionId) => {
+        if (version.projectId === id) this.projectVersionsMap.delete(versionId);
+      });
+    }
+    return deleted;
+  }
+
+  async getProjectVersion(id: string): Promise<ProjectVersion | undefined> {
+    return this.projectVersionsMap.get(id);
+  }
+
+  async getProjectVersionsByProject(projectId: string): Promise<ProjectVersion[]> {
+    return Array.from(this.projectVersionsMap.values())
+      .filter((version) => version.projectId === projectId)
+      .sort((a, b) => b.versionNumber - a.versionNumber);
+  }
+
+  async createProjectVersion(insertVersion: InsertProjectVersion): Promise<ProjectVersion> {
+    const id = randomUUID();
+    const version: ProjectVersion = {
+      ...insertVersion,
+      id,
+      prompt: insertVersion.prompt || null,
+      createdAt: new Date(),
+    };
+    this.projectVersionsMap.set(id, version);
+    return version;
   }
 }
 
@@ -208,16 +247,66 @@ export class PostgresStorage implements IStorage {
     const result = await this.db.delete(projects).where(eq(projects.id, id)).returning();
     return result.length > 0;
   }
+
+  async getProjectVersion(id: string): Promise<ProjectVersion | undefined> {
+    const result = await this.db.select().from(projectVersions).where(eq(projectVersions.id, id));
+    return result[0];
+  }
+
+  async getProjectVersionsByProject(projectId: string): Promise<ProjectVersion[]> {
+    return await this.db
+      .select()
+      .from(projectVersions)
+      .where(eq(projectVersions.projectId, projectId))
+      .orderBy(desc(projectVersions.versionNumber));
+  }
+
+  async createProjectVersion(insertVersion: InsertProjectVersion): Promise<ProjectVersion> {
+    const result = await this.db.insert(projectVersions).values(insertVersion).returning();
+    return result[0];
+  }
+
+  // Raw additive DDL for boot-time schema self-healing.
+  async execRaw(sqlText: string): Promise<void> {
+    await this.db.execute(sql.raw(sqlText));
+  }
 }
 
-// Create storage instance based on environment
+// Which backend is live. Exposed via /api/health so the client can warn users
+// when the app is running in throwaway in-memory mode.
+export const storageMode: "postgres" | "memory" = process.env.DATABASE_URL
+  ? "postgres"
+  : "memory";
+
+// Create storage instance based on environment.
+//
+// In-memory storage loses every account, saved site, and login on restart. That
+// is fine for local dev but catastrophic in production — it makes a real app
+// feel like a throwaway demo. So in production we REFUSE to boot without a
+// database, unless explicitly overridden with ALLOW_MEMORY_STORAGE=1.
 function createStorage(): IStorage {
   const dbUrl = process.env.DATABASE_URL;
   if (dbUrl) {
     console.log("Using PostgreSQL storage");
     return new PostgresStorage(dbUrl);
   }
-  console.log("Using in-memory storage (no DATABASE_URL)");
+
+  const inProd = process.env.NODE_ENV === "production";
+  const allowMemory = process.env.ALLOW_MEMORY_STORAGE === "1";
+  if (inProd && !allowMemory) {
+    throw new Error(
+      "FATAL: DATABASE_URL is not set in production. Refusing to boot with " +
+        "in-memory storage — accounts, saved sites, and logins would be wiped " +
+        "on every restart. Provision a Postgres database and set DATABASE_URL " +
+        "(or set ALLOW_MEMORY_STORAGE=1 to override intentionally).",
+    );
+  }
+
+  console.warn(
+    inProd
+      ? "⚠  In-memory storage in PRODUCTION (ALLOW_MEMORY_STORAGE=1). Data resets on restart."
+      : "⚠  Using in-memory storage (no DATABASE_URL). Data resets on restart — fine for local dev.",
+  );
   return new MemStorage();
 }
 

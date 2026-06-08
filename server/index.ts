@@ -5,6 +5,8 @@ import { setupSession } from "./auth";
 import { handleStripeWebhook } from "./billing";
 import { publishedSiteMiddleware } from "./publish";
 import { createServer } from "http";
+import { PostgresStorage, storage } from "./storage";
+import { runBootMigrations } from "./boot-migrations";
 
 const app = express();
 const httpServer = createServer(app);
@@ -83,6 +85,10 @@ const APP_HOSTS = (process.env.APP_HOSTS ?? "")
 app.use(publishedSiteMiddleware(APP_HOSTS));
 
 (async () => {
+  if (storage instanceof PostgresStorage) {
+    await runBootMigrations(storage, log);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
