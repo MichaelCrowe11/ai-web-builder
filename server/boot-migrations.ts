@@ -29,6 +29,26 @@ export const ADDITIVE_MIGRATIONS: Array<{ name: string; statements: string[] }> 
       `CREATE INDEX IF NOT EXISTS chat_messages_project_idx ON chat_messages(project_id, created_at)`,
     ],
   },
+  {
+    name: "project_versions (version-first publish)",
+    statements: [
+      // projects already exists in prod, so the new column needs an additive
+      // ADD COLUMN (CREATE TABLE IF NOT EXISTS would skip an existing table).
+      `ALTER TABLE projects ADD COLUMN IF NOT EXISTS published_version_id varchar(36)`,
+      `CREATE TABLE IF NOT EXISTS project_versions (
+        id             varchar(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id     varchar(36) NOT NULL REFERENCES projects(id),
+        version_number integer NOT NULL,
+        name           text NOT NULL,
+        html           text NOT NULL,
+        css            text NOT NULL,
+        prompt         text,
+        created_at     timestamp DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS project_versions_project_idx ON project_versions(project_id, created_at)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS project_versions_project_number_idx ON project_versions(project_id, version_number)`,
+    ],
+  },
 ];
 
 /**

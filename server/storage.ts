@@ -3,6 +3,8 @@ import {
   type InsertUser,
   type Project,
   type InsertProject,
+  type ProjectVersion,
+  type InsertProjectVersion,
   type ExperimentRow,
   type AgentClaimTokenRow,
   type ChatMessageRow,
@@ -18,6 +20,7 @@ import {
   siteMedia,
   agentClaimTokens,
   chatMessages,
+  projectVersions,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -44,6 +47,10 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, data: Partial<Project>): Promise<Project | undefined>;
   deleteProject(id: string): Promise<boolean>;
+  // Version-first publish: immutable saved deployment candidates.
+  getProjectVersion(id: string): Promise<ProjectVersion | undefined>;
+  getProjectVersionsByProject(projectId: string): Promise<ProjectVersion[]>;
+  createProjectVersion(version: InsertProjectVersion): Promise<ProjectVersion>;
 
   // Living Sites — documents + versions
   saveDocumentVersion(projectId: string, document: SiteDocument): Promise<{ version: number }>;
@@ -169,6 +176,7 @@ export class MemStorage implements IStorage {
       slug: null,
       isPublished: false,
       publishedUrl: null,
+      publishedVersionId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -186,7 +194,39 @@ export class MemStorage implements IStorage {
   }
 
   async deleteProject(id: string): Promise<boolean> {
+    // Cascade: drop this project's saved versions so they don't dangle.
+    this.projectVersionsMap.forEach((version, versionId) => {
+      if (version.projectId === id) this.projectVersionsMap.delete(versionId);
+    });
     return this.projectsMap.delete(id);
+  }
+
+  private projectVersionsMap: Map<string, ProjectVersion> = new Map();
+
+  async getProjectVersion(id: string): Promise<ProjectVersion | undefined> {
+    return this.projectVersionsMap.get(id);
+  }
+
+  async getProjectVersionsByProject(projectId: string): Promise<ProjectVersion[]> {
+    return Array.from(this.projectVersionsMap.values())
+      .filter((v) => v.projectId === projectId)
+      .sort((a, b) => b.versionNumber - a.versionNumber);
+  }
+
+  async createProjectVersion(insertVersion: InsertProjectVersion): Promise<ProjectVersion> {
+    const id = randomUUID();
+    const version: ProjectVersion = {
+      id,
+      projectId: insertVersion.projectId,
+      versionNumber: insertVersion.versionNumber,
+      name: insertVersion.name,
+      html: insertVersion.html,
+      css: insertVersion.css,
+      prompt: insertVersion.prompt ?? null,
+      createdAt: new Date(),
+    };
+    this.projectVersionsMap.set(id, version);
+    return version;
   }
 
   // Living Sites — in-memory implementations
@@ -444,8 +484,28 @@ export class PostgresStorage implements IStorage {
   }
 
   async deleteProject(id: string): Promise<boolean> {
+    // Cascade saved versions first — the FK has no ON DELETE CASCADE.
+    await this.db.delete(projectVersions).where(eq(projectVersions.projectId, id));
     const result = await this.db.delete(projects).where(eq(projects.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getProjectVersion(id: string): Promise<ProjectVersion | undefined> {
+    const result = await this.db.select().from(projectVersions).where(eq(projectVersions.id, id));
+    return result[0];
+  }
+
+  async getProjectVersionsByProject(projectId: string): Promise<ProjectVersion[]> {
+    return this.db
+      .select()
+      .from(projectVersions)
+      .where(eq(projectVersions.projectId, projectId))
+      .orderBy(desc(projectVersions.versionNumber));
+  }
+
+  async createProjectVersion(insertVersion: InsertProjectVersion): Promise<ProjectVersion> {
+    const result = await this.db.insert(projectVersions).values(insertVersion).returning();
+    return result[0];
   }
 
   // Living Sites — documents + versions
