@@ -18,9 +18,10 @@ const FREE = [
   "Publish to a crowe subdomain",
 ];
 const PRO = [
+  "Self-optimizing growth agent that A/B tests your copy and keeps the winners",
   "Unlimited site generations",
-  "AI photography on every section",
-  "AI hero video (Sora)",
+  "Generated photography on every section",
+  "Generated hero video",
   "Connect your own custom domain",
   "Code view + GitHub export",
   "Priority generation queue",
@@ -51,8 +52,9 @@ export default function Pricing() {
                 Start free. Upgrade when it's earning.
               </h1>
               <p className="mx-auto mt-4 max-w-xl text-[1.05rem] leading-relaxed text-parchment/55">
-                No card to start. Build and publish a real site today — go Pro when
-                you want custom domains, richer media, and unlimited builds.
+                No card to start. Build and publish a real site today. Go Pro when
+                you want a site that keeps improving itself, your own custom domain,
+                richer media, and unlimited builds.
               </p>
             </div>
 
@@ -92,7 +94,7 @@ export default function Pricing() {
                   <span className="text-4xl font-semibold tracking-tight text-parchment">$29.99</span>
                   <span className="text-sm text-parchment/45">/ month</span>
                 </div>
-                <p className="mt-2 text-sm text-parchment/55">For sites that need to look and perform their best.</p>
+                <p className="mt-2 text-sm text-parchment/55">A living site that keeps improving itself, and looks its best.</p>
                 <ul className="mt-6 flex-1 space-y-3">
                   {PRO.map((f) => (
                     <li key={f} className="flex items-start gap-2.5 text-sm text-parchment/85">

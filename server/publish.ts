@@ -6,9 +6,26 @@ import type { IStorage } from "./storage";
 import { requireAuth } from "./auth";
 import { log } from "./log";
 import type { Project } from "@shared/schema";
+import { siteGoalSchema, defaultConstraints, type SiteGoal } from "@shared/site-goal";
 import { assembleDocumentHtml } from "./serve-document";
 
 const PUBLISH_DOMAIN = process.env.PUBLISH_DOMAIN ?? "ai-webbuilder.com";
+
+// The goal a freshly published site gets if its owner never sets one. It makes
+// the "living site" turnkey: the growth agent optimizes toward primary
+// call-to-action clicks (which the renderer already marks data-conversion) and,
+// under the default "suggest" autonomy, proposes changes for one-click approval
+// rather than mutating a live site unattended. Owners can retune it in the
+// growth dashboard, including switching to full autopilot ("auto").
+export function defaultPublishGoal(): SiteGoal {
+  return siteGoalSchema.parse({
+    objective: "capture_lead",
+    conversionEvent: "primary_cta_click",
+    description:
+      "Set automatically on publish. The growth agent works to increase primary call-to-action clicks. Edit this any time in the growth dashboard.",
+    constraints: defaultConstraints(),
+  });
+}
 
 // Assemble a standalone HTML document from a project's html + css.
 // Shared by both the export download and the published-site server.
@@ -76,6 +93,17 @@ export async function publishProjectRecord(
   const patch: Partial<Project> = { slug, isPublished: true, publishedUrl };
   if (ownerUserId) patch.userId = ownerUserId;
   const updated = await store.updateProject(project.id, patch);
+
+  // Turnkey living site: give a newly published site a default optimization
+  // goal so the growth agent has something to work on with zero owner setup.
+  // Never overwrite an existing goal, and never let this fail the publish.
+  try {
+    const existing = await store.getGoal(project.id);
+    if (!existing) await store.setGoal(project.id, defaultPublishGoal());
+  } catch (e) {
+    log(`default goal set failed for ${project.id}: ${(e as Error).message}`);
+  }
+
   return { slug, publishedUrl, project: updated ?? project };
 }
 

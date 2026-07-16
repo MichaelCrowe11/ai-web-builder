@@ -23,4 +23,28 @@ describe("publishProjectRecord", () => {
     const rb = await publishProjectRecord(b, s);
     expect(ra.slug).not.toBe(rb.slug);
   });
+
+  it("sets a default optimization goal on publish so the living site is turnkey", async () => {
+    const p = await s.createProject({ userId: null, name: "Joe's Cafe", html: "<h1/>", css: "", prompt: "x" } as InsertProject);
+    expect(await s.getGoal(p.id)).toBeUndefined();
+    await publishProjectRecord(p, s);
+    const goal = await s.getGoal(p.id);
+    expect(goal?.objective).toBe("capture_lead");
+    expect(goal?.conversionEvent).toBe("primary_cta_click");
+    // "suggest" keeps the agent proposing rather than mutating a live site unattended.
+    expect(goal?.constraints.autonomy).toBe("suggest");
+  });
+
+  it("never overwrites an owner's existing goal on re-publish", async () => {
+    const p = await s.createProject({ userId: null, name: "Joe's Cafe", html: "<h1/>", css: "", prompt: "x" } as InsertProject);
+    await s.setGoal(p.id, {
+      objective: "sell_product",
+      conversionEvent: "add_to_cart",
+      constraints: { lockedSectionIds: [], lockedCopy: true, autonomy: "auto", minExposuresPerVariant: 200 },
+    });
+    await publishProjectRecord(p, s);
+    const goal = await s.getGoal(p.id);
+    expect(goal?.objective).toBe("sell_product");
+    expect(goal?.constraints.autonomy).toBe("auto");
+  });
 });

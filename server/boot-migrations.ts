@@ -29,6 +29,20 @@ export const ADDITIVE_MIGRATIONS: Array<{ name: string; statements: string[] }> 
       `CREATE INDEX IF NOT EXISTS chat_messages_project_idx ON chat_messages(project_id, created_at)`,
     ],
   },
+  {
+    name: "product_events (acquisition funnel)",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS product_events (
+        id       varchar(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+        ts       bigint NOT NULL,
+        event    text NOT NULL,
+        user_id  varchar(36),
+        anon_id  text,
+        meta     jsonb
+      )`,
+      `CREATE INDEX IF NOT EXISTS product_events_event_ts_idx ON product_events(event, ts)`,
+    ],
+  },
 ];
 
 /**
