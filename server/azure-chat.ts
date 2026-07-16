@@ -240,13 +240,26 @@ export async function azureChatTools(
   };
 }
 
-// Resolve the model fallback chain from env: primary first, then any fallbacks.
-export function modelsFromEnv(): string[] {
-  const primary = process.env.AI_WEBBUILDER_MODEL ?? "gpt-4o";
-  const fallbacks = (process.env.AI_WEBBUILDER_FALLBACK_MODELS ?? "model-router,grok-4-1-fast-non-r")
+// Resolve a TIER-AWARE model fallback chain. Each tier has its own primary
+// (env-driven); all tiers share AI_WEBBUILDER_FALLBACK_MODELS as a safety net.
+//   "pro"        -> AI_WEBBUILDER_PRO_MODEL
+//   "free"       -> AI_WEBBUILDER_FREE_MODEL
+//   "anonymous"  -> AI_WEBBUILDER_ANON_MODEL   (also the default when plan is absent)
+// Any tier falls back to AI_WEBBUILDER_MODEL, then the shared fallback list.
+export function modelsFromEnvForPlan(plan?: string | null): string[] {
+  const fallbacks = (process.env.AI_WEBBUILDER_FALLBACK_MODELS ?? "model-router,DeepSeek-V4-Flash")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  const base = process.env.AI_WEBBUILDER_MODEL ?? "gpt-4o";
+  let primary: string;
+  if (plan === "pro") {
+    primary = process.env.AI_WEBBUILDER_PRO_MODEL ?? base;
+  } else if (plan === "free") {
+    primary = process.env.AI_WEBBUILDER_FREE_MODEL ?? base;
+  } else {
+    primary = process.env.AI_WEBBUILDER_ANON_MODEL ?? base;
+  }
   // de-dupe while preserving order (no Set spread: keeps tsconfig target happy)
   const seen = new Set<string>();
   const ordered: string[] = [];
@@ -257,4 +270,9 @@ export function modelsFromEnv(): string[] {
     }
   }
   return ordered;
+}
+
+// Back-compat: callers without a tier get the anonymous/default chain.
+export function modelsFromEnv(): string[] {
+  return modelsFromEnvForPlan();
 }

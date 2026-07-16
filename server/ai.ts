@@ -1,7 +1,7 @@
 // AI generation backed by Crowe Logic's Azure AI Foundry (crowelm-prod-eastus2).
 // OpenAI-format REST calls over plain fetch — no SDK dependency, uses our Azure quota.
 
-import { azureChat, modelsFromEnv } from "./azure-chat";
+import { azureChat, modelsFromEnvForPlan } from "./azure-chat";
 
 const ENDPOINT = process.env.AZURE_CORE_ENDPOINT ?? "";
 const API_KEY = process.env.AZURE_CORE_API_KEY ?? "";
@@ -75,14 +75,14 @@ export function parseSite(text: string): { html: string; css: string } {
 
 /** Non-streaming generation. Returns the raw model text (expected to be JSON).
  *  Resilient: retries 429/408/5xx with backoff and falls back across the model chain. */
-export async function generate(prompt: string): Promise<string> {
+export async function generate(prompt: string, plan?: string | null): Promise<string> {
   return azureChat(
     [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: `Create a website based on this description: ${prompt}` },
     ],
     MAX_TOKENS,
-    { endpoint: ENDPOINT, apiKey: API_KEY, apiVersion: API_VERSION, models: modelsFromEnv() },
+    { endpoint: ENDPOINT, apiKey: API_KEY, apiVersion: API_VERSION, models: modelsFromEnvForPlan(plan) },
   );
 }
 
