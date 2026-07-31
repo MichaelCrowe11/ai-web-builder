@@ -281,7 +281,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
               )}
               {m.content || (busy && i === messages.length - 1 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null)}
               {m.upsell && (
-                <div className="mt-2 rounded-2xl border border-gold/25 bg-black/35 p-3 shadow-[0_0_0_1px_rgba(191,166,105,0.06)]">
+                <div className="mt-2 rounded-2xl border border-gold/25 bg-black/35 p-3 shadow-[0_0_0_1px_rgba(210,173,98,0.06)]">
                   <div className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-gold/70">Pro feature</div>
                   <div className="mt-1 text-[13px] leading-relaxed text-parchment/92">
                     {upgradeCopy(m.upsellFeature).headline}

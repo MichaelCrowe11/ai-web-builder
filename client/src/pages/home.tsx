@@ -34,7 +34,7 @@ export default function Home() {
         <section className="relative overflow-hidden">
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(191,166,105,0.13), transparent 62%)" }}
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(210,173,98,0.13), transparent 62%)" }}
           />
           <div className="container relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-20 pt-24 text-center lg:pt-28">
             <div className="rise mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
@@ -59,7 +59,7 @@ export default function Home() {
 
             {/* THE COMPOSER — the hero element */}
             <div className="rise mt-10 w-full" style={{ ["--d" as any]: "220ms" }}>
-              <div className="group rounded-2xl border border-gold/25 bg-graphite-soft/80 p-2.5 text-left shadow-[0_30px_90px_-36px_rgba(191,166,105,0.5)] backdrop-blur-sm transition-colors focus-within:border-gold/50">
+              <div className="group rounded-2xl border border-gold/25 bg-graphite-soft/80 p-2.5 text-left shadow-[0_30px_90px_-36px_rgba(210,173,98,0.5)] backdrop-blur-sm transition-colors focus-within:border-gold/50">
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -78,7 +78,7 @@ export default function Home() {
                   <Button
                     onClick={() => start(prompt)}
                     disabled={!prompt.trim()}
-                    className="h-11 rounded-xl bg-gold px-6 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(191,166,105,0.75)] disabled:opacity-40"
+                    className="h-11 rounded-xl bg-gold px-6 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(210,173,98,0.75)] disabled:opacity-40"
                   >
                     <Sparkles className="mr-1.5 h-4 w-4" />
                     Build it
@@ -163,7 +163,7 @@ export default function Home() {
             <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
               <Button
                 onClick={() => navigate("/builder")}
-                className="h-11 rounded-xl bg-gold px-7 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(191,166,105,0.75)]"
+                className="h-11 rounded-xl bg-gold px-7 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(210,173,98,0.75)]"
               >
                 <Sparkles className="mr-1.5 h-4 w-4" />
                 Start building free

@@ -1,16 +1,19 @@
-// AI generation backed by Crowe Logic's Azure AI Foundry (crowelm-prod-eastus2).
-// OpenAI-format REST calls over plain fetch — no SDK dependency, uses our Azure quota.
+// Site generation, backed by whichever cloud the resolved model chain lands on:
+// Cloudflare Workers AI for the @cf/ models Crowe Logic holds funded credit on,
+// Azure AI Foundry for Foundry deployments. OpenAI-format REST over plain fetch,
+// no SDK. Provider selection and the retry/fallback loop live in ./azure-chat
+// and ./providers; this module owns the prompt and the parsing only.
 
-import { azureChat, modelsFromEnvForPlan } from "./azure-chat";
+import { azureChat, modelsForTask, type ModelTask } from "./azure-chat";
 
 const ENDPOINT = process.env.AZURE_CORE_ENDPOINT ?? "";
 const API_KEY = process.env.AZURE_CORE_API_KEY ?? "";
-const DEPLOYMENT = process.env.AI_WEBBUILDER_MODEL ?? "grok-4-1-fast-non-r";
 const API_VERSION = process.env.AZURE_API_VERSION ?? "2024-12-01-preview";
 
-// gpt-5 family rejects `max_tokens`/custom temperature and requires `max_completion_tokens`.
-const IS_GPT5 = /^gpt-5/i.test(DEPLOYMENT);
-const MAX_TOKENS = 4096;
+// A whole site as JSON is a long answer, and a reasoning model in the chain
+// bills its scratchpad against the same budget, so 4096 truncated real pages
+// mid-document. Raised, and overridable for a deployment that wants to cap cost.
+const MAX_TOKENS = Number(process.env.AI_WEBBUILDER_MAX_TOKENS ?? 8192);
 
 export const SYSTEM_PROMPT = `You are an expert web designer and developer. Generate clean, modern HTML and CSS code based on user prompts.
 
@@ -37,32 +40,11 @@ Guidelines:
 - DO NOT include <html>, <head>, or <body> tags - only the inner content
 - DO NOT include any explanation - ONLY the JSON object`;
 
-function chatUrl(): string {
-  if (!ENDPOINT || !API_KEY) {
-    throw new Error(
-      "Azure Foundry not configured: set AZURE_CORE_ENDPOINT and AZURE_CORE_API_KEY",
-    );
-  }
-  return `${ENDPOINT.replace(/\/$/, "")}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`;
-}
-
-function buildBody(stream: boolean) {
-  const body: Record<string, unknown> = {
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: "Create a website based on this description: " },
-    ],
-    stream,
-  };
-  body[IS_GPT5 ? "max_completion_tokens" : "max_tokens"] = MAX_TOKENS;
-  if (!IS_GPT5) body.temperature = 0.7;
-  return body;
-}
-
-function withPrompt(body: Record<string, unknown>, prompt: string) {
-  const messages = body.messages as Array<{ role: string; content: string }>;
-  messages[1].content = `Create a website based on this description: ${prompt}`;
-  return body;
+function promptMessages(prompt: string) {
+  return [
+    { role: "system", content: SYSTEM_PROMPT },
+    { role: "user", content: `Create a website based on this description: ${prompt}` },
+  ];
 }
 
 /** Extract the {html, css} object from a model response that should be pure JSON. */
@@ -76,61 +58,40 @@ export function parseSite(text: string): { html: string; css: string } {
 /** Non-streaming generation. Returns the raw model text (expected to be JSON).
  *  Resilient: retries 429/408/5xx with backoff and falls back across the model chain. */
 export async function generate(prompt: string, plan?: string | null): Promise<string> {
-  return azureChat(
-    [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `Create a website based on this description: ${prompt}` },
-    ],
-    MAX_TOKENS,
-    { endpoint: ENDPOINT, apiKey: API_KEY, apiVersion: API_VERSION, models: modelsFromEnvForPlan(plan) },
-  );
+  return azureChat(promptMessages(prompt), MAX_TOKENS, {
+    endpoint: ENDPOINT,
+    apiKey: API_KEY,
+    apiVersion: API_VERSION,
+    models: modelsForTask("generate", plan),
+  });
 }
 
-/** Streaming generation. Calls onChunk for each text delta; resolves with the full text. */
+/** Streaming generation. Calls onChunk for each text delta; resolves with the full text.
+ *
+ *  This used to be a hand-rolled single-shot fetch with its own SSE parser, which
+ *  meant the one path a user actually watches was the only path with no retry, no
+ *  fallback and no second provider: a single 429 surfaced as a dead stream. It now
+ *  runs the same transport as everything else. Deltas are optimistic, so a
+ *  mid-stream fallback re-emits; the resolved string is authoritative and callers
+ *  should render that as the final answer.
+ */
 export async function generateStream(
   prompt: string,
   onChunk: (text: string) => void,
+  plan?: string | null,
 ): Promise<string> {
-  const res = await fetch(chatUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "api-key": API_KEY },
-    body: JSON.stringify(withPrompt(buildBody(true), prompt)),
+  return azureChat(promptMessages(prompt), MAX_TOKENS, {
+    endpoint: ENDPOINT,
+    apiKey: API_KEY,
+    apiVersion: API_VERSION,
+    models: modelsForTask("generate", plan),
+    onDelta: onChunk,
   });
-  if (!res.ok || !res.body) {
-    throw new Error(`Azure ${DEPLOYMENT} returned ${res.status}: ${await res.text()}`);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let full = "";
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? ""; // keep incomplete trailing line
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) continue;
-      const payload = trimmed.slice(5).trim();
-      if (payload === "[DONE]") continue;
-      try {
-        const json = JSON.parse(payload);
-        const delta = json.choices?.[0]?.delta?.content;
-        if (delta) {
-          full += delta;
-          onChunk(delta);
-        }
-      } catch {
-        // partial JSON across chunks — ignore, it'll complete next read
-      }
-    }
-  }
-  return full;
 }
 
-export const MODEL = DEPLOYMENT;
+/** The model a given task and tier leads with, for log lines. */
+export function modelLabel(plan?: string | null, task: ModelTask = "generate"): string {
+  return modelsForTask(task, plan)[0] ?? "unconfigured";
+}
+
+export const MODEL = modelLabel();

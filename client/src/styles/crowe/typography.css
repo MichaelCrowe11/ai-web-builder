@@ -1,12 +1,15 @@
-/* Vendored from @crowe/design-system@0.1.0 (tokens/typography.css).
- * Re-sync on a design-system release; do not hand-edit.
+/* Crowe Logic type tokens.
  * Inter primary (UI + body), JetBrains Mono for code/labels/eyebrow,
- * EB Garamond optional serif for editorial display. */
+ * Fraunces for editorial display.
+ *
+ * The serif was EB Garamond here while index.css set --font-display to Fraunces,
+ * so `font-serif` and `font-display` rendered as two different typefaces on the
+ * same page. Fraunces is the one the desktop app ships, so it wins. */
 
 :root {
   --crowe-font-sans: "Inter", "InterVariable", system-ui, -apple-system, sans-serif;
   --crowe-font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
-  --crowe-font-serif: "EB Garamond", "Source Serif Pro", Georgia, serif;
+  --crowe-font-serif: "Fraunces", "EB Garamond", Georgia, serif;
 
   /* Type scale, modular ~1.25. Display sizes use serif. */
   --crowe-size-caption: 0.8125rem;

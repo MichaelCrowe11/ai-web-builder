@@ -25,7 +25,11 @@ import { ChatPanel } from "@/components/builder/chat-panel";
 // Clean, modern workspace empty state (rarely seen - arriving from the home
 // prompt auto-builds). Crowe gold-on-graphite, clean sans.
 const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Describe a website to begin.</h1><p class="sub">Type what you want in the bar below — a business, a vibe, a few details — and the workspace builds it live.</p></div>`;
-const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:end center;background:#0b0b0c;color:#e8e2cf;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 13rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(191,166,105,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#bfa669;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:rgba(232,226,207,0.5);max-width:24rem}`;
+// The empty-state document, rendered inside the preview iframe. Literal values,
+// not tokens, because the app's custom properties do not cross the iframe
+// boundary. Keep in step with styles/crowe/colors.css: base #0a0a0b, text
+// #e9e9ec, muted #9a9aa2, gold #d2ad62.
+const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:end center;background:#0a0a0b;color:#e9e9ec;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 13rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(210,173,98,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#d2ad62;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:#9a9aa2;max-width:24rem}`;
 
 // The conversational builder is the DEFAULT interface (C3 complete, flag
 // flipped 2026-06-07). ?chat=0 is the escape hatch back to the legacy dock —
@@ -514,7 +518,7 @@ export default function Builder() {
               </Button>
             </>
           )}
-          <Button size="sm" className="gap-1.5 rounded-full bg-gold px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(191,166,105,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
+          <Button size="sm" className="gap-1.5 rounded-full bg-gold px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(210,173,98,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>
         </div>

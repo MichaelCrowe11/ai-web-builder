@@ -47,50 +47,60 @@
   --radius: 0.5rem;
 }
 
-/* Crowe brand tokens (--crowe-gold, --crowe-graphite, ...) now come from the
- * vendored design system: ./styles/crowe/colors.css (imported via preset.css).
- * The shadcn HSL mapping below stays as the canonical (and only) theme. */
+/* Crowe brand tokens (--crowe-gold, --crowe-graphite, ...) come from
+ * ./styles/crowe/colors.css (imported via preset.css), ported from the desktop
+ * app. The block below is the shadcn bridge: the same palette expressed as the
+ * HSL triplets those components expect. It is the canonical (and only) theme.
+ *
+ * Keep the two in step. If a value here disagrees with colors.css, colors.css
+ * is right, because that is the file the desktop system is ported into. */
 :root {
-  /* Crowe Logic — gold on graphite, parchment text (app chrome). ~/BRAND.md */
-  --background: 240 4% 4%;          /* graphite #0b0b0c */
-  --foreground: 44 30% 86%;         /* parchment #e8e2cf */
+  /* Surfaces step: base -> panel -> raised, each lighter as it rises. */
+  --background: 240 5% 4%;          /* graphite       #0a0a0b */
+  --foreground: 240 7% 92%;         /* text           #e9e9ec */
 
-  --card: 240 11% 9%;              /* graphite-soft #15151a */
-  --card-foreground: 44 30% 86%;
+  --card: 240 5% 8%;                /* panel          #141416 */
+  --card-foreground: 240 7% 92%;
 
-  --popover: 240 11% 9%;
-  --popover-foreground: 44 30% 86%;
+  --popover: 240 5% 12%;            /* raised         #1c1c1f */
+  --popover-foreground: 240 7% 92%;
 
-  /* Primary: Crowe gold #bfa669 */
-  --primary: 43 39% 58%;
-  --primary-foreground: 240 4% 4%;
+  /* Primary: Crowe gold #d2ad62. Its foreground must be dark; the gold is light. */
+  --primary: 40 55% 60%;
+  --primary-foreground: 38 25% 6%;  /* on-gold        #14110c */
 
-  --secondary: 240 8% 14%;
-  --secondary-foreground: 44 30% 86%;
+  --secondary: 240 5% 12%;
+  --secondary-foreground: 240 7% 92%;
 
-  --muted: 240 8% 14%;
-  --muted-foreground: 44 12% 62%;
+  --muted: 240 5% 12%;
+  --muted-foreground: 240 4% 62%;   /* muted          #9a9aa2 */
 
-  --accent: 43 39% 58%;
-  --accent-foreground: 240 4% 4%;
+  --accent: 40 55% 60%;
+  --accent-foreground: 38 25% 6%;
 
-  --destructive: 13 62% 59%;        /* crowe error #d97356 */
-  --destructive-foreground: 0 0% 98%;
+  --destructive: 11 62% 63%;        /* error          #db7c66 */
+  --destructive-foreground: 240 7% 92%;
 
-  --border: 43 39% 58%;             /* gold hairlines (used at low alpha) */
-  --input: 240 8% 18%;
-  --ring: 43 39% 58%;
+  /* Neutral hairline, not gold. shadcn's --border cannot carry alpha, so this is
+   * the solid equivalent of white at 8% over the base surface. */
+  --border: 240 5% 16%;
+  --input: 240 5% 16%;
+  --ring: 40 55% 60%;               /* focus is gold */
 
-  --radius: 0.5rem;
+  /* Radius: 9px is --crowe-r-lg. The scale derives the rest from it, so the
+   * shadcn steps land on 5 / 7 / 9 / 13 rather than the old uniform 8. */
+  --radius: 0.5625rem;
 
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  /* The sidebar tokens shipped as shadcn's LIGHT defaults, which is why any
+   * sidebar surface rendered as a white slab inside a dark app. Now on-palette. */
+  --sidebar: 240 5% 8%;
+  --sidebar-foreground: 240 7% 92%;
+  --sidebar-primary: 40 55% 60%;
+  --sidebar-primary-foreground: 38 25% 6%;
+  --sidebar-accent: 240 5% 12%;
+  --sidebar-accent-foreground: 240 7% 92%;
+  --sidebar-border: 240 5% 16%;
+  --sidebar-ring: 40 55% 60%;
 }
 
 /* No .dark block: Crowe gold-on-graphite (above) is the single canonical theme.
@@ -98,8 +108,10 @@
 
 @layer base {
   * {
-    /* gold hairline at low alpha — the brand's border treatment */
-    border-color: rgba(191, 166, 105, 0.18);
+    /* Neutral hairline. This was a gold border on every element in the
+     * document, which is what made the build read as a template: when the
+     * accent outlines everything, it accents nothing. */
+    border-color: var(--crowe-line);
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
@@ -107,20 +119,75 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-semibold tracking-tight;
   }
+  /* One focus treatment for the whole app, gold, offset so it never crowds the
+   * control it is marking. */
+  :focus-visible {
+    outline: 2px solid var(--crowe-gold);
+    outline-offset: 2px;
+    border-radius: var(--crowe-r-xs);
+  }
+  ::selection {
+    background: var(--crowe-selection);
+    color: var(--crowe-parchment);
+  }
 }
 
-/* Glassmorphism utilities */
+/* Depth.
+ *
+ * Depth is a stepped surface plus a lit top hairline plus a tinted shadow, in
+ * that order of importance. The shadow only seats the panel; it is never what
+ * makes it read as raised. This replaces the previous glassmorphism utilities,
+ * which painted white-tinted translucent panels (a light-theme treatment) into
+ * a dark app and are explicitly off-brand.
+ *
+ * .surface  a panel sitting on the page
+ * .raised   a panel above that, or a panel on hover
+ * .floating the overlay step: menus, palettes, toasts. The only place blur is used.
+ */
 @layer utilities {
-  .glass {
-    @apply bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/30;
+  .surface {
+    background: var(--crowe-surface-panel);
+    border: 1px solid var(--crowe-line);
+    border-radius: var(--crowe-r-lg);
+    box-shadow: var(--crowe-z2);
   }
 
-  .glass-card {
-    @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/30 dark:border-gray-700/40 shadow-xl shadow-black/5;
+  .raised {
+    background: var(--crowe-surface-raised);
+    border: 1px solid var(--crowe-line);
+    border-radius: var(--crowe-r-lg);
+    box-shadow: var(--crowe-z3);
   }
 
-  .glass-hover {
-    @apply transition-all duration-300 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:shadow-2xl hover:shadow-primary/10;
+  /* Hover lifts one step. Colour and shadow only: nothing moves, because a card
+   * that jumps under the cursor costs more attention than it returns. */
+  .surface-hover {
+    transition:
+      background-color var(--crowe-dur) var(--crowe-ease),
+      border-color var(--crowe-dur) var(--crowe-ease),
+      box-shadow var(--crowe-dur) var(--crowe-ease);
+  }
+  .surface-hover:hover {
+    background: var(--crowe-surface-raised);
+    border-color: var(--crowe-line-strong);
+    box-shadow: var(--crowe-z3);
+  }
+
+  .floating {
+    background: var(--crowe-glass);
+    border: 1px solid var(--crowe-glass-edge);
+    border-radius: var(--crowe-r-xl);
+    box-shadow: var(--crowe-z4);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+
+  /* The deliberate gold edge, for the one element that is currently the point. */
+  .edge-accent {
+    border-color: var(--crowe-gold-border);
+  }
+  .edge-accent:hover {
+    border-color: var(--crowe-gold-border-hover);
   }
 
   .gradient-border {
@@ -163,12 +230,14 @@
 
   /* Orchestrated page-load reveal. Stagger via inline style="--d:120ms". */
   @keyframes rise {
-    from { opacity: 0; transform: translateY(16px); }
+    from { opacity: 0; transform: translateY(10px); }
     to   { opacity: 1; transform: none; }
   }
   .rise {
     opacity: 0;
-    animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+    /* One motion system: the brand ease, and short enough that a reader who
+     * scrolls immediately is not waiting on the page to finish arriving. */
+    animation: rise 420ms var(--crowe-ease) forwards;
     animation-delay: var(--d, 0ms);
   }
   @media (prefers-reduced-motion: reduce) {
@@ -190,7 +259,12 @@
 
   /* Fine letterpress sheen on gold display text. */
   .gold-sheen {
-    background: linear-gradient(180deg, #d8c188 0%, var(--crowe-gold) 55%, #9c854f 100%);
+    background: linear-gradient(
+      180deg,
+      var(--crowe-gold-soft) 0%,
+      var(--crowe-gold) 55%,
+      var(--crowe-gold-dim) 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

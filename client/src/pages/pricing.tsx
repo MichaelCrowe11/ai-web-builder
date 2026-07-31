@@ -41,7 +41,7 @@ export default function Pricing() {
         <section className="relative overflow-hidden">
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(191,166,105,0.12), transparent 62%)" }}
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(210,173,98,0.12), transparent 62%)" }}
           />
           <div className="container relative z-10 mx-auto max-w-5xl px-6 pb-24 pt-24 lg:pt-28">
             <div className="text-center">
@@ -85,7 +85,7 @@ export default function Pricing() {
               </div>
 
               {/* Pro */}
-              <div className="relative flex flex-col rounded-2xl border border-gold/40 bg-graphite-soft p-8 shadow-[0_30px_90px_-40px_rgba(191,166,105,0.5)]">
+              <div className="relative flex flex-col rounded-2xl border border-gold/40 bg-graphite-soft p-8 shadow-[0_30px_90px_-40px_rgba(210,173,98,0.5)]">
                 <div className="absolute right-6 top-6 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-gold">
                   Most popular
                 </div>
@@ -104,7 +104,7 @@ export default function Pricing() {
                   ))}
                 </ul>
                 <Button
-                  className="mt-8 h-11 w-full rounded-xl bg-gold font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(191,166,105,0.75)]"
+                  className="mt-8 h-11 w-full rounded-xl bg-gold font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(210,173,98,0.75)]"
                   onClick={getPro}
                 >
                   <Sparkles className="mr-1.5 h-4 w-4" />

@@ -15,10 +15,13 @@ interface PreviewFrameProps {
 
 // Tool-theater styles injected into the preview document. The srcDoc iframe is
 // same-origin, so the flash effect toggles the class directly on the section.
+// Values are literal, not tokens: this CSS crosses into the iframe, where the
+// app's custom properties do not exist. Keep the gold in step with
+// --crowe-gold (#d2ad62) in styles/crowe/colors.css.
 const FLASH_CSS = `
-[data-section-key].cw-flash { position: relative; outline: 2px solid #bfa669; outline-offset: -2px; animation: cw-flash-pulse 1.4s ease-in-out infinite; }
-[data-section-key].cw-flash::before { content: attr(data-cw-flash-label); position: absolute; top: 12px; left: 12px; z-index: 60; padding: 5px 11px; border: 1px solid #bfa669; border-radius: 999px; background: rgba(20, 18, 12, 0.92); color: #bfa669; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; }
-@keyframes cw-flash-pulse { 0%, 100% { outline-color: rgba(191, 166, 105, 0.95); } 50% { outline-color: rgba(191, 166, 105, 0.4); } }
+[data-section-key].cw-flash { position: relative; outline: 2px solid #d2ad62; outline-offset: -2px; animation: cw-flash-pulse 1.4s ease-in-out infinite; }
+[data-section-key].cw-flash::before { content: attr(data-cw-flash-label); position: absolute; top: 12px; left: 12px; z-index: 60; padding: 5px 11px; border: 1px solid #d2ad62; border-radius: 999px; background: rgba(20, 17, 12, 0.92); color: #d2ad62; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; }
+@keyframes cw-flash-pulse { 0%, 100% { outline-color: rgba(210, 173, 98, 0.95); } 50% { outline-color: rgba(210, 173, 98, 0.4); } }
 `;
 
 export function PreviewFrame({ html, css, device, onDeviceChange, flash }: PreviewFrameProps) {

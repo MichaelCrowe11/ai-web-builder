@@ -1,10 +1,12 @@
-/* Vendored from @crowe/design-system@0.1.0 (preset/tailwind-v4.css).
- * Re-sync on a design-system release; do not hand-edit.
+/* Crowe Logic Tailwind v4 preset.
  * Import AFTER `@import "tailwindcss"` so the @theme utilities register.
  * Exposes the canonical dark palette + fonts + tracking as utilities:
- * bg-graphite, bg-graphite-soft, text-parchment, text-parchment-dim,
- * text-gold, bg-gold, text-gold-dim, text-error, font-sans/mono/serif,
- * tracking-eyebrow, tracking-status, tracking-tight. */
+ * bg-graphite, bg-graphite-soft, bg-graphite-raised, text-parchment,
+ * text-parchment-dim, text-gold, bg-gold, text-gold-soft, text-gold-dim,
+ * text-error, text-ok, font-sans/mono/serif, tracking-eyebrow/status/tight.
+ *
+ * The palette itself now tracks the desktop app rather than the 0.1.0 package;
+ * see ./colors.css. Token names are stable, so utilities did not change. */
 
 @import "./colors.css";
 @import "./typography.css";
@@ -13,11 +15,17 @@
 @theme {
   --color-graphite: var(--crowe-graphite);
   --color-graphite-soft: var(--crowe-graphite-soft);
+  --color-graphite-raised: var(--crowe-graphite-raised);
   --color-parchment: var(--crowe-parchment);
   --color-parchment-dim: var(--crowe-parchment-dim);
   --color-gold: var(--crowe-gold);
+  --color-gold-soft: var(--crowe-gold-soft);
   --color-gold-dim: var(--crowe-gold-dim);
+  --color-on-gold: var(--crowe-on-gold);
   --color-error: var(--crowe-error);
+  --color-ok: var(--crowe-ok);
+  --color-line: var(--crowe-line);
+  --color-line-strong: var(--crowe-line-strong);
 
   --font-sans: var(--crowe-font-sans);
   --font-mono: var(--crowe-font-mono);

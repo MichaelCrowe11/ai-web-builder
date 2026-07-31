@@ -16,7 +16,7 @@ function LegalShell({ kicker, title, children }: { kicker: string; title: string
         <section className="relative overflow-hidden">
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(191,166,105,0.10), transparent 62%)" }}
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(210,173,98,0.10), transparent 62%)" }}
           />
           <div className="container relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-24 lg:pt-28">
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">

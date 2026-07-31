@@ -83,7 +83,7 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
         ))}
       </div>
 
-      <div className="flex items-end gap-2 rounded-2xl border border-gold/25 bg-graphite-soft/95 p-2.5 pl-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)] backdrop-blur-lg transition-all focus-within:border-gold focus-within:shadow-[0_0_40px_-10px_rgba(191,166,105,0.4)]">
+      <div className="flex items-end gap-2 rounded-2xl border border-gold/25 bg-graphite-soft/95 p-2.5 pl-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)] backdrop-blur-lg transition-all focus-within:border-gold focus-within:shadow-[0_0_40px_-10px_rgba(210,173,98,0.4)]">
         <Textarea
           ref={textareaRef}
           value={prompt}
