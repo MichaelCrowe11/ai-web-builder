@@ -75,7 +75,7 @@ describe("addGeneratedImages", () => {
     const out = await addGeneratedImages(
       doc([
         { type: "gallery", title: "G", imageHint: "a shelf" },
-        { type: "hero", headline: "H", imageHint: "a loaf" },
+        { type: "hero", layout: "split", headline: "H", imageHint: "a loaf" },
       ]),
       1,
       f as any,
@@ -85,7 +85,108 @@ describe("addGeneratedImages", () => {
   });
 
   it("leaves the document alone when the limit is zero", async () => {
-    const input = doc([{ type: "hero", headline: "H", imageHint: "a loaf" }]);
+    const input = doc([{ type: "hero", layout: "split", headline: "H", imageHint: "a loaf" }]);
     await expect(addGeneratedImages(input, 0)).resolves.toBe(input);
+  });
+
+  // The gap this closes: products carry a hint PER ITEM and galleries carry an
+  // array of hints, so a section-level lookup matched neither and product grids
+  // stayed grey on every plan.
+  it("fills product items, which have their own hints", async () => {
+    const f = vi.fn(async () => response(200, okBody));
+    const out = await addGeneratedImages(
+      doc([
+        {
+          type: "products",
+          title: "P",
+          items: [{ name: "a", imageHint: "a mug" }, { name: "b", imageHint: "a bowl" }],
+        },
+      ]),
+      2,
+      f as any,
+    );
+    const items = (out.sections[0] as any).items;
+    expect(items[0].image?.url).toBe("data:image/jpeg;base64,QUJD");
+    expect(items[1].image?.url).toBe("data:image/jpeg;base64,QUJD");
+  });
+
+  it("fills gallery cells index-aligned, leaving already-resolved cells alone", async () => {
+    const f = vi.fn(async () => response(200, okBody));
+    const out = await addGeneratedImages(
+      doc([
+        {
+          type: "gallery",
+          title: "G",
+          imageHints: ["one", "two"],
+          imageUrls: [{ url: "https://example.com/kept.jpg" }],
+        },
+      ]),
+      4,
+      f as any,
+    );
+    const urls = (out.sections[0] as any).imageUrls;
+    expect(urls[0].url).toBe("https://example.com/kept.jpg");
+    expect(urls[1].url).toBe("data:image/jpeg;base64,QUJD");
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it("spends its one image on the hero before any product or gallery slot", async () => {
+    const f = vi.fn(async () => response(200, okBody));
+    const out = await addGeneratedImages(
+      doc([
+        { type: "gallery", title: "G", imageHints: ["a shelf"] },
+        { type: "products", title: "P", items: [{ name: "a", imageHint: "a mug" }] },
+        { type: "hero", layout: "split", headline: "H", imageHint: "a loaf" },
+      ]),
+      1,
+      f as any,
+    );
+    expect((out.sections[2] as any).image?.url).toBe("data:image/jpeg;base64,QUJD");
+    expect((out.sections[0] as any).imageUrls).toBeUndefined();
+    expect((out.sections[1] as any).items[0].image).toBeUndefined();
+  });
+
+  // A centred hero renders copy and nothing else, so an image generated for it
+  // is fifty seconds and, on the free tier, the site's only image, spent on a
+  // picture no visitor ever sees.
+  it("skips hero layouts the renderer does not paint an image into", async () => {
+    const f = vi.fn(async () => response(200, okBody));
+    const out = await addGeneratedImages(
+      doc([{ type: "hero", layout: "centered", headline: "H", imageHint: "a loaf" }]),
+      2,
+      f as any,
+    );
+    expect(f).not.toHaveBeenCalled();
+    expect((out.sections[0] as any).image).toBeUndefined();
+  });
+
+  it("still fills a split hero", async () => {
+    const f = vi.fn(async () => response(200, okBody));
+    const out = await addGeneratedImages(
+      doc([{ type: "hero", layout: "split", headline: "H", imageHint: "a loaf" }]),
+      2,
+      f as any,
+    );
+    expect((out.sections[0] as any).image?.url).toBe("data:image/jpeg;base64,QUJD");
+  });
+
+  it("gives a centred hero's image to the gallery instead of wasting it", async () => {
+    const f = vi.fn(async () => response(200, okBody));
+    const out = await addGeneratedImages(
+      doc([
+        { type: "hero", layout: "centered", headline: "H", imageHint: "a loaf" },
+        { type: "gallery", title: "G", imageHints: ["a shelf"] },
+      ]),
+      1,
+      f as any,
+    );
+    expect((out.sections[1] as any).imageUrls[0].url).toBe("data:image/jpeg;base64,QUJD");
+  });
+
+  it("does not mutate the document it was given", async () => {
+    const f = vi.fn(async () => response(200, okBody));
+    const input = doc([{ type: "hero", layout: "split", headline: "H", imageHint: "a loaf" }]);
+    await addGeneratedImages(input, 1, f as any);
+    expect((input.sections[0] as any).image).toBeUndefined();
   });
 });
