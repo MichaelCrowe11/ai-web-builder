@@ -19,21 +19,21 @@ const SITES = [
     id: "bakery",
     label: "Bakery",
     host: "ryeandember.com",
-    note: "Terracotta warmth, menu and story sections.",
+    note: "Terracotta warmth. Generated photography, menu and story sections.",
     src: "/showcase/bakery.webp",
   },
   {
     id: "trades",
     label: "Plumber",
     host: "halvorsenplumbing.com",
-    note: "Industrial slate, service list and call-first layout.",
+    note: "Industrial slate. Generated hero, service list, call-first layout.",
     src: "/showcase/trades.webp",
   },
   {
     id: "studio",
     label: "Yoga studio",
     host: "meridianyoga.com",
-    note: "Coastal calm, class grid and gallery.",
+    note: "Coastal calm. Generated hero, class grid and gallery.",
     src: "/showcase/studio.webp",
   },
 ] as const;
@@ -58,8 +58,10 @@ export function Showcase() {
           <p className="mt-5 text-[1rem] leading-relaxed text-parchment/55">
             Every site is assembled from hand-designed sections and a curated
             palette, so the layout, the type and the rhythm change with the
-            business. These three came out of the same builder you are about to
-            use.
+            business. The photography is generated for the site rather than
+            pulled from a stock library, which is why no other page on the
+            internet has these pictures. All three came out of the same builder
+            you are about to use.
           </p>
         </div>
 

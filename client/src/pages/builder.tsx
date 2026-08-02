@@ -150,8 +150,11 @@ export default function Builder() {
       // `ready` flips before its busy flag clears — otherwise a fast second
       // message could re-route through onFirstMessage and regenerate the site.
       if (chatEnabled && !projectIdRef.current) await createProject(fData.document, prompt);
-      // Pro: generate real images in the background (best-effort) and swap them in.
-      if (user?.plan === "pro") void generateImages(fData.document);
+      // Photography, for every plan. This was Pro-only, which meant every build
+      // a prospective customer ever saw shipped grey gradients. The server
+      // decides how many images the plan gets and returns the document
+      // untouched when the budget is spent.
+      void generateImages(fData.document);
       return true;
     } catch (error: any) {
       toast({ title: "Generation failed", description: error.message, variant: "destructive" });
@@ -163,8 +166,10 @@ export default function Builder() {
     }
   };
 
-  // Pro-only: generate real topical images (~20s each) AFTER the site is shown,
-  // then swap them into the document. Best-effort - failures keep gradients.
+  // Real topical photography (~50s an image on Azure) fetched AFTER the site is
+  // on screen, then swapped into the document. Never blocks the build: the site
+  // is usable the moment the text lands, and any failure or spent budget just
+  // leaves the gradients in place.
   const generateImages = async (document: any) => {
     setImaging(true);
     try {
@@ -174,15 +179,18 @@ export default function Builder() {
         credentials: "include",
         body: JSON.stringify({ document }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setDoc(data.document);
-        setHtml(data.html);
-        setCss(data.css);
-        toast({ title: "Photos added", description: "Generated images for your site." });
-      }
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.imagesAdded) return; // nothing changed, so do not repaint or crow
+      setDoc(data.document);
+      setHtml(data.html);
+      setCss(data.css);
+      toast({
+        title: data.imagesAdded > 1 ? "Photos added" : "Photo added",
+        description: "Shot for this site, not picked from a stock library.",
+      });
     } catch {
-      // best-effort; the site already looks good with gradients
+      // best-effort; the site already works with gradients
     } finally {
       setImaging(false);
     }

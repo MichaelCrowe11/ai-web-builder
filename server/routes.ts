@@ -6,6 +6,7 @@ import { generateDocument, generateOutline, fillDocument, refineDocument, REFINE
 import { renderDocumentBody, renderDocumentCss, renderOutlineBody, renderOutlineCss } from "./renderer";
 import { resolveDocumentImages, type StockProvider } from "./stock-images";
 import { addGeneratedImages } from "./azure-image";
+import { claimImageJob } from "./image-budget";
 import { startVideo, getVideoStatus, downloadVideo } from "./azure-video";
 import { siteDocumentSchema, siteOutlineSchema } from "@shared/site-document";
 
@@ -16,7 +17,8 @@ const stockOpts = () => ({
   provider: process.env.STOCK_IMAGE_PROVIDER as StockProvider | undefined,
 });
 import { enforceQuota, consumeGeneration } from "./quota";
-import { track, acquisitionFunnel } from "./funnel";
+
+import { track, acquisitionFunnel, anonIdFromIp } from "./funnel";
 import { runLimited, AtCapacityError, makeCapacityPayload } from "./gen-limiter";
 import { seedTurnZeroTranscript } from "./chat/seed";
 import { publicUser } from "./plan";
@@ -30,6 +32,18 @@ import { makeVerifier } from "./agent/x402-verifier";
 import { registerChatRoutes } from "./chat/routes";
 import { log } from "./log";
 import { insertUserSchema, insertProjectSchema } from "@shared/schema";
+
+// Stable-per-IP subject for anonymous callers, matching how the generation
+// quota buckets them. Hashed in funnel.ts, so no raw IP is retained here.
+function anonSubject(req: Request): string {
+  const fwd = req.headers["x-forwarded-for"];
+  const ip =
+    typeof fwd === "string" && fwd.length
+      ? fwd.split(",")[0].trim()
+      : req.ip ?? req.socket.remoteAddress ?? "unknown";
+  return anonIdFromIp(ip);
+}
+
 
 export async function registerRoutes(
   httpServer: Server,
@@ -175,25 +189,65 @@ export async function registerRoutes(
 
   // PRO image generation (async, after the text site is shown). Generates real
   // topical images (gpt-image-1) for hero + about. Free tier keeps gradients.
-  app.post("/api/generate/images", requireAuth, async (req: Request, res: Response) => {
+  // Generated photography. Open to every plan, because this used to be Pro-only
+  // and the consequence was that every build a prospective customer ever saw
+  // shipped grey gradient placeholders: the demo sold against the product.
+  //
+  // Not behind enforceQuota. A build that just spent its last generation unit
+  // must still be able to finish fetching its own images, so the image budget
+  // is separate and tracks the daily build limits one for one.
+  //
+  // Slow by nature (~50s an image) and best-effort by design: any failure, or a
+  // spent budget, returns the document untouched and the renderer keeps its
+  // gradients. The site is already usable either way, so nothing here 500s a
+  // caller over a photo.
+  app.post("/api/generate/images", async (req: Request, res: Response) => {
     try {
-      const user = await storage.getUser(req.session.userId!);
-      if (!user || user.plan !== "pro") {
-        return res.status(403).json({ error: "Image generation is a Pro feature.", requiresUpgrade: true });
-      }
       const parsed = siteDocumentSchema.safeParse(req.body?.document);
       if (!parsed.success) {
         return res.status(400).json({ error: "Valid document is required" });
       }
-      const document = await addGeneratedImages(parsed.data);
+
+      const userId = req.session.userId;
+      const user = userId ? await storage.getUser(userId) : undefined;
+      const plan = user?.plan ?? (userId ? "free" : "anonymous");
+      const subject = userId ? `u${userId}` : anonSubject(req);
+
+      const budget = claimImageJob(subject, plan);
+      if (!budget.ok) {
+        return res.json({
+          document: parsed.data,
+          html: renderDocumentBody(parsed.data),
+          css: renderDocumentCss(parsed.data),
+          imagesAdded: 0,
+          budgetSpent: true,
+        });
+      }
+
+      const document = await addGeneratedImages(parsed.data, budget.images);
+      const added = document.sections.filter(
+        (s, i) => (s as any).image && !(parsed.data.sections[i] as any).image,
+      ).length;
+      log(`Images: plan=${plan} asked=${budget.images} added=${added} left=${budget.remaining}`);
       return res.json({
         document,
         html: renderDocumentBody(document),
         css: renderDocumentCss(document),
+        imagesAdded: added,
       });
     } catch (error: any) {
       log(`Image gen error: ${error.message}`);
-      return res.status(500).json({ error: "Failed to generate images", details: error.message });
+      // Hand back what came in: a site with gradients beats an error toast.
+      const doc = siteDocumentSchema.safeParse(req.body?.document);
+      if (doc.success) {
+        return res.json({
+          document: doc.data,
+          html: renderDocumentBody(doc.data),
+          css: renderDocumentCss(doc.data),
+          imagesAdded: 0,
+        });
+      }
+      return res.status(500).json({ error: "Failed to generate images" });
     }
   });
 

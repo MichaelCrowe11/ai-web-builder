@@ -12,6 +12,7 @@ import { Check } from "lucide-react";
 // gold-on-graphite identity, matching the home hero.
 const FREE = [
   "5 site generations per day",
+  "A hero photograph generated for your site, not stock",
   "Full workspace: describe, refine, publish",
   "One-click publish, hosting included",
   "Lead capture + owner content editing",
@@ -20,7 +21,7 @@ const FREE = [
 const PRO = [
   "Self-optimizing growth agent that A/B tests your copy and keeps the winners",
   "Unlimited site generations",
-  "Generated photography on every section",
+  "Generated photography across the page, not just the hero",
   "Generated hero video",
   "Connect your own custom domain",
   "Code view + GitHub export",
