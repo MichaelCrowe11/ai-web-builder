@@ -11,6 +11,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { renderDocumentFull } from "../shared/renderer";
+import { addGeneratedImages, imagesEnabled } from "../server/azure-image";
 import type { SiteDocument } from "../shared/site-document";
 
 const OUT = "/tmp/showcase";
@@ -150,8 +151,31 @@ const SITES = [
   { slug: "studio", doc: studio },
 ];
 
+// Real photography, not gradients.
+//
+// The marketing page shows these three as proof of what the product makes, so
+// they have to be made the way the product makes them: same renderer, same
+// image generator. Rendering them with placeholder gradients meant the page
+// advertising "not a template" was itself showing grey rectangles.
+//
+// Needs AZURE_CORE_API_KEY and AZURE_CORE_ENDPOINT in the environment. Without
+// them this still writes the documents, with the gradients, and says so, rather
+// than failing the build.
 mkdirSync(OUT, { recursive: true });
-for (const { slug, doc } of SITES) {
+
+if (!imagesEnabled()) {
+  console.warn(
+    "AZURE_CORE_ENDPOINT / AZURE_CORE_API_KEY not set: writing showcase with gradient placeholders.",
+  );
+}
+
+// Roughly 50s an image, so the three sites run together rather than in turn.
+const built = await Promise.all(
+  SITES.map(async ({ slug, doc }) => ({ slug, doc: await addGeneratedImages(doc, 2) })),
+);
+
+for (const { slug, doc } of built) {
+  const withImages = doc.sections.filter((s) => (s as any).image).length;
   writeFileSync(`${OUT}/${slug}.html`, renderDocumentFull(doc));
-  console.log(`${OUT}/${slug}.html`);
+  console.log(`${OUT}/${slug}.html  (${withImages} real images)`);
 }
