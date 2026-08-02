@@ -49,10 +49,10 @@ export function LeadsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl border-gold/20 bg-graphite-soft text-parchment">
+      <DialogContent className="max-w-2xl border-accent/20 bg-graphite-soft text-parchment">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-parchment">
-            <Inbox className="h-5 w-5 text-gold" /> Leads
+            <Inbox className="h-5 w-5 text-accent" /> Leads
           </DialogTitle>
           <DialogDescription className="text-parchment/55">
             Contact and booking form submissions from your published site.
@@ -65,7 +65,7 @@ export function LeadsModal({
           <p className="py-6 text-error">{err}</p>
         ) : subs === null ? (
           <div className="flex justify-center py-10">
-            <Loader2 className="h-5 w-5 animate-spin text-gold" />
+            <Loader2 className="h-5 w-5 animate-spin text-accent" />
           </div>
         ) : subs.length === 0 ? (
           <p className="py-6 text-parchment-dim">
@@ -74,7 +74,7 @@ export function LeadsModal({
         ) : (
           <>
             <div className="mb-3 flex items-center justify-between">
-              <span className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-gold-dim">
+              <span className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-accent-dim">
                 {subs.length} submission{subs.length === 1 ? "" : "s"}
               </span>
               <Button size="sm" variant="outline" className="gap-1.5" onClick={exportCsv}>
@@ -83,8 +83,8 @@ export function LeadsModal({
             </div>
             <div className="max-h-[55vh] space-y-2 overflow-auto">
               {subs.map((s) => (
-                <div key={s.id} className="rounded-lg border border-gold/15 bg-graphite p-3 text-sm">
-                  <div className="mb-1.5 font-mono text-[0.62rem] text-gold-dim">
+                <div key={s.id} className="rounded-lg border border-accent/15 bg-graphite p-3 text-sm">
+                  <div className="mb-1.5 font-mono text-[0.62rem] text-accent-dim">
                     {s.createdAt ? new Date(s.createdAt).toLocaleString() : ""}
                   </div>
                   {Object.entries(s.data).map(([k, v]) => (

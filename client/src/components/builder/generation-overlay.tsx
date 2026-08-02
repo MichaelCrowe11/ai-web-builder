@@ -24,10 +24,10 @@ export function GenerationOverlay({ refining, queued }: { refining: boolean; que
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-graphite/80 backdrop-blur-sm">
-      <div className="w-[min(22rem,90vw)] rounded-2xl border border-gold/20 bg-graphite-soft p-6 shadow-2xl">
+      <div className="w-[min(22rem,90vw)] rounded-2xl border border-accent/20 bg-graphite-soft p-6 shadow-2xl">
         <div className="flex items-center gap-2.5">
-          <Sparkles className="h-4 w-4 animate-pulse text-gold" />
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-gold/90">
+          <Sparkles className="h-4 w-4 animate-pulse text-accent" />
+          <span className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-accent/90">
             {queued ? "High demand" : refining ? "Applying your change" : "Building your site"}
           </span>
         </div>
@@ -37,8 +37,8 @@ export function GenerationOverlay({ refining, queued }: { refining: boolean; que
         </p>
 
         {/* indeterminate sweep */}
-        <div className="mt-4 h-1 overflow-hidden rounded-full bg-gold/10">
-          <div className="h-full w-1/3 rounded-full bg-gold [animation:sweep_1.3s_ease-in-out_infinite]" />
+        <div className="mt-4 h-1 overflow-hidden rounded-full bg-accent/10">
+          <div className="h-full w-1/3 rounded-full bg-accent [animation:sweep_1.3s_ease-in-out_infinite]" />
         </div>
 
         {!refining && (
@@ -46,7 +46,7 @@ export function GenerationOverlay({ refining, queued }: { refining: boolean; que
             {STAGES.map((_, i) => (
               <span
                 key={i}
-                className={`h-1 flex-1 rounded-full transition-colors duration-500 ${i <= stage ? "bg-gold/70" : "bg-gold/15"}`}
+                className={`h-1 flex-1 rounded-full transition-colors duration-500 ${i <= stage ? "bg-accent/70" : "bg-accent/15"}`}
               />
             ))}
           </div>

@@ -50,14 +50,14 @@ export function GitHubExportModal({ open, onOpenChange, name, html, css }: Props
   };
 
   const input =
-    "w-full rounded-lg border border-gold/20 bg-graphite px-3 py-2.5 text-sm text-parchment outline-none transition-colors placeholder:text-parchment/35 focus:border-gold/50";
+    "w-full rounded-lg border border-accent/20 bg-graphite px-3 py-2.5 text-sm text-parchment outline-none transition-colors placeholder:text-parchment/35 focus:border-accent/50";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-gold/20 bg-graphite-soft text-parchment">
+      <DialogContent className="max-w-md border-accent/20 bg-graphite-soft text-parchment">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-parchment">
-            <Github className="h-5 w-5 text-gold" /> Export to GitHub
+            <Github className="h-5 w-5 text-accent" /> Export to GitHub
           </DialogTitle>
           <DialogDescription className="text-parchment/55">
             Push this site to a new repository as a ready-to-deploy <span className="font-mono text-parchment/70">index.html</span>.
@@ -66,11 +66,11 @@ export function GitHubExportModal({ open, onOpenChange, name, html, css }: Props
 
         {repoUrl ? (
           <div className="space-y-4 py-2">
-            <div className="flex items-center gap-2 rounded-lg border border-gold/25 bg-gold/[0.06] px-4 py-3 text-sm text-gold">
+            <div className="flex items-center gap-2 rounded-lg border border-accent/25 bg-accent/[0.06] px-4 py-3 text-sm text-accent">
               <Check className="h-4 w-4" /> Pushed to GitHub.
             </div>
             <a href={repoUrl} target="_blank" rel="noreferrer">
-              <Button className="w-full gap-2 bg-gold font-semibold text-graphite hover:bg-gold">
+              <Button className="w-full gap-2 bg-accent font-semibold text-graphite hover:bg-accent">
                 Open repository <ExternalLink className="h-4 w-4" />
               </Button>
             </a>
@@ -104,7 +104,7 @@ export function GitHubExportModal({ open, onOpenChange, name, html, css }: Props
                   href="https://github.com/settings/tokens/new?scopes=repo&description=AI%20Web%20Builder"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-gold/80 underline hover:text-gold"
+                  className="text-accent/80 underline hover:text-accent"
                 >
                   Create a token
                 </a>{" "}
@@ -116,8 +116,8 @@ export function GitHubExportModal({ open, onOpenChange, name, html, css }: Props
               onClick={() => setIsPrivate((p) => !p)}
               className="flex items-center gap-2 text-sm text-parchment/70 hover:text-parchment"
             >
-              <span className={`flex h-4 w-4 items-center justify-center rounded border ${isPrivate ? "border-gold bg-gold/20" : "border-gold/30"}`}>
-                {isPrivate && <Check className="h-3 w-3 text-gold" />}
+              <span className={`flex h-4 w-4 items-center justify-center rounded border ${isPrivate ? "border-accent bg-accent/20" : "border-accent/30"}`}>
+                {isPrivate && <Check className="h-3 w-3 text-accent" />}
               </span>
               <Lock className="h-3.5 w-3.5" /> Private repository
             </button>
@@ -127,7 +127,7 @@ export function GitHubExportModal({ open, onOpenChange, name, html, css }: Props
             <Button
               onClick={push}
               disabled={loading || !token.trim() || !repoName.trim()}
-              className="w-full gap-2 bg-gold font-semibold text-graphite hover:bg-gold disabled:opacity-40"
+              className="w-full gap-2 bg-accent font-semibold text-graphite hover:bg-accent disabled:opacity-40"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Github className="h-4 w-4" />}
               {loading ? "Pushing…" : "Create repo & push"}

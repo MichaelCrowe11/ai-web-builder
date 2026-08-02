@@ -76,14 +76,14 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
             key={t.label}
             onClick={() => setPrompt(t.prompt)}
             title={t.prompt}
-            className="shrink-0 whitespace-nowrap rounded-full border border-gold/20 bg-graphite-soft/90 px-3 py-1 text-xs font-medium text-parchment/70 backdrop-blur transition-colors hover:border-gold/40 hover:text-gold"
+            className="shrink-0 whitespace-nowrap rounded-full border border-accent/20 bg-graphite-soft/90 px-3 py-1 text-xs font-medium text-parchment/70 backdrop-blur transition-colors hover:border-accent/40 hover:text-accent"
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      <div className="flex items-end gap-2 rounded-2xl border border-gold/25 bg-graphite-soft/95 p-2.5 pl-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)] backdrop-blur-lg transition-all focus-within:border-gold focus-within:shadow-[0_0_40px_-10px_rgba(210,173,98,0.4)]">
+      <div className="flex items-end gap-2 rounded-2xl border border-accent/25 bg-graphite-soft/95 p-2.5 pl-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)] backdrop-blur-lg transition-all focus-within:border-accent focus-within:shadow-[0_0_40px_-10px_rgba(59,130,246,0.4)]">
         <Textarea
           ref={textareaRef}
           value={prompt}
@@ -99,7 +99,7 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
           disabled={!prompt.trim() || isGenerating}
           className={`h-10 w-10 shrink-0 rounded-xl transition-all ${
             prompt.trim() && !isGenerating
-              ? "bg-gold text-graphite hover:bg-gold"
+              ? "bg-accent text-graphite hover:bg-accent"
               : "bg-graphite text-parchment/40"
           }`}
         >

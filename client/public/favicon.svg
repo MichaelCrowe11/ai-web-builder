@@ -1,13 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Trellis">
-  <!-- Trellis mark on a graphite tile so it holds on light browser chrome too.
-       Four strokes and a node: anything denser dissolves below 24px. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="AI Web Builder">
+  <!-- Monogram on a graphite tile so it holds on light browser chrome too.
+       Four paths and no background of its own: the supplied artwork is a raster
+       with a baked grey glow, which cannot do either job. -->
+  <defs>
+    <linearGradient id="fav" x1="14" y1="54" x2="52" y2="10" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="0.5" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
   <rect width="64" height="64" rx="14" fill="#0a0a0b"/>
-  <g transform="translate(32 32) scale(0.8) translate(-24 -24)">
-    <g fill="none" stroke="#f5f2ea" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M24 2 L46 24 L24 46 L2 24 Z"/>
-      <path d="M13 13 L35 35"/>
-      <path d="M35 13 L13 35"/>
-    </g>
-    <circle cx="24" cy="24" r="4.4" fill="#EFA71B"/>
+  <g transform="translate(32 32) scale(0.86) translate(-24 -24)">
+    <path d="M8 42 L20.5 8 L33 42" fill="none" stroke="url(#fav)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M26.5 42 L37 20" fill="none" stroke="#7dd3fc" stroke-width="5.5" stroke-linecap="round"/>
+    <path d="M40 6 l1.5 3.6 3.6 1.5 -3.6 1.5 -1.5 3.6 -1.5 -3.6 -3.6 -1.5 3.6 -1.5 z" fill="#e0f2fe"/>
   </g>
 </svg>

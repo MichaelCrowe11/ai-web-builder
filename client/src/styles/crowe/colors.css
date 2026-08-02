@@ -1,39 +1,42 @@
-/* Crowe Logic palette, dark console.
+/* AI Web Builder palette, dark console.
  *
- * Ported from the Crowe Logic desktop app (renderer/styles.css, body.dark),
- * which is where the system is now maintained. This supersedes the vendored
- * @crowe/design-system@0.1.0 tokens. The public token NAMES are unchanged, so
- * every existing bg-graphite / text-parchment / text-gold utility keeps working
- * and simply resolves to the current palette.
+ * The surfaces, neutrals, lines and elevation are the Crowe Logic desktop
+ * system (renderer/styles.css, body.dark), which is where that system is
+ * maintained. Two things about it are worth keeping in mind, because they are
+ * why the greys look the way they do:
  *
- * Three things changed, and the third is the reason for the other two:
- *
- * 1. Neutrals are neutral. The old parchment (#e8e2cf) was a warm cream, and the
+ * 1. Neutrals are neutral. The old parchment (#e8e2cf) was a warm cream and the
  *    old dim was that cream at 60%, which painted every label and every line of
- *    body copy warm. Warmth is the accent's job. An accent can only read as warm
- *    against something that is not, so with the text warm too there was nothing
- *    for the gold to be warm against and the whole screen browned. Text is now
- *    #e9e9ec, a hair cool, and the gold is the only warm thing on screen.
+ *    body copy warm. Warmth is the accent's job, and an accent can only read as
+ *    an accent against something that is not it. Text is #e9e9ec, a hair cool.
  *
- * 2. Surfaces step. There was one raised surface (#15151a). There are now three
- *    (#0a0a0b base, #141416 panel, #1c1c1f raised), because depth here comes
- *    from a surface getting lighter as it rises plus a lit top hairline, not
- *    from a heavier drop shadow. Shadows are near-black, never warm-black: a
- *    brown shadow under a neutral panel is mistake 1 again, one layer down.
+ * 2. Surfaces step: #0a0a0b base, #141416 panel, #1c1c1f raised. Depth here
+ *    comes from a surface getting lighter as it rises plus a lit top hairline,
+ *    not from a heavier drop shadow. Shadows are near-black, never warm-black.
  *
- * 3. Gold moved #bfa669 -> #d2ad62. On the old warm base a brighter gold looked
- *    garish; on a neutral base it reads as metal.
+ * THE ACCENT IS NOT THE HOUSE GOLD. This product has its own mark, an angular
+ * monogram in blue through violet, and the accent follows the mark rather than
+ * the parent. Crowe Logic gold appears in exactly one place, the endorsement
+ * lockup in the footer, which is what makes the endorsement read as an
+ * endorsement instead of as the product's own colour.
  *
- * Gold is accent only and never body text. Forbidden: any navy, amber #D4941A,
- * and the light-surface gold #C4A86C (that one belongs to the paper theme, which
- * this product does not ship).
+ * The tokens are named `accent`, not `blue`. If the accent moves again, the
+ * names stay true. They were named `gold` until 2026-08-02, and a utility
+ * called text-gold that renders blue is a trap for whoever reads it next, so
+ * the rename went through every call site at the same time as the value.
+ *
+ * #3B82F6 was chosen to do both jobs the old gold did: 5.6:1 as text on the
+ * base surface, and 5.7:1 as a fill under near-black button text. A brighter
+ * blue fails the second, a deeper one fails the first.
  */
 
 :root {
   /* Canonical palette */
-  --crowe-gold: #d2ad62;
-  --crowe-gold-soft: #e7c984;
-  --crowe-gold-dim: #9a7e44;
+  --crowe-accent: #3b82f6;
+  --crowe-accent-soft: #7dd3fc;
+  --crowe-accent-dim: #4c7fe0;
+  /* Terminus of the monogram gradient. Mark only, never a UI fill. */
+  --crowe-accent-violet: #a855f7;
   --crowe-graphite: #0a0a0b;
   --crowe-graphite-soft: #141416;
   --crowe-graphite-raised: #1c1c1f;
@@ -42,9 +45,9 @@
   --crowe-error: #db7c66;
   --crowe-ok: #8cb87c;
 
-  /* Lines. Hairlines are white at low alpha, not gold: a gold border on every
-   * element is what made the old build read as a template. A gold edge is for
-   * the one thing that is currently the point. */
+  /* Lines. Hairlines are white at low alpha, not accent: an accent border on
+   * every element is what makes a build read as a template. An accent edge is
+   * for the one thing that is currently the point. */
   --crowe-line: rgba(255, 255, 255, 0.08);
   --crowe-line-strong: rgba(255, 255, 255, 0.16);
   --crowe-hair-top: rgba(255, 255, 255, 0.13);
@@ -54,16 +57,16 @@
   --crowe-glass: rgba(28, 28, 31, 0.82);
   --crowe-glass-edge: rgba(255, 255, 255, 0.1);
 
-  /* Derived gold alphas, for washes, focus and the deliberate gold edge. */
-  --crowe-gold-border: rgba(210, 173, 98, 0.22);
-  --crowe-gold-border-hover: rgba(210, 173, 98, 0.44);
-  --crowe-gold-focus: rgba(210, 173, 98, 0.55);
-  --crowe-gold-panel: rgba(210, 173, 98, 0.05);
-  --crowe-gold-highlight: rgba(210, 173, 98, 0.14);
-  --crowe-gold-glow: 0 0 30px rgba(210, 173, 98, 0.18);
-  --crowe-accent-wash: rgba(210, 173, 98, 0.14);
-  --crowe-focus-halo: rgba(210, 173, 98, 0.22);
-  --crowe-selection: rgba(210, 173, 98, 0.32);
+  /* Derived accent alphas, for washes, focus and the deliberate accent edge. */
+  --crowe-accent-border: rgba(59, 130, 246, 0.24);
+  --crowe-accent-border-hover: rgba(59, 130, 246, 0.46);
+  --crowe-accent-focus: rgba(59, 130, 246, 0.55);
+  --crowe-accent-panel: rgba(59, 130, 246, 0.06);
+  --crowe-accent-highlight: rgba(59, 130, 246, 0.16);
+  --crowe-accent-glow: 0 0 30px rgba(59, 130, 246, 0.2);
+  --crowe-accent-wash: rgba(59, 130, 246, 0.14);
+  --crowe-focus-halo: rgba(59, 130, 246, 0.24);
+  --crowe-selection: rgba(59, 130, 246, 0.32);
 
   /* Elevation. Each step lightens the surface and lights its top edge; the
    * shadow only seats it. z4 is the floating/overlay step. */
@@ -78,20 +81,18 @@
   --crowe-surface-raised: var(--crowe-graphite-raised);
   --crowe-text: var(--crowe-parchment);
   --crowe-text-muted: var(--crowe-parchment-dim);
-  --crowe-accent: var(--crowe-gold);
-  --crowe-accent-dim: var(--crowe-gold-dim);
   --crowe-divider: var(--crowe-line);
   --crowe-danger: var(--crowe-error);
-  /* Text sitting on a gold fill. The gold is light, so this must be dark. */
-  --crowe-on-gold: #14110c;
+  /* Text sitting on an accent fill. The accent is mid-tone, so this stays dark:
+   * near-black on #3B82F6 is 5.7:1, white on it is 3.7:1 and fails AA. */
+  --crowe-on-accent: #04101f;
 
-  /* Focus ring: gold, the brand's restrained outline. */
-  --crowe-focus-ring: var(--crowe-gold-focus);
+  /* Focus ring: the accent, the brand's restrained outline. */
+  --crowe-focus-ring: var(--crowe-accent-focus);
 
-  /* Radius. The old scale was a uniform 8px with a pill on every control, which
-   * gave everything the soft sameness that reads as a template rather than a
-   * tool. Tightened one step; the pill is for status tokens you read, never for
-   * something you press. */
+  /* Radius. A uniform 8px with a pill on every control gives everything the
+   * soft sameness that reads as a template rather than a tool. The pill is for
+   * status tokens you read, never for something you press. */
   --crowe-r-xs: 3px;
   --crowe-r-sm: 6px;
   --crowe-r-md: 6px;
@@ -99,8 +100,8 @@
   --crowe-r-xl: 11px;
   --crowe-r-pill: 999px;
 
-  /* Motion: one system, decisive ease-out. Nothing is slower than --crowe-dur-slow
-   * except deliberate ambient drift. */
+  /* Motion: one system, decisive ease-out. Nothing is slower than
+   * --crowe-dur-slow except deliberate ambient drift. */
   --crowe-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --crowe-dur-fast: 80ms;
   --crowe-dur: 120ms;

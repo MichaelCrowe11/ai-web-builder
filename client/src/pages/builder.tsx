@@ -19,7 +19,7 @@ import { renderDocumentBody, renderDocumentCss } from "@shared/renderer";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { postWithCapacityRetry } from "@/lib/generate-fetch";
-import { TrellisMark } from "@/components/brand/trellis-mark";
+import { AiwbMark } from "@/components/brand/aiwb-mark";
 import { ChatPanel } from "@/components/builder/chat-panel";
 
 // Clean, modern workspace empty state (rarely seen - arriving from the home
@@ -28,8 +28,8 @@ const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Desc
 // The empty-state document, rendered inside the preview iframe. Literal values,
 // not tokens, because the app's custom properties do not cross the iframe
 // boundary. Keep in step with styles/crowe/colors.css: base #0a0a0b, text
-// #e9e9ec, muted #9a9aa2, gold #d2ad62.
-const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:end center;background:#0a0a0b;color:#e9e9ec;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 13rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(210,173,98,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#d2ad62;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:#9a9aa2;max-width:24rem}`;
+// #e9e9ec, muted #9a9aa2, gold #3b82f6.
+const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:end center;background:#0a0a0b;color:#e9e9ec;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 13rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(59,130,246,0.12),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:36rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#3b82f6;margin-bottom:1.4rem}h1{font-weight:600;font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;letter-spacing:-0.03em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:#9a9aa2;max-width:24rem}`;
 
 // The conversational builder is the DEFAULT interface (C3 complete, flag
 // flipped 2026-06-07). ?chat=0 is the escape hatch back to the legacy dock —
@@ -471,16 +471,16 @@ export default function Builder() {
   return (
     <div className="h-screen flex flex-col bg-graphite font-sans overflow-hidden text-parchment">
       {/* Top bar */}
-      <header className="h-16 border-b border-gold/20 flex items-center justify-between px-5 bg-graphite-soft z-10">
+      <header className="h-16 border-b border-accent/20 flex items-center justify-between px-5 bg-graphite-soft z-10">
         <div className="flex items-center gap-4">
           <Link href="/">
-            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-gold/20 text-parchment/70 transition-colors hover:bg-graphite-soft">
+            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-accent/20 text-parchment/70 transition-colors hover:bg-graphite-soft">
               <ArrowLeft className="h-4 w-4" />
             </button>
           </Link>
           <div className="flex items-center gap-2.5">
-            <TrellisMark size={22} />
-            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-44 bg-transparent font-heading text-base font-medium tracking-tight outline-none transition-colors focus:border-b focus:border-gold" />
+            <AiwbMark size={22} />
+            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-44 bg-transparent font-heading text-base font-medium tracking-tight outline-none transition-colors focus:border-b focus:border-accent" />
           </div>
         </div>
 
@@ -489,18 +489,18 @@ export default function Builder() {
 
         <div className="flex items-center gap-2">
           {user ? (
-            <span className="mr-1 font-mono text-xs text-parchment/55">{user.username}{user.plan === "pro" && <span className="ml-1 font-semibold text-gold">· PRO</span>}</span>
+            <span className="mr-1 font-mono text-xs text-parchment/55">{user.username}{user.plan === "pro" && <span className="ml-1 font-semibold text-accent">· PRO</span>}</span>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => setShowAuth(true)}>Sign in</Button>
           )}
           {user?.plan !== "pro" && (
-            <button onClick={() => setShowBilling(true)} className="rounded-full border border-gold px-3 py-1.5 text-sm font-semibold text-gold transition-colors hover:bg-gold/10">Upgrade</button>
+            <button onClick={() => setShowBilling(true)} className="rounded-full border border-accent px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/10">Upgrade</button>
           )}
           {/* Utility actions only exist once there's a site to act on — before
               that they'd just clutter the empty state as a row of grey buttons. */}
           {hasGenerated && (
             <>
-              <div className="mx-1 h-5 w-px bg-gold/20" />
+              <div className="mx-1 h-5 w-px bg-accent/20" />
               <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={saveProject} disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save
               </Button>
@@ -518,7 +518,7 @@ export default function Builder() {
               </Button>
             </>
           )}
-          <Button size="sm" className="gap-1.5 rounded-full bg-gold px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(210,173,98,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
+          <Button size="sm" className="gap-1.5 rounded-full bg-accent px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(59,130,246,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>
         </div>
@@ -526,18 +526,18 @@ export default function Builder() {
 
       {/* Published banner */}
       {publishedUrl && (
-        <div className="flex items-center justify-between border-b border-gold/30 bg-gold/10 px-5 py-2.5 text-sm">
-          <div className="flex min-w-0 items-center gap-2 text-gold">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold" />
+        <div className="flex items-center justify-between border-b border-accent/30 bg-accent/10 px-5 py-2.5 text-sm">
+          <div className="flex min-w-0 items-center gap-2 text-accent">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
             <span className="shrink-0 font-medium">Live at</span>
             <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer" className="truncate font-mono hover:underline">{publishedUrl}</a>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-gold" onClick={() => { navigator.clipboard?.writeText(publishedUrl); toast({ title: "Copied" }); }}>
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-accent" onClick={() => { navigator.clipboard?.writeText(publishedUrl); toast({ title: "Copied" }); }}>
               <Copy className="h-3.5 w-3.5" /> Copy
             </Button>
             <a href={previewUrl ?? publishedUrl} target="_blank" rel="noreferrer">
-              <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-gold"><ExternalLink className="h-3.5 w-3.5" /> Visit</Button>
+              <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-accent"><ExternalLink className="h-3.5 w-3.5" /> Visit</Button>
             </a>
           </div>
         </div>
@@ -572,14 +572,14 @@ export default function Builder() {
 
           {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} queued={queued} />}
           {filling && (
-            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
-              <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
+            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-accent/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />
               <span className="font-mono text-xs text-parchment/80">Writing your copy…</span>
             </div>
           )}
           {imaging && !filling && (
-            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-gold/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
-              <Sparkles className="h-3.5 w-3.5 animate-pulse text-gold" />
+            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-accent/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />
               <span className="font-mono text-xs text-parchment/80">Generating photos…</span>
             </div>
           )}
@@ -599,20 +599,20 @@ export default function Builder() {
                 {!hasGenerated ? (
                   <PromptInput onGenerate={handleGenerate} isGenerating={isGenerating} />
                 ) : (
-                  <div className="rounded-2xl border border-gold/25 bg-graphite-soft p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
+                  <div className="rounded-2xl border border-accent/25 bg-graphite-soft p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
                     <div className="mb-2 flex items-center gap-2 px-1">
-                      <Wand2 className="h-3.5 w-3.5 text-gold" />
+                      <Wand2 className="h-3.5 w-3.5 text-accent" />
                       <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/55">Refine, tap to apply</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {refineIntents.map((r) => (
                         <button key={r.label} onClick={() => handleRefine(r.instruction)} disabled={isGenerating}
-                          className="rounded-full border border-gold/20 bg-graphite-soft px-3 py-1.5 text-sm font-medium text-parchment/85 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
+                          className="rounded-full border border-accent/20 bg-graphite-soft px-3 py-1.5 text-sm font-medium text-parchment/85 transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-50">
                           {r.label}
                         </button>
                       ))}
                       <button onClick={generateHeroVideo} disabled={isGenerating || videoPct !== null}
-                        className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-sm font-medium text-gold transition-colors hover:bg-gold/20 disabled:opacity-50">
+                        className="flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50">
                         <Film className="h-3.5 w-3.5" />
                         {videoPct !== null ? `Rendering ${videoPct}%` : "Hero video"}
                       </button>

@@ -22,24 +22,24 @@
   /* One restrained light source, upper left, so the card is not a flat fill. */
   .glow { position:absolute; inset:0;
     background:
-      radial-gradient(760px 420px at 14% -8%, rgba(210,173,98,.13), transparent 62%),
-      radial-gradient(600px 380px at 88% 112%, rgba(210,173,98,.05), transparent 60%); }
+      radial-gradient(760px 420px at 14% -8%, rgba(59,130,246,.16), transparent 62%),
+      radial-gradient(600px 380px at 88% 112%, rgba(168,85,247,.07), transparent 60%); }
   .bevel { position:absolute; top:0; left:0; right:0; height:1px;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.16) 22%,rgba(255,255,255,.16) 78%,transparent); }
   .frame { position:relative; height:100%; padding:72px 84px; display:flex; flex-direction:column; }
   .top { display:flex; align-items:center; gap:16px; }
-  .name { font-family:"Fraunces",serif; font-weight:500; font-size:34px; letter-spacing:-.01em; color:#f5f2ea; }
-  .rule-v { width:1px; height:26px; background:rgba(210,173,98,.3); }
+  .name { font-family:"Fraunces",serif; font-weight:500; font-size:31px; letter-spacing:-.01em; color:#f5f2ea; }
+  .rule-v { width:1px; height:26px; background:rgba(59,130,246,.35); }
   .eyebrow { font-family:"JetBrains Mono",monospace; font-size:14px; font-weight:500;
-    letter-spacing:.22em; text-transform:uppercase; color:#d2ad62; }
+    letter-spacing:.22em; text-transform:uppercase; color:#7dd3fc; }
   h1 { font-family:"Fraunces",serif; font-weight:500; font-size:76px; line-height:1.05;
     letter-spacing:-.02em; color:#f5f2ea; margin-top:auto; }
   p { font-size:24px; line-height:1.5; color:#a3a097; margin-top:20px; max-width:840px; }
-  .rule { height:1px; background:rgba(210,173,98,.22); margin:36px 0 24px; }
+  .rule { height:1px; background:rgba(59,130,246,.24); margin:36px 0 24px; }
   .foot { display:flex; align-items:center; justify-content:space-between; }
   .sig { display:flex; align-items:center; gap:16px; }
   .sig span { font-family:"JetBrains Mono",monospace; font-size:13px; letter-spacing:.2em;
-    text-transform:uppercase; color:#9a7e44; }
+    text-transform:uppercase; color:#4c7fe0; }
   .sig img { width:146px; display:block; opacity:.9; }
   .url { font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.1em; color:#6f6d66; }
 </style>
@@ -49,15 +49,15 @@
   <div class="bevel"></div>
   <div class="frame">
     <div class="top">
-      <svg width="46" height="46" viewBox="0 0 48 48">
-        <g fill="none" stroke="#f5f2ea" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M24 2 L46 24 L24 46 L2 24 Z"/>
-          <path d="M13 13 L35 35"/>
-          <path d="M35 13 L13 35"/>
-        </g>
-        <circle cx="24" cy="24" r="4.4" fill="#EFA71B"/>
+      <svg width="48" height="48" viewBox="0 0 48 48">
+        <defs><linearGradient id="og" x1="6" y1="44" x2="40" y2="6" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#2563eb"/><stop offset=".5" stop-color="#38bdf8"/><stop offset="1" stop-color="#a855f7"/>
+        </linearGradient></defs>
+        <path d="M8 42 L20.5 8 L33 42" fill="none" stroke="url(#og)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M26.5 42 L37 20" fill="none" stroke="#7dd3fc" stroke-width="5.5" stroke-linecap="round"/>
+        <path d="M40 6 l1.5 3.6 3.6 1.5 -3.6 1.5 -1.5 3.6 -1.5 -3.6 -3.6 -1.5 3.6 -1.5 z" fill="#e0f2fe"/>
       </svg>
-      <div class="name">Trellis</div>
+      <div class="name">AI Web Builder</div>
       <div class="rule-v"></div>
       <div class="eyebrow">The living site</div>
     </div>

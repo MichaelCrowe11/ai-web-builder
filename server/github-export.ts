@@ -27,7 +27,7 @@ ${html}
 }
 
 function readme(name: string): string {
-  return `# ${name}\n\nBuilt with Trellis, the Crowe Logic website builder (https://ai-webbuilder.com).\n\nOpen \`index.html\` in a browser, or deploy the folder to any static host.\n`;
+  return `# ${name}\n\nBuilt with Crowe Logic AI Web Builder (https://ai-webbuilder.com).\n\nOpen \`index.html\` in a browser, or deploy the folder to any static host.\n`;
 }
 
 export function registerExportRoutes(app: Express) {
@@ -73,7 +73,7 @@ export function registerExportRoutes(app: Express) {
           name: repoName,
           private: !!isPrivate,
           auto_init: true,
-          description: `${name || "Website"} - built with Trellis by Crowe Logic`,
+          description: `${name || "Website"} - built with Crowe Logic AI Web Builder`,
         }),
       });
       if (repoRes.status === 422) {
@@ -102,7 +102,7 @@ export function registerExportRoutes(app: Express) {
         });
       };
 
-      const idx = await put("index.html", standalone, "Add site (Trellis by Crowe Logic)");
+      const idx = await put("index.html", standalone, "Add site (Crowe Logic AI Web Builder)");
       if (!idx.ok) {
         return res.status(502).json({ error: `Created the repo, but pushing index.html failed (${idx.status}).`, repoUrl: repo.html_url });
       }
