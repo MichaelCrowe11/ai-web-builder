@@ -17,11 +17,11 @@ interface PreviewFrameProps {
 // same-origin, so the flash effect toggles the class directly on the section.
 // Values are literal, not tokens: this CSS crosses into the iframe, where the
 // app's custom properties do not exist. Keep the gold in step with
-// --crowe-gold (#d2ad62) in styles/crowe/colors.css.
+// --crowe-gold (#3b82f6) in styles/crowe/colors.css.
 const FLASH_CSS = `
-[data-section-key].cw-flash { position: relative; outline: 2px solid #d2ad62; outline-offset: -2px; animation: cw-flash-pulse 1.4s ease-in-out infinite; }
-[data-section-key].cw-flash::before { content: attr(data-cw-flash-label); position: absolute; top: 12px; left: 12px; z-index: 60; padding: 5px 11px; border: 1px solid #d2ad62; border-radius: 999px; background: rgba(20, 17, 12, 0.92); color: #d2ad62; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; }
-@keyframes cw-flash-pulse { 0%, 100% { outline-color: rgba(210, 173, 98, 0.95); } 50% { outline-color: rgba(210, 173, 98, 0.4); } }
+[data-section-key].cw-flash { position: relative; outline: 2px solid #3b82f6; outline-offset: -2px; animation: cw-flash-pulse 1.4s ease-in-out infinite; }
+[data-section-key].cw-flash::before { content: attr(data-cw-flash-label); position: absolute; top: 12px; left: 12px; z-index: 60; padding: 5px 11px; border: 1px solid #3b82f6; border-radius: 999px; background: rgba(4, 16, 31, 0.92); color: #3b82f6; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; }
+@keyframes cw-flash-pulse { 0%, 100% { outline-color: rgba(59, 130, 246, 0.95); } 50% { outline-color: rgba(59, 130, 246, 0.4); } }
 `;
 
 export function PreviewFrame({ html, css, device, onDeviceChange, flash }: PreviewFrameProps) {
@@ -83,15 +83,15 @@ export function PreviewFrame({ html, css, device, onDeviceChange, flash }: Previ
 
   const segBtn = (active: boolean) =>
     `flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-      active ? "bg-gold/15 text-gold" : "text-parchment/55 hover:text-parchment"
+      active ? "bg-accent/15 text-accent" : "text-parchment/55 hover:text-parchment"
     }`;
 
   return (
     <div className="flex h-full flex-1 flex-col bg-graphite">
       {/* toolbar */}
-      <div className="flex h-12 items-center justify-between border-b border-gold/15 bg-graphite-soft px-3">
+      <div className="flex h-12 items-center justify-between border-b border-accent/15 bg-graphite-soft px-3">
         {/* left: view toggle */}
-        <div className="flex items-center gap-0.5 rounded-lg border border-gold/15 p-0.5">
+        <div className="flex items-center gap-0.5 rounded-lg border border-accent/15 p-0.5">
           <button className={segBtn(view === "preview")} onClick={() => setView("preview")}>
             <Eye className="h-3.5 w-3.5" /> Preview
           </button>
@@ -120,9 +120,9 @@ export function PreviewFrame({ html, css, device, onDeviceChange, flash }: Previ
           {view === "code" && (
             <button
               onClick={() => copy("all", fullHtml)}
-              className="flex items-center gap-1.5 rounded-md border border-gold/20 px-2.5 py-1 text-xs font-medium text-parchment/70 transition-colors hover:border-gold/40 hover:text-gold"
+              className="flex items-center gap-1.5 rounded-md border border-accent/20 px-2.5 py-1 text-xs font-medium text-parchment/70 transition-colors hover:border-accent/40 hover:text-accent"
             >
-              {copied === "all" ? <Check className="h-3.5 w-3.5 text-gold" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied === "all" ? <Check className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
               {copied === "all" ? "Copied" : "Copy file"}
             </button>
           )}
@@ -150,14 +150,14 @@ export function PreviewFrame({ html, css, device, onDeviceChange, flash }: Previ
             { label: "index.html (body)", text: html },
             { label: "styles.css", text: css },
           ].map((block) => (
-            <div key={block.label} className="overflow-hidden rounded-xl border border-gold/15 bg-graphite-soft">
-              <div className="flex items-center justify-between border-b border-gold/15 px-4 py-2">
-                <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-gold/80">{block.label}</span>
+            <div key={block.label} className="overflow-hidden rounded-xl border border-accent/15 bg-graphite-soft">
+              <div className="flex items-center justify-between border-b border-accent/15 px-4 py-2">
+                <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-accent/80">{block.label}</span>
                 <button
                   onClick={() => copy(block.label, block.text)}
-                  className="flex items-center gap-1.5 text-[0.7rem] text-parchment/55 transition-colors hover:text-gold"
+                  className="flex items-center gap-1.5 text-[0.7rem] text-parchment/55 transition-colors hover:text-accent"
                 >
-                  {copied === block.label ? <Check className="h-3 w-3 text-gold" /> : <Copy className="h-3 w-3" />}
+                  {copied === block.label ? <Check className="h-3 w-3 text-accent" /> : <Copy className="h-3 w-3" />}
                   {copied === block.label ? "Copied" : "Copy"}
                 </button>
               </div>

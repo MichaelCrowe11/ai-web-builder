@@ -28,10 +28,10 @@ export function JourneyRail({ current }: { current: JourneyStep }) {
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.7rem] font-semibold transition-colors ${
                   state === "done"
-                    ? "bg-gold text-white"
+                    ? "bg-accent text-white"
                     : state === "current"
-                    ? "border-2 border-gold text-gold"
-                    : "border border-gold/25 text-parchment/50"
+                    ? "border-2 border-accent text-accent"
+                    : "border border-accent/25 text-parchment/50"
                 }`}
               >
                 {state === "done" ? <Check className="h-3.5 w-3.5" /> : i + 1}
@@ -47,7 +47,7 @@ export function JourneyRail({ current }: { current: JourneyStep }) {
             {i < STEPS.length - 1 && (
               <span
                 className={`mx-2 h-px w-6 ${
-                  idx < currentIdx ? "bg-gold" : "bg-gold/20"
+                  idx < currentIdx ? "bg-accent" : "bg-accent/20"
                 }`}
               />
             )}

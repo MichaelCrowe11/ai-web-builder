@@ -2,11 +2,14 @@
  * Import AFTER `@import "tailwindcss"` so the @theme utilities register.
  * Exposes the canonical dark palette + fonts + tracking as utilities:
  * bg-graphite, bg-graphite-soft, bg-graphite-raised, text-parchment,
- * text-parchment-dim, text-gold, bg-gold, text-gold-soft, text-gold-dim,
- * text-error, text-ok, font-sans/mono/serif, tracking-eyebrow/status/tight.
+ * text-parchment-dim, text-accent, bg-accent, text-accent-soft,
+ * text-accent-dim, text-error, text-ok, font-sans/mono/serif,
+ * tracking-eyebrow/status/tight.
  *
- * The palette itself now tracks the desktop app rather than the 0.1.0 package;
- * see ./colors.css. Token names are stable, so utilities did not change. */
+ * The accent utilities were named `gold` until 2026-08-02, when this product
+ * took its own mark and its own accent; see ./colors.css. The value and every
+ * call site moved together, because a utility called text-accent that renders
+ * blue is worse than either colour. */
 
 @import "./colors.css";
 @import "./typography.css";
@@ -18,10 +21,11 @@
   --color-graphite-raised: var(--crowe-graphite-raised);
   --color-parchment: var(--crowe-parchment);
   --color-parchment-dim: var(--crowe-parchment-dim);
-  --color-gold: var(--crowe-gold);
-  --color-gold-soft: var(--crowe-gold-soft);
-  --color-gold-dim: var(--crowe-gold-dim);
-  --color-on-gold: var(--crowe-on-gold);
+  --color-accent: var(--crowe-accent);
+  --color-accent-soft: var(--crowe-accent-soft);
+  --color-accent-dim: var(--crowe-accent-dim);
+  --color-accent-violet: var(--crowe-accent-violet);
+  --color-on-accent: var(--crowe-on-accent);
   --color-error: var(--crowe-error);
   --color-ok: var(--crowe-ok);
   --color-line: var(--crowe-line);
@@ -69,7 +73,7 @@
 .crowe-lift:hover {
   transform: translateY(-2px);
   box-shadow: var(--crowe-z3);
-  border-color: var(--crowe-gold-border);
+  border-color: var(--crowe-accent-border);
   border-top-color: var(--crowe-hair-top);
 }
 @media (prefers-reduced-motion: reduce) {

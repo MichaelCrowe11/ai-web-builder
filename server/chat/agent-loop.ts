@@ -47,7 +47,7 @@ export interface TurnResult {
 const CAP_REPLY = "I hit the per-turn limit. I've kept the changes that succeeded. Tell me what to do next.";
 
 function systemPrompt(doc: SiteDocument, allowMutations: boolean): string {
-  const base = `You are Builder, the site assistant inside Trellis. You modify the user's website by calling tools against its structured document — you never write HTML.
+  const base = `You are Builder, the site assistant inside AI Web Builder. You modify the user's website by calling tools against its structured document — you never write HTML.
 Current site outline:
 ${JSON.stringify(compactOutline(doc))}
 

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { AuthModal } from "@/components/auth/auth-modal";
-import { TrellisMark } from "@/components/brand/trellis-mark";
+import { AiwbMark } from "@/components/brand/aiwb-mark";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -25,20 +25,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   const navClass = (active: boolean) =>
-    `text-sm font-medium transition-colors cursor-pointer hover:text-gold ${active ? "text-gold" : "text-parchment-dim"}`;
+    `text-sm font-medium transition-colors cursor-pointer hover:text-accent ${active ? "text-accent" : "text-parchment-dim"}`;
 
   return (
     <div className="min-h-screen bg-graphite text-parchment flex flex-col font-sans">
-      <header className="border-b border-gold/15 bg-graphite/95 backdrop-blur supports-[backdrop-filter]:bg-graphite/70 sticky top-0 z-50">
+      <header className="border-b border-accent/15 bg-graphite/95 backdrop-blur supports-[backdrop-filter]:bg-graphite/70 sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
             <div className="group flex cursor-pointer items-center gap-2.5">
-              <TrellisMark
+              <AiwbMark
                 size={28}
                 className="transition-transform duration-200 ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.06] motion-reduce:transition-none"
               />
               <span className="font-display text-[1.35rem] leading-none tracking-[-0.01em] text-parchment">
-                Trellis
+                AI Web Builder
               </span>
             </div>
           </Link>
@@ -50,13 +50,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <span className={navClass(location === item.href)}>{item.label}</span>
               </Link>
             ))}
-            <div className="h-4 w-px bg-gold/15 mx-2" />
+            <div className="h-4 w-px bg-accent/15 mx-2" />
             {user ? (
               <>
                 <span className="text-sm text-parchment-dim flex items-center gap-2">
                   {user.username}
                   {user.plan === "pro" && (
-                    <span className="rounded-full border border-gold/30 px-1.5 py-0.5 text-[0.6rem] font-semibold tracking-status uppercase text-gold">
+                    <span className="rounded-full border border-accent/30 px-1.5 py-0.5 text-[0.6rem] font-semibold tracking-status uppercase text-accent">
                       Pro
                     </span>
                   )}
@@ -90,8 +90,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {navItems.map((item) => (
                     <Link key={item.href} href={item.href}>
                       <span
-                        className={`text-lg font-medium transition-colors hover:text-gold cursor-pointer flex items-center gap-2 ${
-                          location === item.href ? "text-gold" : "text-parchment-dim"
+                        className={`text-lg font-medium transition-colors hover:text-accent cursor-pointer flex items-center gap-2 ${
+                          location === item.href ? "text-accent" : "text-parchment-dim"
                         }`}
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
@@ -100,7 +100,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       </span>
                     </Link>
                   ))}
-                  <div className="h-px bg-gold/15 my-2" />
+                  <div className="h-px bg-accent/15 my-2" />
                   {user ? (
                     <Button
                       variant="outline"
@@ -146,37 +146,37 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="border-t border-gold/15 bg-graphite-soft pb-8 pt-12">
+      <footer className="border-t border-accent/15 bg-graphite-soft pb-8 pt-12">
         <div className="container mx-auto grid gap-8 px-4 md:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center gap-2.5">
-              <TrellisMark size={24} />
-              <span className="font-display text-lg leading-none tracking-[-0.01em] text-parchment">Trellis</span>
+              <AiwbMark size={24} />
+              <span className="font-display text-lg leading-none tracking-[-0.01em] text-parchment">AI Web Builder</span>
             </div>
             <p className="text-sm text-parchment-dim">
-              The website builder at ai-webbuilder.com. Describe your business,
-              get a site that is live and keeps improving itself.
+              Describe your business. Get a website that's live, and that keeps
+              improving itself.
             </p>
           </div>
           <div>
-            <h4 className="text-xs tracking-eyebrow uppercase text-gold-dim mb-4">Product</h4>
+            <h4 className="text-xs tracking-eyebrow uppercase text-accent-dim mb-4">Product</h4>
             <ul className="space-y-2 text-sm text-parchment-dim">
-              <li><a href="/#how-it-works" className="transition-colors hover:text-gold">How it works</a></li>
-              <li><Link href="/pricing" className="transition-colors hover:text-gold">Pricing</Link></li>
-              <li><Link href="/builder" className="transition-colors hover:text-gold">Start building</Link></li>
+              <li><a href="/#how-it-works" className="transition-colors hover:text-accent">How it works</a></li>
+              <li><Link href="/pricing" className="transition-colors hover:text-accent">Pricing</Link></li>
+              <li><Link href="/builder" className="transition-colors hover:text-accent">Start building</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-xs tracking-eyebrow uppercase text-gold-dim mb-4">Company</h4>
+            <h4 className="text-xs tracking-eyebrow uppercase text-accent-dim mb-4">Company</h4>
             <ul className="space-y-2 text-sm text-parchment-dim">
-              <li><a href="https://www.crowelogic.com" target="_blank" rel="noreferrer" className="transition-colors hover:text-gold">About Crowe Logic</a></li>
+              <li><a href="https://www.crowelogic.com" target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">About Crowe Logic</a></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-xs tracking-eyebrow uppercase text-gold-dim mb-4">Legal</h4>
+            <h4 className="text-xs tracking-eyebrow uppercase text-accent-dim mb-4">Legal</h4>
             <ul className="space-y-2 text-sm text-parchment-dim">
-              <li><Link href="/privacy" className="transition-colors hover:text-gold">Privacy</Link></li>
-              <li><Link href="/terms" className="transition-colors hover:text-gold">Terms</Link></li>
+              <li><Link href="/privacy" className="transition-colors hover:text-accent">Privacy</Link></li>
+              <li><Link href="/terms" className="transition-colors hover:text-accent">Terms</Link></li>
             </ul>
           </div>
         </div>
@@ -185,14 +185,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
             drawn logotype rather than the product's type, which is the point of
             an endorsed lockup. The wordmark is 4.35:1, so it is sized by width;
             sizing a lockup that wide by height overflows a phone. */}
-        <div className="container mx-auto mt-10 flex flex-col items-center gap-4 border-t border-gold/10 px-4 pt-8 sm:flex-row sm:justify-between">
+        <div className="container mx-auto mt-10 flex flex-col items-center gap-4 border-t border-accent/10 px-4 pt-8 sm:flex-row sm:justify-between">
           <a
             href="https://www.crowelogic.com"
             target="_blank"
             rel="noreferrer"
             className="group flex items-center gap-3"
           >
-            <span className="font-mono text-[0.65rem] uppercase tracking-status text-gold-dim">
+            <span className="font-mono text-[0.65rem] uppercase tracking-status text-accent-dim">
               A product of
             </span>
             <img

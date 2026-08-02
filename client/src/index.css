@@ -48,13 +48,13 @@
   --radius: 0.5rem;
 }
 
-/* Crowe brand tokens (--crowe-gold, --crowe-graphite, ...) come from
- * ./styles/crowe/colors.css (imported via preset.css), ported from the desktop
- * app. The block below is the shadcn bridge: the same palette expressed as the
- * HSL triplets those components expect. It is the canonical (and only) theme.
+/* Brand tokens (--crowe-accent, --crowe-graphite, ...) come from
+ * ./styles/crowe/colors.css (imported via preset.css). The block below is the
+ * shadcn bridge: the same palette expressed as the HSL triplets those
+ * components expect. It is the canonical (and only) theme.
  *
  * Keep the two in step. If a value here disagrees with colors.css, colors.css
- * is right, because that is the file the desktop system is ported into. */
+ * is right, because that is where the accent is defined. */
 :root {
   /* Surfaces step: base -> panel -> raised, each lighter as it rises. */
   --background: 240 5% 4%;          /* graphite       #0a0a0b */
@@ -66,9 +66,10 @@
   --popover: 240 5% 12%;            /* raised         #1c1c1f */
   --popover-foreground: 240 7% 92%;
 
-  /* Primary: Crowe gold #d2ad62. Its foreground must be dark; the gold is light. */
-  --primary: 40 55% 60%;
-  --primary-foreground: 38 25% 6%;  /* on-gold        #14110c */
+  /* Primary: the product accent #3b82f6. Its foreground stays DARK: near-black
+   * on this blue is 5.7:1, white on it is 3.7:1 and fails AA for button text. */
+  --primary: 217 91% 60%;
+  --primary-foreground: 210 79% 6%; /* on-accent      #04101f */
 
   --secondary: 240 5% 12%;
   --secondary-foreground: 240 7% 92%;
@@ -76,17 +77,17 @@
   --muted: 240 5% 12%;
   --muted-foreground: 240 4% 62%;   /* muted          #9a9aa2 */
 
-  --accent: 40 55% 60%;
-  --accent-foreground: 38 25% 6%;
+  --accent: 217 91% 60%;
+  --accent-foreground: 210 79% 6%;
 
   --destructive: 11 62% 63%;        /* error          #db7c66 */
   --destructive-foreground: 240 7% 92%;
 
-  /* Neutral hairline, not gold. shadcn's --border cannot carry alpha, so this is
+  /* Neutral hairline, not accent. shadcn's --border cannot carry alpha, so this is
    * the solid equivalent of white at 8% over the base surface. */
   --border: 240 5% 16%;
   --input: 240 5% 16%;
-  --ring: 40 55% 60%;               /* focus is gold */
+  --ring: 217 91% 60%;              /* focus is the accent */
 
   /* Radius: 9px is --crowe-r-lg. The scale derives the rest from it, so the
    * shadcn steps land on 5 / 7 / 9 / 13 rather than the old uniform 8. */
@@ -96,20 +97,20 @@
    * sidebar surface rendered as a white slab inside a dark app. Now on-palette. */
   --sidebar: 240 5% 8%;
   --sidebar-foreground: 240 7% 92%;
-  --sidebar-primary: 40 55% 60%;
-  --sidebar-primary-foreground: 38 25% 6%;
+  --sidebar-primary: 217 91% 60%;
+  --sidebar-primary-foreground: 210 79% 6%;
   --sidebar-accent: 240 5% 12%;
   --sidebar-accent-foreground: 240 7% 92%;
   --sidebar-border: 240 5% 16%;
-  --sidebar-ring: 40 55% 60%;
+  --sidebar-ring: 217 91% 60%;
 }
 
-/* No .dark block: Crowe gold-on-graphite (above) is the single canonical theme.
+/* No .dark block: accent-on-graphite (above) is the single canonical theme.
  * The dark: variant stays defined (for shadcn dark: utilities) but never matches. */
 
 @layer base {
   * {
-    /* Neutral hairline. This was a gold border on every element in the
+    /* Neutral hairline. This was an accent border on every element in the
      * document, which is what made the build read as a template: when the
      * accent outlines everything, it accents nothing. */
     border-color: var(--crowe-line);
@@ -120,10 +121,10 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-semibold tracking-tight;
   }
-  /* One focus treatment for the whole app, gold, offset so it never crowds the
+  /* One focus treatment for the whole app, the accent, offset so it never crowds the
    * control it is marking. */
   :focus-visible {
-    outline: 2px solid var(--crowe-gold);
+    outline: 2px solid var(--crowe-accent);
     outline-offset: 2px;
     border-radius: var(--crowe-r-xs);
   }
@@ -183,12 +184,12 @@
     -webkit-backdrop-filter: blur(20px) saturate(140%);
   }
 
-  /* The deliberate gold edge, for the one element that is currently the point. */
+  /* The deliberate accent edge, for the one element that is currently the point. */
   .edge-accent {
-    border-color: var(--crowe-gold-border);
+    border-color: var(--crowe-accent-border);
   }
   .edge-accent:hover {
-    border-color: var(--crowe-gold-border-hover);
+    border-color: var(--crowe-accent-border-hover);
   }
 
   .gradient-border {
@@ -198,7 +199,7 @@
   .gradient-border::before {
     content: '';
     @apply absolute inset-0 rounded-[inherit] p-[1px];
-    background: linear-gradient(135deg, var(--crowe-gold), var(--crowe-gold-dim));
+    background: linear-gradient(135deg, var(--crowe-accent), var(--crowe-accent-dim));
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -251,20 +252,20 @@
     100% { transform: translateX(360%); }
   }
 
-  /* Slow gold aurora drift for hero atmosphere. */
+  /* Slow accent aurora drift for hero atmosphere. */
   @keyframes drift {
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
     50%      { transform: translate3d(2%, -3%, 0) scale(1.08); }
   }
   .aurora { animation: drift 18s ease-in-out infinite; }
 
-  /* Fine letterpress sheen on gold display text. */
-  .gold-sheen {
+  /* Fine letterpress sheen on accent display text. */
+  .accent-sheen {
     background: linear-gradient(
       180deg,
-      var(--crowe-gold-soft) 0%,
-      var(--crowe-gold) 55%,
-      var(--crowe-gold-dim) 100%
+      var(--crowe-accent-soft) 0%,
+      var(--crowe-accent) 55%,
+      var(--crowe-accent-dim) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;

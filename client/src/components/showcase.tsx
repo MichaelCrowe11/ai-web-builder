@@ -43,10 +43,10 @@ export function Showcase() {
   const site = SITES[active];
 
   return (
-    <section className="border-t border-gold/10 py-20">
+    <section className="border-t border-accent/10 py-20">
       <div className="container mx-auto max-w-5xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">
             Real output
           </p>
           <h2 className="mt-4 font-display text-[clamp(1.8rem,4vw,2.7rem)] font-medium leading-[1.08] tracking-[-0.02em] text-parchment">
@@ -73,10 +73,10 @@ export function Showcase() {
               aria-selected={i === active}
               aria-controls="showcase-frame"
               onClick={() => setActive(i)}
-              className={`rounded-full px-4 py-1.5 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/55 ${
+              className={`rounded-full px-4 py-1.5 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 ${
                 i === active
-                  ? "bg-gold/15 text-gold ring-1 ring-gold/35"
-                  : "text-parchment/55 ring-1 ring-gold/10 hover:text-parchment/80 hover:ring-gold/25"
+                  ? "bg-accent/15 text-accent ring-1 ring-accent/35"
+                  : "text-parchment/55 ring-1 ring-accent/10 hover:text-parchment/80 hover:ring-accent/25"
               }`}
             >
               {s.label}

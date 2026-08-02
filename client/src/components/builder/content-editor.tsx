@@ -13,8 +13,8 @@ function clone<T>(x: T): T {
 }
 
 const inputCls =
-  "w-full rounded-md border border-gold/15 bg-graphite px-2.5 py-1.5 text-sm text-parchment outline-none transition-colors focus:border-gold/45 placeholder:text-parchment/30";
-const labelCls = "block text-[0.62rem] uppercase tracking-[0.16em] text-gold-dim mb-1";
+  "w-full rounded-md border border-accent/15 bg-graphite px-2.5 py-1.5 text-sm text-parchment outline-none transition-colors focus:border-accent/45 placeholder:text-parchment/30";
+const labelCls = "block text-[0.62rem] uppercase tracking-[0.16em] text-accent-dim mb-1";
 
 export function ContentEditor({
   open,
@@ -99,10 +99,10 @@ export function ContentEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl border-gold/20 bg-graphite-soft text-parchment">
+      <DialogContent className="max-w-2xl border-accent/20 bg-graphite-soft text-parchment">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-parchment">
-            <Pencil className="h-5 w-5 text-gold" /> Edit content
+            <Pencil className="h-5 w-5 text-accent" /> Edit content
           </DialogTitle>
           <DialogDescription className="text-parchment/55">
             Edit your text and manage list items: add, remove, reorder. Nothing is regenerated.
@@ -110,8 +110,8 @@ export function ContentEditor({
         </DialogHeader>
 
         <div className="max-h-[60vh] space-y-5 overflow-auto pr-1">
-          <div className="rounded-lg border border-gold/15 bg-graphite p-3">
-            <p className="mb-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-gold-dim">Business</p>
+          <div className="rounded-lg border border-accent/15 bg-graphite p-3">
+            <p className="mb-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-accent-dim">Business</p>
             <div className="grid grid-cols-2 gap-3">
               <Text label="Name" value={draft.meta?.name} onChange={(v) => setMeta("name", v)} />
               <Text label="Tagline" value={draft.meta?.tagline} onChange={(v) => setMeta("tagline", v)} />
@@ -119,8 +119,8 @@ export function ContentEditor({
           </div>
 
           {draft.sections.map((s: AnyDoc, i: number) => (
-            <div key={i} className="rounded-lg border border-gold/15 bg-graphite p-3">
-              <p className="mb-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-gold-dim">{s.type}</p>
+            <div key={i} className="rounded-lg border border-accent/15 bg-graphite p-3">
+              <p className="mb-2 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-accent-dim">{s.type}</p>
               <div className="space-y-3">
                 {"headline" in s && <Text label="Headline" value={s.headline} onChange={(v) => setField(i, "headline", v)} />}
                 {"subheadline" in s && <Text label="Subheadline" value={s.subheadline} onChange={(v) => setField(i, "subheadline", v)} area />}
@@ -138,12 +138,12 @@ export function ContentEditor({
                 {isCollection(s) && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[0.58rem] uppercase tracking-[0.16em] text-gold-dim">
+                      <span className="font-mono text-[0.58rem] uppercase tracking-[0.16em] text-accent-dim">
                         Items{Array.isArray(s.items) ? ` · ${s.items.length}` : ""}
                       </span>
                     </div>
                     {(s.items ?? []).map((it: AnyDoc, ii: number) => (
-                      <div key={ii} className="flex items-start gap-2 rounded-md border border-gold/10 p-2">
+                      <div key={ii} className="flex items-start gap-2 rounded-md border border-accent/10 p-2">
                         <div className="grid flex-1 grid-cols-12 gap-2">
                           {"name" in it && <input className={`${inputCls} col-span-4`} value={it.name ?? ""} placeholder="name" onChange={(e) => setItem(i, ii, "name", e.target.value)} />}
                           {"quote" in it && <input className={`${inputCls} col-span-7`} value={it.quote ?? ""} placeholder="quote" onChange={(e) => setItem(i, ii, "quote", e.target.value)} />}
@@ -152,10 +152,10 @@ export function ContentEditor({
                           {"price" in it && <input className={`${inputCls} col-span-2`} value={it.price ?? ""} placeholder="price" onChange={(e) => setItem(i, ii, "price", e.target.value)} />}
                         </div>
                         <div className="flex flex-col gap-0.5 pt-0.5">
-                          <button type="button" title="Move up" disabled={ii === 0} onClick={() => moveItem(i, ii, -1)} className="rounded p-0.5 text-parchment/45 transition-colors hover:text-gold disabled:opacity-25 disabled:hover:text-parchment/45">
+                          <button type="button" title="Move up" disabled={ii === 0} onClick={() => moveItem(i, ii, -1)} className="rounded p-0.5 text-parchment/45 transition-colors hover:text-accent disabled:opacity-25 disabled:hover:text-parchment/45">
                             <ChevronUp className="h-3.5 w-3.5" />
                           </button>
-                          <button type="button" title="Move down" disabled={ii === (s.items?.length ?? 0) - 1} onClick={() => moveItem(i, ii, 1)} className="rounded p-0.5 text-parchment/45 transition-colors hover:text-gold disabled:opacity-25 disabled:hover:text-parchment/45">
+                          <button type="button" title="Move down" disabled={ii === (s.items?.length ?? 0) - 1} onClick={() => moveItem(i, ii, 1)} className="rounded p-0.5 text-parchment/45 transition-colors hover:text-accent disabled:opacity-25 disabled:hover:text-parchment/45">
                             <ChevronDown className="h-3.5 w-3.5" />
                           </button>
                           <button type="button" title="Delete item" onClick={() => removeItem(i, ii)} className="rounded p-0.5 text-parchment/45 transition-colors hover:text-error">
@@ -164,7 +164,7 @@ export function ContentEditor({
                         </div>
                       </div>
                     ))}
-                    <button type="button" onClick={() => addItem(i)} className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gold/25 py-1.5 text-xs font-medium text-gold-dim transition-colors hover:border-gold/50 hover:text-gold">
+                    <button type="button" onClick={() => addItem(i)} className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-accent/25 py-1.5 text-xs font-medium text-accent-dim transition-colors hover:border-accent/50 hover:text-accent">
                       <Plus className="h-3.5 w-3.5" /> Add item
                     </button>
                   </div>
@@ -176,7 +176,7 @@ export function ContentEditor({
 
         <div className="mt-2 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="gap-2 bg-gold font-semibold text-graphite hover:bg-gold" disabled={saving} onClick={() => onSave(draft)}>
+          <Button className="gap-2 bg-accent font-semibold text-graphite hover:bg-accent" disabled={saving} onClick={() => onSave(draft)}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Save changes
           </Button>

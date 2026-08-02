@@ -6,7 +6,7 @@ import { Sparkles, Globe, Zap, ArrowUp, Eye, FlaskConical, TrendingUp } from "lu
 import { Showcase } from "@/components/showcase";
 import { STARTERS } from "@/lib/starters";
 
-// Trellis, the Crowe Logic website builder. The hero is a big central prompt:
+// Crowe Logic AI Web Builder. The hero is a big central prompt:
 // describe a business and land straight in the workspace, building. The
 // positioning leads with the differentiator, a LIVING site that keeps testing
 // and improving itself, not just "generate a page and leave."
@@ -29,11 +29,11 @@ export default function Home() {
         <section className="relative overflow-hidden">
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(210,173,98,0.13), transparent 62%)" }}
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(59,130,246,0.13), transparent 62%)" }}
           />
           <div className="container relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-20 pt-24 text-center lg:pt-28">
-            <div className="rise mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
-              <span className="h-1 w-1 animate-pulse rounded-full bg-gold" />
+            <div className="rise mb-7 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">
+              <span className="h-1 w-1 animate-pulse rounded-full bg-accent" />
               A Crowe Logic product
             </div>
 
@@ -54,7 +54,7 @@ export default function Home() {
 
             {/* THE COMPOSER — the hero element */}
             <div className="rise mt-10 w-full" style={{ ["--d" as any]: "220ms" }}>
-              <div className="group rounded-2xl border border-gold/25 bg-graphite-soft/80 p-2.5 text-left shadow-[0_30px_90px_-36px_rgba(210,173,98,0.5)] backdrop-blur-sm transition-colors focus-within:border-gold/50">
+              <div className="group rounded-2xl border border-accent/25 bg-graphite-soft/80 p-2.5 text-left shadow-[0_30px_90px_-36px_rgba(59,130,246,0.5)] backdrop-blur-sm transition-colors focus-within:border-accent/50">
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -73,7 +73,7 @@ export default function Home() {
                   <Button
                     onClick={() => start(prompt)}
                     disabled={!prompt.trim()}
-                    className="h-11 rounded-xl bg-gold px-6 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(210,173,98,0.75)] disabled:opacity-40"
+                    className="h-11 rounded-xl bg-accent px-6 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(59,130,246,0.75)] disabled:opacity-40"
                   >
                     <Sparkles className="mr-1.5 h-4 w-4" />
                     Build it
@@ -88,7 +88,7 @@ export default function Home() {
                   <button
                     key={s}
                     onClick={() => start(s)}
-                    className="rounded-full border border-gold/15 bg-graphite-soft/50 px-3.5 py-1.5 text-xs text-parchment/60 transition-colors hover:border-gold/40 hover:text-gold"
+                    className="rounded-full border border-accent/15 bg-graphite-soft/50 px-3.5 py-1.5 text-xs text-parchment/60 transition-colors hover:border-accent/40 hover:text-accent"
                   >
                     {s.length > 42 ? s.slice(0, 40) + "…" : s}
                   </button>
@@ -105,7 +105,7 @@ export default function Home() {
         <Showcase />
 
         {/* ============ HOW IT WORKS (clean, compact) ============ */}
-        <section id="how-it-works" className="scroll-mt-20 border-t border-gold/10 py-20">
+        <section id="how-it-works" className="scroll-mt-20 border-t border-accent/10 py-20">
           <div className="container mx-auto px-6">
             <div className="crowe-panel grid gap-px overflow-hidden rounded-2xl bg-line md:grid-cols-3">
               {[
@@ -115,8 +115,8 @@ export default function Home() {
               ].map((f) => (
                 <div key={f.n} className="group bg-graphite-soft p-8 transition-colors duration-200 hover:bg-graphite-raised">
                   <div className="flex items-center justify-between">
-                    <f.icon className="h-6 w-6 text-gold" strokeWidth={1.6} />
-                    <span className="font-mono text-xs text-gold/70">{f.n}</span>
+                    <f.icon className="h-6 w-6 text-accent" strokeWidth={1.6} />
+                    <span className="font-mono text-xs text-accent/70">{f.n}</span>
                   </div>
                   <h3 className="mt-5 text-lg font-semibold tracking-tight text-parchment">{f.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-parchment/55">{f.body}</p>
@@ -127,10 +127,10 @@ export default function Home() {
         </section>
 
         {/* ============ THE LIVING SITE (the differentiator) ============ */}
-        <section className="border-t border-gold/10 py-24">
+        <section className="border-t border-accent/10 py-24">
           <div className="container mx-auto max-w-5xl px-6">
             <div className="mx-auto max-w-2xl text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">The living site</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">The living site</p>
               <h2 className="mt-4 font-display text-[clamp(1.8rem,4vw,2.7rem)] font-medium leading-[1.08] tracking-[-0.02em] text-parchment">
                 It does not just launch. It learns.
               </h2>
@@ -149,7 +149,7 @@ export default function Home() {
                 { icon: TrendingUp, title: "Improves", body: "It keeps the winning version and moves to the next weak spot. Your approval is one click." },
               ].map((c) => (
                 <div key={c.title} className="crowe-panel crowe-lift rounded-2xl p-7">
-                  <c.icon className="h-6 w-6 text-gold" strokeWidth={1.6} />
+                  <c.icon className="h-6 w-6 text-accent" strokeWidth={1.6} />
                   <h3 className="mt-5 text-lg font-semibold tracking-tight text-parchment">{c.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-parchment/55">{c.body}</p>
                 </div>
@@ -159,7 +159,7 @@ export default function Home() {
             <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
               <Button
                 onClick={() => navigate("/builder")}
-                className="h-11 rounded-xl bg-gold px-7 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(210,173,98,0.75)]"
+                className="h-11 rounded-xl bg-accent px-7 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(59,130,246,0.75)]"
               >
                 <Sparkles className="mr-1.5 h-4 w-4" />
                 Start building free
@@ -167,7 +167,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 onClick={() => navigate("/pricing")}
-                className="h-11 rounded-xl border-gold/30 px-7 text-parchment hover:bg-gold/10"
+                className="h-11 rounded-xl border-accent/30 px-7 text-parchment hover:bg-accent/10"
               >
                 See pricing
               </Button>

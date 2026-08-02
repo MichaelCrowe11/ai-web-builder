@@ -16,10 +16,10 @@ function LegalShell({ kicker, title, children }: { kicker: string; title: string
         <section className="relative overflow-hidden">
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(210,173,98,0.10), transparent 62%)" }}
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(59,130,246,0.10), transparent 62%)" }}
           />
           <div className="container relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-24 lg:pt-28">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">
               {kicker}
             </div>
             <h1 className="font-display text-[clamp(1.8rem,4vw,2.6rem)] font-medium leading-[1.08] tracking-[-0.02em] text-parchment">{title}</h1>
@@ -35,7 +35,7 @@ function LegalShell({ kicker, title, children }: { kicker: string; title: string
 function S({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-gold">{title}</h2>
+      <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-accent">{title}</h2>
       <div className="mt-3 space-y-3 text-[0.95rem] leading-relaxed text-parchment/70">{children}</div>
     </div>
   );
@@ -46,10 +46,10 @@ export function PrivacyPage() {
     <LegalShell kicker="Legal" title="Privacy Policy">
       <S title="Who we are">
         <p>
-          Trellis (ai-webbuilder.com) is operated by Crowe Logic Inc. (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
+          AI Web Builder (ai-webbuilder.com) is operated by Crowe Logic Inc. (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
           This policy describes what we collect, why, and what we do with it, both for people who build
           sites with us, and for people who visit sites our customers publish. Questions:{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="text-gold hover:underline">{CONTACT_EMAIL}</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent hover:underline">{CONTACT_EMAIL}</a>.
         </p>
       </S>
 
@@ -81,7 +81,7 @@ export function PrivacyPage() {
 
       <S title="Published sites and their visitors">
         <p>
-          Sites published through Trellis can include contact forms. Submissions to those forms
+          Sites published through AI Web Builder can include contact forms. Submissions to those forms
           (leads) are stored by us on behalf of the site owner, who controls that data. If you submitted a
           form on a published site, direct requests about your data to that site&rsquo;s owner.
         </p>
@@ -112,7 +112,7 @@ export function PrivacyPage() {
         <p>
           Your sites and leads are kept while your account is active. Deleting a project deletes its leads
           and analytics. To delete your account and its data entirely, email{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="text-gold hover:underline">{CONTACT_EMAIL}</a> and
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent hover:underline">{CONTACT_EMAIL}</a> and
           we will action it promptly.
         </p>
       </S>
@@ -124,8 +124,8 @@ export function PrivacyPage() {
         </p>
       </S>
 
-      <p className="border-t border-gold/15 pt-6 text-sm text-parchment/45">
-        See also our <Link href="/terms" className="text-gold hover:underline">Terms of Service</Link>.
+      <p className="border-t border-accent/15 pt-6 text-sm text-parchment/45">
+        See also our <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link>.
       </p>
     </LegalShell>
   );
@@ -136,14 +136,14 @@ export function TermsPage() {
     <LegalShell kicker="Legal" title="Terms of Service">
       <S title="The agreement">
         <p>
-          These terms govern your use of Trellis (ai-webbuilder.com), a service of Crowe Logic Inc.
+          These terms govern your use of AI Web Builder (ai-webbuilder.com), a service of Crowe Logic Inc.
           By creating an account or using the service you agree to them.
         </p>
       </S>
 
       <S title="The service">
         <p>
-          Trellis generates, hosts, and publishes websites from your descriptions. The Free plan
+          AI Web Builder generates, hosts, and publishes websites from your descriptions. The Free plan
           includes a limited number of generations per day and publishing to an ai-webbuilder.com subdomain.
           The Pro plan ($29.99/month) adds unlimited generations, richer media, and custom domains. Plan
           features may evolve; material reductions to a paid plan will be notified before they apply.
@@ -182,7 +182,7 @@ export function TermsPage() {
           If your published site collects leads through forms, that data belongs to you and you are
           responsible for handling it lawfully, including any notice or consent your jurisdiction requires
           from your visitors. We store and surface it to you as described in our{" "}
-          <Link href="/privacy" className="text-gold hover:underline">Privacy Policy</Link>.
+          <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>.
         </p>
       </S>
 
@@ -215,12 +215,12 @@ export function TermsPage() {
       <S title="Contact">
         <p>
           Questions about these terms:{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="text-gold hover:underline">{CONTACT_EMAIL}</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent hover:underline">{CONTACT_EMAIL}</a>.
         </p>
       </S>
 
-      <p className="border-t border-gold/15 pt-6 text-sm text-parchment/45">
-        See also our <Link href="/privacy" className="text-gold hover:underline">Privacy Policy</Link>.
+      <p className="border-t border-accent/15 pt-6 text-sm text-parchment/45">
+        See also our <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>.
       </p>
     </LegalShell>
   );

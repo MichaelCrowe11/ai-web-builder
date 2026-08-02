@@ -240,9 +240,9 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
     // full-bleed preview — collapsed to the slim composer, the handle expands
     // the transcript; sending a message auto-expands so tool theater is seen.
     <div
-      className={`flex flex-col bg-graphite-soft fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-gold/25 shadow-[0_-8px_30px_rgba(0,0,0,0.45)] ${
+      className={`flex flex-col bg-graphite-soft fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-accent/25 shadow-[0_-8px_30px_rgba(0,0,0,0.45)] ${
         sheetOpen ? "h-[72vh]" : ""
-      } md:static md:z-auto md:h-auto md:w-[370px] md:min-w-[370px] md:rounded-none md:border-t-0 md:border-r md:border-gold/15 md:shadow-none`}
+      } md:static md:z-auto md:h-auto md:w-[370px] md:min-w-[370px] md:rounded-none md:border-t-0 md:border-r md:border-accent/15 md:shadow-none`}
     >
       <button
         type="button"
@@ -250,12 +250,12 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
         onClick={() => setSheetOpen((o) => !o)}
         className="flex w-full items-center justify-center py-2 md:hidden"
       >
-        <span className="h-1 w-10 rounded-full bg-gold/40" />
+        <span className="h-1 w-10 rounded-full bg-accent/40" />
       </button>
-      <div className={`${sheetOpen ? "flex" : "hidden"} items-center justify-between border-b border-gold/10 px-4 py-3 md:flex`}>
+      <div className={`${sheetOpen ? "flex" : "hidden"} items-center justify-between border-b border-accent/10 px-4 py-3 md:flex`}>
         <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-parchment/55">Conversation</span>
         {quota != null && (
-          <span className="rounded-full border border-gold/30 px-2.5 py-0.5 font-mono text-[10px] text-gold">
+          <span className="rounded-full border border-accent/30 px-2.5 py-0.5 font-mono text-[10px] text-accent">
             {quota.limit != null ? `${quota.used} / ${quota.limit} today` : "Unlimited"}
           </span>
         )}
@@ -264,28 +264,28 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
       <div ref={streamRef} className={`${sheetOpen ? "flex" : "hidden"} flex-1 flex-col gap-3.5 overflow-y-auto p-4 md:flex`}>
         {messages.map((m, i) =>
           m.role === "user" ? (
-            <div key={i} className="max-w-[85%] self-end rounded-[14px_14px_4px_14px] border border-gold/20 bg-gold/10 px-3 py-2 text-[13.5px] leading-snug">
+            <div key={i} className="max-w-[85%] self-end rounded-[14px_14px_4px_14px] border border-accent/20 bg-accent/10 px-3 py-2 text-[13.5px] leading-snug">
               {m.content}
             </div>
           ) : (
             <div key={i} className="max-w-[92%] self-start text-[13.5px] leading-relaxed text-parchment/90">
-              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.2em] text-gold">
-                <span className="h-1.5 w-1.5 rounded-full bg-gold" /> Builder
+              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.2em] text-accent">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Builder
               </div>
               {(m.toolEvents?.length ?? 0) > 0 && (
                 <div className="my-1.5 flex flex-col gap-1">
                   {m.toolEvents!.map((t, j) => (
-                    <div key={j} className="flex items-center gap-2 rounded-lg border border-gold/10 bg-black/30 px-2.5 py-1.5 font-mono text-[11px] text-parchment/60">
-                      <span className={`text-gold ${t.running ? "animate-pulse" : ""}`}>{t.running ? "[ .. ]" : t.ok ? "[done]" : "[fail]"}</span>
+                    <div key={j} className="flex items-center gap-2 rounded-lg border border-accent/10 bg-black/30 px-2.5 py-1.5 font-mono text-[11px] text-parchment/60">
+                      <span className={`text-accent ${t.running ? "animate-pulse" : ""}`}>{t.running ? "[ .. ]" : t.ok ? "[done]" : "[fail]"}</span>
                       <span className="text-parchment/85">{t.detail}</span>
                     </div>
                   ))}
                 </div>
               )}
-              {m.content || (busy && i === messages.length - 1 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null)}
+              {m.content || (busy && i === messages.length - 1 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" /> : null)}
               {m.upsell && (
-                <div className="mt-2 rounded-2xl border border-gold/25 bg-black/35 p-3 shadow-[0_0_0_1px_rgba(210,173,98,0.06)]">
-                  <div className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-gold/70">Pro feature</div>
+                <div className="mt-2 rounded-2xl border border-accent/25 bg-black/35 p-3 shadow-[0_0_0_1px_rgba(59,130,246,0.06)]">
+                  <div className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-accent/70">Pro feature</div>
                   <div className="mt-1 text-[13px] leading-relaxed text-parchment/92">
                     {upgradeCopy(m.upsellFeature).headline}
                   </div>
@@ -296,7 +296,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
                     <button
                       type="button"
                       onClick={onUpgrade}
-                      className="mt-3 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-gold transition-colors hover:bg-gold/20"
+                      className="mt-3 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-accent transition-colors hover:bg-accent/20"
                     >
                       Upgrade to Pro
                     </button>
@@ -307,7 +307,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
                 <button
                   onClick={() => undo(m.docVersion! - 1)}
                   disabled={busy}
-                  className="mt-1.5 font-mono text-[10.5px] text-parchment/45 hover:text-gold disabled:opacity-40"
+                  className="mt-1.5 font-mono text-[10.5px] text-parchment/45 hover:text-accent disabled:opacity-40"
                 >
                   v{m.docVersion! - 1} &rarr; v{m.docVersion} &middot; undo
                 </button>
@@ -335,7 +335,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
                     key={o}
                     onClick={() => send(o)}
                     disabled={busy}
-                    className="crowe-lift rounded-xl border border-gold/12 bg-graphite-soft px-3.5 py-2.5 text-left text-[0.82rem] leading-snug text-parchment/70 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/55 disabled:opacity-40"
+                    className="crowe-lift rounded-xl border border-accent/12 bg-graphite-soft px-3.5 py-2.5 text-left text-[0.82rem] leading-snug text-parchment/70 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 disabled:opacity-40"
                   >
                     {o}
                   </button>
@@ -346,8 +346,8 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
         )}
       </div>
 
-      <div className="border-t border-gold/10 p-3">
-        <div className="flex items-end gap-2 rounded-xl border border-gold/30 bg-black/35 p-2 pl-3">
+      <div className="border-t border-accent/10 p-3">
+        <div className="flex items-end gap-2 rounded-xl border border-accent/30 bg-black/35 p-2 pl-3">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -357,7 +357,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
             className="max-h-[120px] min-h-[36px] w-full resize-none border-none bg-transparent py-1.5 text-[13.5px] placeholder:text-parchment/45 focus:outline-none"
           />
           <button onClick={() => send()} disabled={busy || !input.trim()}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold text-graphite disabled:opacity-40">
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-graphite disabled:opacity-40">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
           </button>
         </div>

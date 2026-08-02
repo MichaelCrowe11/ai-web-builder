@@ -38,7 +38,7 @@ export default function GrowthPage() {
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <main className="min-h-screen bg-graphite text-parchment font-sans px-6 py-12">
       <div className="mx-auto max-w-5xl">
-        <p className="text-xs tracking-eyebrow uppercase text-gold-dim mb-1">Mission Control</p>
+        <p className="text-xs tracking-eyebrow uppercase text-accent-dim mb-1">Mission Control</p>
         <h1 className="font-heading text-2xl font-semibold tracking-tight text-parchment mb-8">
           Living Site
         </h1>
@@ -50,8 +50,8 @@ export default function GrowthPage() {
   if (err) return <Shell><p className="text-error">Couldn't load growth: {err}</p></Shell>;
   if (!state) return <Shell><p className="text-parchment-dim">Loading...</p></Shell>;
 
-  const card = "rounded-sm border border-gold/15 bg-graphite-soft p-6 mb-6";
-  const sectionLabel = "text-xs tracking-eyebrow uppercase text-gold-dim mb-3";
+  const card = "rounded-sm border border-accent/15 bg-graphite-soft p-6 mb-6";
+  const sectionLabel = "text-xs tracking-eyebrow uppercase text-accent-dim mb-3";
 
   return (
     <Shell>
@@ -59,7 +59,7 @@ export default function GrowthPage() {
         <h2 className={sectionLabel}>Goal</h2>
         {state.goal ? (
           <p className="text-parchment">
-            {state.goal.objective} {"->"} <strong className="text-gold">{state.goal.conversionEvent}</strong>
+            {state.goal.objective} {"->"} <strong className="text-accent">{state.goal.conversionEvent}</strong>
             <span className="text-parchment-dim"> · autonomy: {state.goal.constraints.autonomy}</span>
           </p>
         ) : (
@@ -75,19 +75,19 @@ export default function GrowthPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs tracking-status uppercase text-parchment-dim">
-                  <th className="border-b border-gold/15 py-2 font-medium">Variant</th>
-                  <th className="border-b border-gold/15 py-2 font-medium">Exposures</th>
-                  <th className="border-b border-gold/15 py-2 font-medium">Conversions</th>
-                  <th className="border-b border-gold/15 py-2 font-medium">Rate</th>
+                  <th className="border-b border-accent/15 py-2 font-medium">Variant</th>
+                  <th className="border-b border-accent/15 py-2 font-medium">Exposures</th>
+                  <th className="border-b border-accent/15 py-2 font-medium">Conversions</th>
+                  <th className="border-b border-accent/15 py-2 font-medium">Rate</th>
                 </tr>
               </thead>
               <tbody>
                 {state.stats.map((s) => (
                   <tr key={s.variantId}>
-                    <td className="border-b border-gold/10 py-2 font-mono">{s.variantId}</td>
-                    <td className="border-b border-gold/10 py-2">{s.exposures}</td>
-                    <td className="border-b border-gold/10 py-2">{s.conversions}</td>
-                    <td className="border-b border-gold/10 py-2 font-mono text-gold">{rate(s)}%</td>
+                    <td className="border-b border-accent/10 py-2 font-mono">{s.variantId}</td>
+                    <td className="border-b border-accent/10 py-2">{s.exposures}</td>
+                    <td className="border-b border-accent/10 py-2">{s.conversions}</td>
+                    <td className="border-b border-accent/10 py-2 font-mono text-accent">{rate(s)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -116,9 +116,9 @@ export default function GrowthPage() {
           <ul className="space-y-2 font-mono text-sm">
             {state.decisions.map((d, i) => (
               <li key={i} className="text-parchment-dim">
-                <span className="text-gold-dim">{new Date(d.ts).toLocaleString()}</span>
+                <span className="text-accent-dim">{new Date(d.ts).toLocaleString()}</span>
                 {" "}
-                <strong className="text-gold">{d.kind}</strong>
+                <strong className="text-accent">{d.kind}</strong>
                 {d.detail?.reason ? ` · ${d.detail.reason}` : ""}
               </li>
             ))}
