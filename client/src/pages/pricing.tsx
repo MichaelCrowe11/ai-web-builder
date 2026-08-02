@@ -48,7 +48,7 @@ export default function Pricing() {
               <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
                 Pricing
               </div>
-              <h1 className="text-[clamp(2rem,4.5vw,3.2rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-parchment">
+              <h1 className="font-display text-[clamp(2rem,4.5vw,3.2rem)] font-medium leading-[1.05] tracking-[-0.02em] text-parchment">
                 Start free. Upgrade when it's earning.
               </h1>
               <p className="mx-auto mt-4 max-w-xl text-[1.05rem] leading-relaxed text-parchment/55">

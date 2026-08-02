@@ -1,0 +1,50 @@
+/* Self-hosted brand faces.
+ *
+ * These were two render-blocking <link>s to fonts.googleapis.com, which put a
+ * third-party DNS + TLS + CSS round trip in front of first paint and meant a
+ * blocked or slow Google Fonts left the page in system-ui. The brand faces are
+ * not optional decoration, so they ship with the app.
+ *
+ * Files are the same variable woff2 the desktop app ships
+ * (crowe-logic-desktop/assets/fonts), served from /fonts by Vite's public dir.
+ * Licences are alongside them: OFL-Fraunces.txt, OFL-Inter.txt,
+ * OFL-JetBrainsMono.txt.
+ */
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-var.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-var.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-var.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Metric-matched fallback for the body face, so the swap from fallback to Inter
+ * does not reflow the page. Only Inter gets one: it sets nearly every line of
+ * running text, and these overrides are measured values for Inter against
+ * Arial. Guessing the same for a display serif would move headlines rather than
+ * hold them still, so Fraunces and JetBrains Mono use their plain stacks. */
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans");
+  size-adjust: 107%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}

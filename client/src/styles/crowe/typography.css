@@ -7,7 +7,7 @@
  * same page. Fraunces is the one the desktop app ships, so it wins. */
 
 :root {
-  --crowe-font-sans: "Inter", "InterVariable", system-ui, -apple-system, sans-serif;
+  --crowe-font-sans: "Inter", "Inter Fallback", "InterVariable", system-ui, -apple-system, sans-serif;
   --crowe-font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
   --crowe-font-serif: "Fraunces", "EB Garamond", Georgia, serif;
 

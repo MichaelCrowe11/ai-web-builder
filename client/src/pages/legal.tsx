@@ -22,7 +22,7 @@ function LegalShell({ kicker, title, children }: { kicker: string; title: string
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
               {kicker}
             </div>
-            <h1 className="text-[clamp(1.8rem,4vw,2.6rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-parchment">{title}</h1>
+            <h1 className="font-display text-[clamp(1.8rem,4vw,2.6rem)] font-medium leading-[1.08] tracking-[-0.02em] text-parchment">{title}</h1>
             <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em] text-parchment/45">Effective {EFFECTIVE_DATE}</p>
             <div className="mt-10 space-y-8">{children}</div>
           </div>
