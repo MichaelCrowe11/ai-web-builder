@@ -169,13 +169,30 @@ if (!imagesEnabled()) {
   );
 }
 
-// Roughly 50s an image, so the three sites run together rather than in turn.
+// Roughly 50s an image and the deployment takes one call at a time, so these
+// three kick off together but the images themselves queue. Expect minutes.
 const built = await Promise.all(
-  SITES.map(async ({ slug, doc }) => ({ slug, doc: await addGeneratedImages(doc, 2) })),
+  SITES.map(async ({ slug, doc }) => ({ slug, doc: await addGeneratedImages(doc, 4) })),
 );
 
+// Count every slot, not just section-level ones: products carry an image per
+// item and galleries carry an index-aligned array, so counting `section.image`
+// alone under-reports a gallery-heavy sample by three.
+function imageCount(doc: SiteDocument): number {
+  let n = 0;
+  for (const section of doc.sections) {
+    const s = section as any;
+    if (s.image) n++;
+    if (Array.isArray(s.items)) n += s.items.filter((i: any) => i?.image).length;
+    if (Array.isArray(s.imageUrls)) n += s.imageUrls.filter(Boolean).length;
+  }
+  return n;
+}
+
 for (const { slug, doc } of built) {
-  const withImages = doc.sections.filter((s) => (s as any).image).length;
-  writeFileSync(`${OUT}/${slug}.html`, renderDocumentFull(doc));
-  console.log(`${OUT}/${slug}.html  (${withImages} real images)`);
+  const html = renderDocumentFull(doc);
+  writeFileSync(`${OUT}/${slug}.html`, html);
+  console.log(
+    `${OUT}/${slug}.html  ${imageCount(doc)} images, ${Math.round(html.length / 1024)}KB of HTML`,
+  );
 }

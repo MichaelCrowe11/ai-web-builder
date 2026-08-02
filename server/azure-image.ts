@@ -57,14 +57,27 @@ function waitMs(res: Response, attempt: number): number {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+export type Orientation = "landscape" | "portrait" | "square";
+
+// Shape follows the slot, and so does weight. A hero is a full-bleed banner and
+// earns the wide frame; a product cell or a gallery tile renders a few hundred
+// pixels across, so asking for a 1536-wide banner there buys nothing and costs
+// the same. These are inlined as base64 into the document, so every kilobyte is
+// carried by the published page.
+const SIZES: Record<Orientation, string> = {
+  landscape: "1536x1024",
+  portrait: "1024x1536",
+  square: "1024x1024",
+};
+
 /** Generate one image for a hint. Returns a JPEG data URI, or null on any failure. */
 export async function generateSiteImage(
   hint: string,
-  orientation: "landscape" | "portrait" = "landscape",
+  orientation: Orientation = "landscape",
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | null> {
   if (!imagesEnabled() || !hint.trim()) return null;
-  const size = orientation === "portrait" ? "1024x1536" : "1536x1024";
+  const size = SIZES[orientation] ?? SIZES.landscape;
   const prompt = `${hint}. Professional editorial website photography, natural light, high detail. No text, no words, no watermark, no logo.`;
   const url = `${ENDPOINT.replace(/\/$/, "")}/openai/deployments/${MODEL}/images/generations?api-version=${API_VERSION}`;
   const body = JSON.stringify({ prompt, n: 1, size, quality: "medium", output_format: "jpeg" });
@@ -93,28 +106,98 @@ export async function generateSiteImage(
   });
 }
 
-// Which sections are worth an image, most valuable first. The hero is not
-// negotiable: it is the one a visitor decides on, and a grey rectangle there is
-// what makes a generated site look generated.
-const IMAGE_SECTIONS = ["hero", "about", "products", "gallery"] as const;
+// An image SLOT: somewhere in the document a picture can go. Slots are not
+// sections. A products section holds one hint per item, and a gallery holds an
+// array of hints with an index-aligned array of results, so a section-level
+// lookup finds neither. Both were listed as candidates here and neither could
+// ever match, which meant only heroes and about sections were ever illustrated
+// and product grids stayed grey no matter what plan you were on.
+interface Slot {
+  hint: string;
+  rank: number;
+  /** Landscape for a banner, square for a cell in a grid. */
+  shape: "landscape" | "square";
+  apply: (doc: SiteDocument, url: string) => void;
+}
 
-function rank(type: string): number {
-  const i = (IMAGE_SECTIONS as readonly string[]).indexOf(type);
-  return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+// Most valuable first. The hero is not negotiable: it is the one a visitor
+// decides on, and a grey rectangle there is what makes a site look generated.
+const RANK = { hero: 0, about: 1, product: 2, gallery: 3 } as const;
+
+function slotsFor(doc: SiteDocument): Slot[] {
+  const slots: Slot[] = [];
+
+  doc.sections.forEach((section, si) => {
+    const s = section as any;
+
+    // Only claim a slot the renderer will actually paint.
+    //
+    // A centred or minimal hero renders copy and nothing else, and a statement
+    // or centred about does the same. Generating for those spent fifty seconds
+    // and, on the free tier, the site's ONE image, on a picture no visitor ever
+    // sees: a page could come back with a photograph attached to it and still
+    // look like it had none. Keep this in step with renderHero/renderAbout in
+    // shared/renderer.ts.
+    const paints =
+      s.type === "hero"
+        ? s.videoUrl || s.layout === "split" || s.layout === "overlay"
+        : s.layout === "split";
+
+    if ((s.type === "hero" || s.type === "about") && paints && s.imageHint && !s.image) {
+      slots.push({
+        hint: s.imageHint,
+        rank: s.type === "hero" ? RANK.hero : RANK.about,
+        shape: "landscape",
+        apply: (d, url) => {
+          (d.sections[si] as any).image = { url, alt: s.imageHint };
+        },
+      });
+    }
+
+    if (s.type === "products" && Array.isArray(s.items)) {
+      s.items.forEach((item: any, ii: number) => {
+        if (!item?.imageHint || item.image) return;
+        slots.push({
+          hint: item.imageHint,
+          rank: RANK.product,
+          shape: "square",
+          apply: (d, url) => {
+            (d.sections[si] as any).items[ii].image = { url, alt: item.imageHint };
+          },
+        });
+      });
+    }
+
+    if (s.type === "gallery" && Array.isArray(s.imageHints)) {
+      s.imageHints.forEach((hint: string, gi: number) => {
+        if (!hint || s.imageUrls?.[gi]) return;
+        slots.push({
+          hint,
+          rank: RANK.gallery,
+          shape: "square",
+          apply: (d, url) => {
+            const target = d.sections[si] as any;
+            target.imageUrls = target.imageUrls ?? [];
+            target.imageUrls[gi] = { url, alt: hint };
+          },
+        });
+      });
+    }
+  });
+
+  return slots.sort((a, b) => a.rank - b.rank);
 }
 
 /**
- * Add generated images to a document, best-effort. Returns a NEW document;
- * sections that fail keep their gradient.
+ * Fill image slots in a document, best-effort. Returns a NEW document; slots
+ * that fail keep their gradient.
  *
- * `limit` bounds cost and latency, and is the whole reason this is not simply
- * "every section": one image is a measured ~50s and several hundred KB inline,
- * so the free tier gets the hero and Pro gets the sections after it. Candidates
- * are ranked rather than taken in document order, because a document whose
- * gallery precedes its hero would otherwise spend the one image it gets on the
- * gallery.
- *
- * Runs in parallel, so wall-clock is one image, not `limit` images.
+ * `limit` bounds cost and latency, and is why this is not simply "every slot":
+ * one image is a measured ~50s and several hundred KB inline, and the deployment
+ * takes one call at a time, so N images is N x 50s of wall clock. Free gets the
+ * hero, Pro gets the next few. Slots are ranked rather than taken in document
+ * order, so a page whose gallery precedes its hero does not spend its one image
+ * on a gallery cell.
  */
 export async function addGeneratedImages(
   doc: SiteDocument,
@@ -123,28 +206,22 @@ export async function addGeneratedImages(
 ): Promise<SiteDocument> {
   if (!imagesEnabled() || limit < 1) return doc;
 
-  const candidates = doc.sections
-    .map((s, i) => ({ i, type: s.type, hint: (s as any).imageHint, has: !!(s as any).image }))
-    .filter((c) => c.hint && !c.has && rank(c.type) !== Number.MAX_SAFE_INTEGER)
-    .sort((a, b) => rank(a.type) - rank(b.type))
-    .slice(0, limit);
-
-  if (!candidates.length) return doc;
+  const chosen = slotsFor(doc).slice(0, limit);
+  if (!chosen.length) return doc;
 
   const results = await Promise.all(
-    candidates.map(async (c) => ({
-      i: c.i,
-      url: await generateSiteImage(c.hint, "landscape", fetchImpl),
-      hint: c.hint,
+    chosen.map(async (slot) => ({
+      slot,
+      url: await generateSiteImage(slot.hint, slot.shape, fetchImpl),
     })),
   );
 
-  const byIndex = new Map(results.filter((r) => r.url).map((r) => [r.i, r]));
-  if (!byIndex.size) return doc;
+  const filled = results.filter((r) => r.url);
+  if (!filled.length) return doc;
 
-  const sections = doc.sections.map((s, i) => {
-    const hit = byIndex.get(i);
-    return hit ? ({ ...s, image: { url: hit.url!, alt: hit.hint } } as typeof s) : s;
-  });
-  return { ...doc, sections } as SiteDocument;
+  // Deep clone before mutating: callers hold the input document (the client is
+  // still rendering it) and slot.apply writes several levels down.
+  const next: SiteDocument = JSON.parse(JSON.stringify(doc));
+  for (const { slot, url } of filled) slot.apply(next, url!);
+  return next;
 }
