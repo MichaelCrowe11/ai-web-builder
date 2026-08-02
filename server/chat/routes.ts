@@ -174,7 +174,7 @@ export function registerChatRoutes(app: Express) {
       send("turn_done", { reply: result.reply, mutated: result.mutated, docVersion, quota: quotaState });
     } catch (error: any) {
       const detail = error instanceof AtCapacityError
-        ? "High demand right now — that didn't go through. Nothing was changed; try again in a moment."
+        ? "High demand right now, so that didn't go through. Nothing was changed; try again in a moment."
         : "That didn't go through. Nothing was changed.";
       log(`Chat turn error: ${error.message}`);
       send("error", { error: detail });

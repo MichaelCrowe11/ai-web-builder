@@ -8,7 +8,7 @@ describe("nextFlash", () => {
   });
 
   it("clears the flash when a non-section tool starts", () => {
-    expect(nextFlash("tool_start", { name: "set_theme", label: "Restyling — warm-bakery" })).toBeNull();
+    expect(nextFlash("tool_start", { name: "set_theme", label: "Restyling: warm-bakery" })).toBeNull();
   });
 
   it("keeps the flash through tool_result — sync tools finish in microseconds, so the flash lives until the turn moves on", () => {

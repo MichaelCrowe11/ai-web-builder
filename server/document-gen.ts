@@ -73,6 +73,7 @@ Rules:
 - VARY the layouts across sections so the page does not feel repetitive. Prefer image-rich layouts (hero "split" or "overlay", about "split", products "showcase") when a photo would strengthen the section.
 - Provide a concrete, photographable "imageHint" on hero, about, every product, and gallery entries: a real subject in 2-5 words (e.g. "sourdough loaf on a wooden board", not "food"). No brand names, no text-in-image. Do NOT output any image URLs; the system fills real photos from your hints.
 - Write real, specific, warm copy. Never lorem ipsum, never placeholder brackets.
+- Never use em dashes or emoji. Em dashes read as machine-written; use a comma, colon, or a second sentence instead.
 - Invent plausible details (sample menu items, services, a phone like 555-0100) the owner can edit.
 - Pick sections that match the business type (a plumber gets services, a cafe gets a menu, a shop gets products).
 - Output ONLY the JSON object. No prose, no code fences.`;

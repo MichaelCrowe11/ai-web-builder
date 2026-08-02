@@ -20,7 +20,7 @@ export function pickWeakestLink(report: FunnelReport, _goal: SiteGoal): { target
   const rate = ((worst.nextStep / worst.views) * 100).toFixed(0);
   return {
     targetSectionId: worst.key,
-    hypothesis: `The ${worst.type} section gets ${worst.views} views but only ${rate}% click through — its copy likely under-motivates the next step.`,
+    hypothesis: `The ${worst.type} section gets ${worst.views} views but only ${rate}% click through, so its copy likely under-motivates the next step.`,
   };
 }
 
@@ -114,7 +114,7 @@ export async function evaluateAndMaybePromote(projectId: string): Promise<{ prom
   await storage.updateExperiment(exp.id, { status: "concluded", winnerVariantId: winner.id });
 
   if (!winner.patch) {
-    await audit(projectId, "experiment_concluded", { id: exp.id, winner: winner.id, note: "control won — no change" });
+    await audit(projectId, "experiment_concluded", { id: exp.id, winner: winner.id, note: "control won, no change" });
     return { promoted: false, reason: "control won" };
   }
 

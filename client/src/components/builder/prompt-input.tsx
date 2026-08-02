@@ -89,7 +89,7 @@ export function PromptInput({ onGenerate, isGenerating }: PromptInputProps) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Describe your business — e.g. 'a cozy coffee shop in Tucson with online reservations'"
+          placeholder="Describe your business, e.g. 'a cozy coffee shop in Tucson with online reservations'"
           className="max-h-[180px] min-h-[44px] w-full resize-none border-none bg-transparent p-0 py-2.5 text-base shadow-none placeholder:text-parchment/50 focus-visible:ring-0"
           rows={1}
         />

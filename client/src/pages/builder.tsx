@@ -24,7 +24,7 @@ import { ChatPanel } from "@/components/builder/chat-panel";
 
 // Clean, modern workspace empty state (rarely seen - arriving from the home
 // prompt auto-builds). Crowe gold-on-graphite, clean sans.
-const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Describe a website to begin.</h1><p class="sub">Type what you want in the bar below — a business, a vibe, a few details — and the workspace builds it live.</p></div>`;
+const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Describe a website to begin.</h1><p class="sub">Type what you want in the bar below (a business, a vibe, a few details) and the workspace builds it live.</p></div>`;
 // The empty-state document, rendered inside the preview iframe. Literal values,
 // not tokens, because the app's custom properties do not cross the iframe
 // boundary. Keep in step with styles/crowe/colors.css: base #0a0a0b, text
@@ -602,7 +602,7 @@ export default function Builder() {
                   <div className="rounded-2xl border border-gold/25 bg-graphite-soft p-3 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
                     <div className="mb-2 flex items-center gap-2 px-1">
                       <Wand2 className="h-3.5 w-3.5 text-gold" />
-                      <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/55">Refine — tap to apply</span>
+                      <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/55">Refine, tap to apply</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {refineIntents.map((r) => (

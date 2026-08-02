@@ -12,7 +12,7 @@ import { Check, Sparkles } from "lucide-react";
 // gold-on-graphite identity, matching the home hero.
 const FREE = [
   "5 site generations per day",
-  "Full workspace — describe, refine, publish",
+  "Full workspace: describe, refine, publish",
   "One-click publish, hosting included",
   "Lead capture + owner content editing",
   "Publish to a crowe subdomain",
