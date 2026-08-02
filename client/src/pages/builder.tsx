@@ -9,7 +9,7 @@ import { BillingModal } from "@/components/settings/billing-modal";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Sparkles, Film, Inbox, Pencil,
+  ArrowLeft, Download, Rocket, Save, Loader2, ExternalLink, Copy, Wand2, Github, Film, Inbox, Pencil,
 } from "lucide-react";
 import { GitHubExportModal } from "@/components/builder/github-export-modal";
 import { LeadsModal } from "@/components/builder/leads-modal";
@@ -573,13 +573,13 @@ export default function Builder() {
           {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} queued={queued} />}
           {filling && (
             <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-accent/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
-              <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
               <span className="font-mono text-xs text-parchment/80">Writing your copy…</span>
             </div>
           )}
           {imaging && !filling && (
             <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-accent/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
-              <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
               <span className="font-mono text-xs text-parchment/80">Generating photos…</span>
             </div>
           )}

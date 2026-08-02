@@ -5,7 +5,7 @@ import { AuthModal } from "@/components/auth/auth-modal";
 import { BillingModal } from "@/components/settings/billing-modal";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 
 // Pricing: Free vs Pro ($29.99/mo). CTAs route into the product — Free starts
 // the builder, Pro opens checkout (or auth first when signed out). Crowe
@@ -107,7 +107,6 @@ export default function Pricing() {
                   className="mt-8 h-11 w-full rounded-xl bg-accent font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(59,130,246,0.75)]"
                   onClick={getPro}
                 >
-                  <Sparkles className="mr-1.5 h-4 w-4" />
                   {user?.plan === "pro" ? "Manage subscription" : "Upgrade to Pro"}
                 </Button>
               </div>

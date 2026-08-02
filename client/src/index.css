@@ -272,3 +272,39 @@
     color: transparent;
   }
 }
+
+@layer components {
+  /* Structural page ground.
+   *
+   * The hero used to sit on a radial accent bloom, which is the single most
+   * common background in a generated app and reads as atmosphere applied to
+   * a page rather than a page with structure. This is a hairline grid at the
+   * layout's own 72px rhythm, masked so it fades before it reaches content.
+   * It says "built to a measure", which is the claim the product is making.
+   */
+  .ground-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 72px 72px;
+    -webkit-mask-image: radial-gradient(58% 52% at 50% 0%, #000 0%, transparent 76%);
+    mask-image: radial-gradient(58% 52% at 50% 0%, #000 0%, transparent 76%);
+  }
+
+  /* A single restrained bloom, kept behind the one element that is the point
+   * (the composer) rather than washed across the whole viewport. */
+  .composer-bloom {
+    background: radial-gradient(
+      36rem 16rem at 50% 50%,
+      rgba(59, 130, 246, 0.14),
+      transparent 70%
+    );
+  }
+
+  /* Editorial row: a hairline rule above, and a display numeral hanging in the
+   * left margin. Used instead of a card grid, because three boxes in a row is
+   * the shape every generated page reaches for. */
+  .rule-row {
+    border-top: 1px solid var(--crowe-line);
+  }
+}

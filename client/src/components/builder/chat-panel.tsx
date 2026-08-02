@@ -332,12 +332,12 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
               <div className="mt-5 flex flex-col gap-1.5">
                 {STARTERS.map((o) => (
                   <button
-                    key={o}
-                    onClick={() => send(o)}
+                    key={o.prompt}
+                    onClick={() => send(o.prompt)}
                     disabled={busy}
-                    className="crowe-lift rounded-xl border border-accent/12 bg-graphite-soft px-3.5 py-2.5 text-left text-[0.82rem] leading-snug text-parchment/70 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 disabled:opacity-40"
+                    className="crowe-lift rounded-lg border border-line bg-graphite-soft px-3.5 py-2.5 text-left text-[0.82rem] leading-snug text-parchment/70 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 disabled:opacity-40"
                   >
-                    {o}
+                    {o.prompt}
                   </button>
                 ))}
               </div>
