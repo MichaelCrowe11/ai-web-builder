@@ -43,16 +43,19 @@ export function Showcase() {
   const site = SITES[active];
 
   return (
-    <section className="border-t border-accent/10 py-20">
+    <section className="border-t border-line py-24">
       <div className="container mx-auto max-w-5xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">
+        {/* Header is left-aligned with the switcher opposite it, rather than a
+            third centred stack. The page has one centred element and it is the
+            prompt. */}
+        <div className="max-w-xl">
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
             Real output
           </p>
-          <h2 className="mt-4 font-display text-[clamp(1.8rem,4vw,2.7rem)] font-medium leading-[1.08] tracking-[-0.02em] text-parchment">
+          <h2 className="mt-5 font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
             Not a template with your name in it.
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-[1.02rem] leading-relaxed text-parchment/55">
+          <p className="mt-5 text-[1rem] leading-relaxed text-parchment/55">
             Every site is assembled from hand-designed sections and a curated
             palette, so the layout, the type and the rhythm change with the
             business. These three came out of the same builder you are about to
@@ -60,33 +63,34 @@ export function Showcase() {
           </p>
         </div>
 
-        {/* Switcher. Segmented, one accent, keyboard reachable. */}
-        <div
-          role="tablist"
-          aria-label="Example sites"
-          className="mt-10 flex flex-wrap items-center justify-center gap-2"
-        >
-          {SITES.map((s, i) => (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={i === active}
-              aria-controls="showcase-frame"
-              onClick={() => setActive(i)}
-              className={`rounded-full px-4 py-1.5 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 ${
-                i === active
-                  ? "bg-accent/15 text-accent ring-1 ring-accent/35"
-                  : "text-parchment/55 ring-1 ring-accent/10 hover:text-parchment/80 hover:ring-accent/25"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
+        {/* Switcher sits on the rule directly above the frame it controls,
+            rather than floating beside the paragraph where it reads as a
+            stranded object. A rule fills the space it does not need. */}
+        <div className="mt-12 flex items-end gap-6">
+          <div aria-hidden className="mb-2 h-px flex-1 bg-line" />
+          <div role="tablist" aria-label="Example sites" className="flex shrink-0 items-center gap-6">
+            {SITES.map((s, i) => (
+              <button
+                key={s.id}
+                role="tab"
+                aria-selected={i === active}
+                aria-controls="showcase-frame"
+                onClick={() => setActive(i)}
+                className={`border-b pb-1.5 font-mono text-[0.68rem] uppercase tracking-[0.16em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 ${
+                  i === active
+                    ? "border-accent text-accent"
+                    : "border-transparent text-parchment/40 hover:text-parchment/70"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Browser frame. Chrome is drawn in CSS rather than baked into the
             capture, so re-shooting the images never re-shoots the chrome. */}
-        <div id="showcase-frame" className="crowe-raised mt-8 overflow-hidden rounded-2xl">
+        <div id="showcase-frame" className="crowe-raised mt-5 overflow-hidden rounded-xl">
           <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
             <span className="h-2.5 w-2.5 rounded-full bg-parchment/15" />
             <span className="h-2.5 w-2.5 rounded-full bg-parchment/15" />
@@ -112,7 +116,9 @@ export function Showcase() {
           />
         </div>
 
-        <p className="mt-4 text-center text-sm text-parchment/45">{site.note}</p>
+        <p className="mt-4 font-mono text-[0.68rem] uppercase tracking-[0.16em] text-parchment/35">
+          {site.note}
+        </p>
       </div>
     </section>
   );

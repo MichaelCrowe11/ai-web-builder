@@ -2,15 +2,55 @@ import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Sparkles, Globe, Zap, ArrowUp, Eye, FlaskConical, TrendingUp } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { Showcase } from "@/components/showcase";
 import { STARTERS } from "@/lib/starters";
 
-// Crowe Logic AI Web Builder. The hero is a big central prompt:
-// describe a business and land straight in the workspace, building. The
-// positioning leads with the differentiator, a LIVING site that keeps testing
-// and improving itself, not just "generate a page and leave."
-// Crowe identity (gold on graphite, parchment), clean modern sans.
+// AI Web Builder. The hero is a prompt: describe a business and land straight in
+// the workspace, building. The positioning leads with the differentiator, a
+// LIVING site that keeps testing and improving itself, not "generate a page and
+// leave."
+//
+// The page is deliberately NOT a stack of centred blocks with three-card grids
+// and an icon in every card. That shape, plus a radial glow behind the hero and
+// a sparkle on every button, is the house style of a generated app, and a
+// product whose whole claim is that its output does not look generated cannot
+// afford to look generated itself. So: one centred element, the prompt, which
+// earns it, then editorial rows with hanging numerals, a split with a sticky
+// column, and hairline rules doing the work boxes were doing.
+
+const STEPS = [
+  {
+    n: "01",
+    title: "Describe it",
+    body: "One sentence about your business: what you do, where, and for whom. Or take one of the openers above and change it later.",
+  },
+  {
+    n: "02",
+    title: "Refine and ship it",
+    body: "A finished site appears in seconds. Change the copy, the sections and the look by talking to it, then publish. Hosting and the subdomain are included.",
+  },
+  {
+    n: "03",
+    title: "Let it grow",
+    body: "Once it is live it watches real visits, finds the section losing people, and proposes a sharper version. You approve with one click.",
+  },
+];
+
+const BEHAVIOURS = [
+  {
+    k: "Watches",
+    body: "It reads which sections earn attention and which lose it, on real visits rather than guesses, and it knows which one is costing you the most.",
+  },
+  {
+    k: "Tests",
+    body: "It writes a stronger version of the weakest section and runs an honest split against the original. Nothing changes on your live site until one of them wins.",
+  },
+  {
+    k: "Improves",
+    body: "It keeps the winner, retires the loser, and moves to the next weak spot. The site you published in March is not the site working for you in June.",
+  },
+];
 
 export default function Home() {
   const [, navigate] = useLocation();
@@ -25,36 +65,26 @@ export default function Home() {
   return (
     <Layout>
       <div className="bg-graphite text-parchment">
-        {/* ============ PROMPT HERO (Replit-Agent style) ============ */}
+        {/* ============ PROMPT HERO ============ */}
         <section className="relative overflow-hidden">
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(59,130,246,0.13), transparent 62%)" }}
-          />
-          <div className="container relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-20 pt-24 text-center lg:pt-28">
-            <div className="rise mb-7 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">
-              <span className="h-1 w-1 animate-pulse rounded-full bg-accent" />
-              A Crowe Logic product
-            </div>
+          <div aria-hidden className="ground-grid pointer-events-none absolute inset-0" />
 
-            <h1
-              className="rise font-display text-[clamp(2.2rem,5vw,3.7rem)] font-medium leading-[1.04] tracking-[-0.02em] text-parchment"
-              style={{ ["--d" as any]: "60ms" }}
-            >
+          <div className="container relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-24 pt-24 text-center lg:pt-32">
+            <h1 className="rise font-display text-[clamp(2.3rem,5.2vw,3.9rem)] font-medium leading-[1.03] tracking-[-0.022em] text-parchment">
               What do you want to build?
             </h1>
             <p
-              className="rise mt-4 max-w-lg text-[1.05rem] leading-relaxed text-parchment/55"
-              style={{ ["--d" as any]: "140ms" }}
+              className="rise mt-5 max-w-md text-[1.05rem] leading-relaxed text-parchment/55"
+              style={{ ["--d" as any]: "80ms" }}
             >
-              Describe your business in a sentence. We design it, write the copy,
-              and put it live. Then it keeps testing itself and improving to win
-              you more customers.
+              Describe your business in a sentence. You get a finished site that
+              goes on improving itself after it is live.
             </p>
 
-            {/* THE COMPOSER — the hero element */}
-            <div className="rise mt-10 w-full" style={{ ["--d" as any]: "220ms" }}>
-              <div className="group rounded-2xl border border-accent/25 bg-graphite-soft/80 p-2.5 text-left shadow-[0_30px_90px_-36px_rgba(59,130,246,0.5)] backdrop-blur-sm transition-colors focus-within:border-accent/50">
+            {/* The composer. The one element that gets a light source. */}
+            <div className="rise relative mt-11 w-full" style={{ ["--d" as any]: "160ms" }}>
+              <div aria-hidden className="composer-bloom pointer-events-none absolute -inset-x-10 -inset-y-8" />
+              <div className="crowe-raised relative rounded-xl p-2.5 text-left transition-colors duration-150 focus-within:border-accent/45">
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -66,111 +96,128 @@ export default function Home() {
                   className="w-full resize-none bg-transparent px-3.5 py-3 text-[1.05rem] leading-relaxed text-parchment outline-none placeholder:text-parchment/35"
                   autoFocus
                 />
-                <div className="flex items-center justify-between px-2 pb-0.5">
+                <div className="flex items-center justify-between gap-4 px-2 pb-0.5">
                   <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/35">
                     Free to start · no card · ⌘↵ to build
                   </span>
                   <Button
                     onClick={() => start(prompt)}
                     disabled={!prompt.trim()}
-                    className="h-11 rounded-xl bg-accent px-6 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(59,130,246,0.75)] disabled:opacity-40"
+                    className="h-10 shrink-0 rounded-lg bg-accent px-5 font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)] disabled:opacity-35"
                   >
-                    <Sparkles className="mr-1.5 h-4 w-4" />
                     Build it
-                    <ArrowUp className="ml-1 h-4 w-4 rotate-45" />
+                    <ArrowUp className="ml-1.5 h-4 w-4 rotate-45" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Openers as text, not a field of pills. */}
+            <div
+              className="rise mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5"
+              style={{ ["--d" as any]: "240ms" }}
+            >
+              <span className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-parchment/30">
+                Or start from
+              </span>
+              {STARTERS.slice(0, 3).map((s) => (
+                <button
+                  key={s.prompt}
+                  onClick={() => start(s.prompt)}
+                  title={s.prompt}
+                  className="border-b border-transparent pb-0.5 text-sm text-parchment/55 transition-colors duration-150 hover:border-accent/50 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55"
+                >
+                  {s.short}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Proof, directly under the hero: the first question after "describe
+            your business" is "and what do I get". */}
+        <Showcase />
+
+        {/* ============ HOW IT WORKS ============ */}
+        <section id="how-it-works" className="scroll-mt-20 border-t border-line py-24">
+          <div className="container mx-auto max-w-5xl px-6">
+            <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
+              How it works
+            </p>
+
+            <div className="mt-10">
+              {STEPS.map((s, i) => (
+                <div
+                  key={s.n}
+                  className={`rule-row grid gap-x-8 gap-y-3 py-9 md:grid-cols-[4.5rem_15rem_1fr] ${
+                    i === STEPS.length - 1 ? "border-b border-line" : ""
+                  }`}
+                >
+                  <span className="font-display text-[1.6rem] leading-none text-accent/70">
+                    {s.n}
+                  </span>
+                  <h3 className="font-display text-[1.45rem] leading-tight tracking-[-0.01em] text-parchment">
+                    {s.title}
+                  </h3>
+                  <p className="max-w-xl text-[0.98rem] leading-relaxed text-parchment/55">
+                    {s.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ============ THE LIVING SITE ============ */}
+        <section className="border-t border-line py-24">
+          <div className="container mx-auto max-w-5xl px-6">
+            <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[22rem_1fr]">
+              <div className="lg:sticky lg:top-28 lg:self-start">
+                <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
+                  The living site
+                </p>
+                <h2 className="mt-5 font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
+                  It does not just launch. It learns.
+                </h2>
+                <p className="mt-5 text-[1rem] leading-relaxed text-parchment/55">
+                  Most builders hand you a page and walk away. This one stays on
+                  the job, and the difference compounds every month you leave it
+                  running.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={() => navigate("/builder")}
+                    className="h-11 rounded-lg bg-accent px-6 font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)]"
+                  >
+                    Start building free
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/pricing")}
+                    className="h-11 rounded-lg border-accent/30 px-6 text-parchment hover:bg-accent/10"
+                  >
+                    See pricing
                   </Button>
                 </div>
               </div>
 
-              {/* starter chips */}
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {STARTERS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => start(s)}
-                    className="rounded-full border border-accent/15 bg-graphite-soft/50 px-3.5 py-1.5 text-xs text-parchment/60 transition-colors hover:border-accent/40 hover:text-accent"
+              <div>
+                {BEHAVIOURS.map((b, i) => (
+                  <div
+                    key={b.k}
+                    className={`rule-row grid gap-x-8 gap-y-2 py-8 sm:grid-cols-[9rem_1fr] ${
+                      i === BEHAVIOURS.length - 1 ? "border-b border-line" : ""
+                    }`}
                   >
-                    {s.length > 42 ? s.slice(0, 40) + "…" : s}
-                  </button>
+                    <h3 className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-parchment/70">
+                      {b.k}
+                    </h3>
+                    <p className="text-[0.98rem] leading-relaxed text-parchment/55">
+                      {b.body}
+                    </p>
+                  </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ============ PROOF: real rendered output ============
-            Placed directly under the hero on purpose. The first question after
-            "describe your business" is "and what do I get", and the answer used
-            to be four hundred pixels of prose before anything was shown. */}
-        <Showcase />
-
-        {/* ============ HOW IT WORKS (clean, compact) ============ */}
-        <section id="how-it-works" className="scroll-mt-20 border-t border-accent/10 py-20">
-          <div className="container mx-auto px-6">
-            <div className="crowe-panel grid gap-px overflow-hidden rounded-2xl bg-line md:grid-cols-3">
-              {[
-                { n: "01", icon: Zap, title: "Describe it", body: "Tell us what your business does in one sentence, or pick a starter above." },
-                { n: "02", icon: Globe, title: "Refine and ship it", body: "A polished site appears in seconds. Adjust the look and copy by chatting, then publish with one click. Hosting is included." },
-                { n: "03", icon: TrendingUp, title: "Let it grow", body: "Once it is live, the site watches real visits and keeps improving its copy to convert more of them." },
-              ].map((f) => (
-                <div key={f.n} className="group bg-graphite-soft p-8 transition-colors duration-200 hover:bg-graphite-raised">
-                  <div className="flex items-center justify-between">
-                    <f.icon className="h-6 w-6 text-accent" strokeWidth={1.6} />
-                    <span className="font-mono text-xs text-accent/70">{f.n}</span>
-                  </div>
-                  <h3 className="mt-5 text-lg font-semibold tracking-tight text-parchment">{f.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-parchment/55">{f.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ============ THE LIVING SITE (the differentiator) ============ */}
-        <section className="border-t border-accent/10 py-24">
-          <div className="container mx-auto max-w-5xl px-6">
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">The living site</p>
-              <h2 className="mt-4 font-display text-[clamp(1.8rem,4vw,2.7rem)] font-medium leading-[1.08] tracking-[-0.02em] text-parchment">
-                It does not just launch. It learns.
-              </h2>
-              <p className="mx-auto mt-5 max-w-xl text-[1.02rem] leading-relaxed text-parchment/55">
-                Most site builders hand you a page and walk away. Yours stays on
-                the job. It sees how visitors move, tests sharper copy on the
-                sections that underperform, and keeps the versions that win, so
-                the site converts better over time without you touching it.
-              </p>
-            </div>
-
-            <div className="mt-14 grid gap-5 md:grid-cols-3">
-              {[
-                { icon: Eye, title: "Watches", body: "It reads which sections earn attention and which lose it, on real visits, not guesses." },
-                { icon: FlaskConical, title: "Tests", body: "It proposes stronger copy for the weakest section and runs a clean, honest A/B split." },
-                { icon: TrendingUp, title: "Improves", body: "It keeps the winning version and moves to the next weak spot. Your approval is one click." },
-              ].map((c) => (
-                <div key={c.title} className="crowe-panel crowe-lift rounded-2xl p-7">
-                  <c.icon className="h-6 w-6 text-accent" strokeWidth={1.6} />
-                  <h3 className="mt-5 text-lg font-semibold tracking-tight text-parchment">{c.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-parchment/55">{c.body}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
-              <Button
-                onClick={() => navigate("/builder")}
-                className="h-11 rounded-xl bg-accent px-7 font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(59,130,246,0.75)]"
-              >
-                <Sparkles className="mr-1.5 h-4 w-4" />
-                Start building free
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate("/pricing")}
-                className="h-11 rounded-xl border-accent/30 px-7 text-parchment hover:bg-accent/10"
-              >
-                See pricing
-              </Button>
             </div>
           </div>
         </section>
