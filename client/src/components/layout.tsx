@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { AuthModal } from "@/components/auth/auth-modal";
-import { CroweHexC } from "@/components/brand/crowe-hex-c";
+import { CroweMark } from "@/components/brand/crowe-mark";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -32,9 +32,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <header className="border-b border-gold/15 bg-graphite/95 backdrop-blur supports-[backdrop-filter]:bg-graphite/70 sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
-            <div className="flex items-center gap-2.5 cursor-pointer group">
-              <CroweHexC size={26} className="transition-transform group-hover:scale-105" />
-              <span className="font-heading text-xl tracking-tight text-parchment">
+            <div className="group flex cursor-pointer items-center gap-2.5">
+              <CroweMark
+                size={28}
+                className="transition-transform duration-200 ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.06] motion-reduce:transition-none"
+              />
+              <span className="font-display text-[1.35rem] leading-none tracking-[-0.01em] text-parchment">
                 AI Web Builder
               </span>
             </div>
@@ -143,18 +146,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="border-t border-gold/15 bg-graphite-soft py-12 mt-20">
-        <div className="container mx-auto px-4 grid md:grid-cols-4 gap-8">
+      <footer className="mt-20 border-t border-gold/15 bg-graphite-soft pb-8 pt-12">
+        <div className="container mx-auto grid gap-8 px-4 md:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <CroweHexC size={24} />
-              <span className="font-heading font-semibold text-lg text-parchment">AI Web Builder</span>
+            <div className="mb-4 flex items-center gap-2.5">
+              <CroweMark size={24} />
+              <span className="font-display text-lg leading-none tracking-[-0.01em] text-parchment">AI Web Builder</span>
             </div>
             <p className="text-sm text-parchment-dim">
               Describe your business. Get a website that's live.
-            </p>
-            <p className="mt-3 text-[0.7rem] tracking-status uppercase text-gold-dim">
-              A Crowe Logic product
             </p>
           </div>
           <div>
@@ -178,6 +178,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <li><Link href="/terms" className="transition-colors hover:text-gold">Terms</Link></li>
             </ul>
           </div>
+        </div>
+
+        {/* Endorsement bar. The parent brand signs the product with its own
+            drawn logotype rather than the product's type, which is the point of
+            an endorsed lockup. The wordmark is 4.35:1, so it is sized by width;
+            sizing a lockup that wide by height overflows a phone. */}
+        <div className="container mx-auto mt-10 flex flex-col items-center gap-4 border-t border-gold/10 px-4 pt-8 sm:flex-row sm:justify-between">
+          <a
+            href="https://www.crowelogic.com"
+            target="_blank"
+            rel="noreferrer"
+            className="group flex items-center gap-3"
+          >
+            <span className="font-mono text-[0.65rem] uppercase tracking-status text-gold-dim">
+              A product of
+            </span>
+            <img
+              src="/brand/crowe-logic-wordmark.svg"
+              alt="Crowe Logic"
+              width={112}
+              height={26}
+              className="w-[112px] opacity-80 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none"
+            />
+          </a>
+          <p className="font-mono text-[0.65rem] uppercase tracking-status text-parchment/35">
+            Crowe Logic Inc.
+          </p>
         </div>
       </footer>
 

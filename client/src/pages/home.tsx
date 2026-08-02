@@ -43,7 +43,7 @@ export default function Home() {
             </div>
 
             <h1
-              className="rise text-[clamp(2.2rem,5vw,3.7rem)] font-semibold leading-[1.04] tracking-[-0.03em] text-parchment"
+              className="rise font-display text-[clamp(2.2rem,5vw,3.7rem)] font-medium leading-[1.04] tracking-[-0.02em] text-parchment"
               style={{ ["--d" as any]: "60ms" }}
             >
               What do you want to build?
@@ -130,7 +130,7 @@ export default function Home() {
           <div className="container mx-auto max-w-5xl px-6">
             <div className="mx-auto max-w-2xl text-center">
               <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">The living site</p>
-              <h2 className="mt-4 text-[clamp(1.8rem,4vw,2.7rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-parchment">
+              <h2 className="mt-4 font-display text-[clamp(1.8rem,4vw,2.7rem)] font-medium leading-[1.08] tracking-[-0.02em] text-parchment">
                 It does not just launch. It learns.
               </h2>
               <p className="mx-auto mt-5 max-w-xl text-[1.02rem] leading-relaxed text-parchment/55">

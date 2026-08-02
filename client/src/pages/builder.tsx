@@ -19,7 +19,7 @@ import { renderDocumentBody, renderDocumentCss } from "@shared/renderer";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { postWithCapacityRetry } from "@/lib/generate-fetch";
-import { CroweHexC } from "@/components/brand/crowe-hex-c";
+import { CroweMark } from "@/components/brand/crowe-mark";
 import { ChatPanel } from "@/components/builder/chat-panel";
 
 // Clean, modern workspace empty state (rarely seen - arriving from the home
@@ -479,7 +479,7 @@ export default function Builder() {
             </button>
           </Link>
           <div className="flex items-center gap-2.5">
-            <CroweHexC size={22} />
+            <CroweMark size={22} />
             <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-44 bg-transparent font-heading text-base font-medium tracking-tight outline-none transition-colors focus:border-b focus:border-gold" />
           </div>
         </div>

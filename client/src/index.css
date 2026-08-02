@@ -1,3 +1,4 @@
+@import "./styles/crowe/fonts.css";
 @import "tailwindcss";
 @import "./styles/crowe/preset.css";
 @import "tw-animate-css";
@@ -39,8 +40,8 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
+  --font-heading: 'Inter', 'Inter Fallback', system-ui, sans-serif;
   --font-display: 'Fraunces', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
