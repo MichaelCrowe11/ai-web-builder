@@ -4,19 +4,13 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { Sparkles, Globe, Zap, ArrowUp, Eye, FlaskConical, TrendingUp } from "lucide-react";
 import { Showcase } from "@/components/showcase";
+import { STARTERS } from "@/lib/starters";
 
 // Crowe Logic AI Web Builder. The hero is a big central prompt (Replit-Agent
 // style): describe a business and land straight in the workspace, building.
 // The positioning leads with the differentiator — a LIVING site that keeps
 // testing and improving itself — not just "generate a page and leave."
 // Crowe identity (gold on graphite, parchment), clean modern sans.
-const STARTERS = [
-  "A cozy coffee shop in Tucson with a menu and online reservations",
-  "A freelance photographer portfolio",
-  "A local plumbing company with service booking",
-  "An online store for handmade ceramics",
-  "A yoga studio with a class schedule",
-];
 
 export default function Home() {
   const [, navigate] = useLocation();

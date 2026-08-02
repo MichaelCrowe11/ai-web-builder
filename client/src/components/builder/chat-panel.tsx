@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, ArrowUp } from "lucide-react";
 import { nextFlash, type SectionFlash } from "@/lib/section-flash";
+import { STARTERS } from "@/lib/starters";
 
 // Conversational builder side panel (the default interface; ?chat=0 restores
 // the legacy dock). Talks to
@@ -126,8 +127,10 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
     }
   };
 
-  const send = async () => {
-    const message = input.trim();
+  // `preset` lets a starter chip send without a round trip through input state,
+  // which would not have committed by the time send() read it.
+  const send = async (preset?: string) => {
+    const message = (preset ?? input).trim();
     if (!message || busy) return;
     setInput("");
     setBusy(true);
@@ -313,11 +316,33 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
           ),
         )}
         {messages.length === 0 && (
-          <p className="mt-6 text-center text-sm text-parchment/45">
-            {ready
-              ? "Tell the builder what to change: copy, sections, style."
-              : "Describe the site you want, and the builder does the rest."}
-          </p>
+          <div className="mt-6">
+            <p className="text-center text-sm text-parchment/45">
+              {ready
+                ? "Tell the builder what to change: copy, sections, style."
+                : "Describe the site you want, and the builder does the rest."}
+            </p>
+
+            {/* Empty-state starters. Landing on /builder directly used to be a
+                blank room: the same instruction printed twice, once here and
+                once across the preview, and nothing to act on. These are the
+                same openers the home hero offers, so arriving by either door
+                puts the same first move in reach. */}
+            {!ready && (
+              <div className="mt-5 flex flex-col gap-1.5">
+                {STARTERS.map((o) => (
+                  <button
+                    key={o}
+                    onClick={() => send(o)}
+                    disabled={busy}
+                    className="crowe-lift rounded-xl border border-gold/12 bg-graphite-soft px-3.5 py-2.5 text-left text-[0.82rem] leading-snug text-parchment/70 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/55 disabled:opacity-40"
+                  >
+                    {o}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -331,7 +356,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
             rows={1}
             className="max-h-[120px] min-h-[36px] w-full resize-none border-none bg-transparent py-1.5 text-[13.5px] placeholder:text-parchment/45 focus:outline-none"
           />
-          <button onClick={send} disabled={busy || !input.trim()}
+          <button onClick={() => send()} disabled={busy || !input.trim()}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold text-graphite disabled:opacity-40">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
           </button>
