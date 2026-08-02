@@ -1,6 +1,6 @@
 {
-  "name": "AI Web Builder",
-  "short_name": "Web Builder",
+  "name": "Trellis",
+  "short_name": "Trellis",
   "description": "Describe your business. Get a website that's live, and that keeps improving itself.",
   "start_url": "/",
   "display": "standalone",

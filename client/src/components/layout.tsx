@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { AuthModal } from "@/components/auth/auth-modal";
-import { CroweMark } from "@/components/brand/crowe-mark";
+import { TrellisMark } from "@/components/brand/trellis-mark";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -33,12 +33,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
             <div className="group flex cursor-pointer items-center gap-2.5">
-              <CroweMark
+              <TrellisMark
                 size={28}
                 className="transition-transform duration-200 ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.06] motion-reduce:transition-none"
               />
               <span className="font-display text-[1.35rem] leading-none tracking-[-0.01em] text-parchment">
-                AI Web Builder
+                Trellis
               </span>
             </div>
           </Link>
@@ -150,11 +150,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto grid gap-8 px-4 md:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center gap-2.5">
-              <CroweMark size={24} />
-              <span className="font-display text-lg leading-none tracking-[-0.01em] text-parchment">AI Web Builder</span>
+              <TrellisMark size={24} />
+              <span className="font-display text-lg leading-none tracking-[-0.01em] text-parchment">Trellis</span>
             </div>
             <p className="text-sm text-parchment-dim">
-              Describe your business. Get a website that's live.
+              The website builder at ai-webbuilder.com. Describe your business,
+              get a site that is live and keeps improving itself.
             </p>
           </div>
           <div>
