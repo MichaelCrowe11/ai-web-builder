@@ -18,15 +18,17 @@ import {
   siteMedia,
   agentClaimTokens,
   chatMessages,
+  productEvents,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, and, desc, isNull, sql } from "drizzle-orm";
+import { eq, and, desc, gte, isNull, sql } from "drizzle-orm";
 import postgres from "postgres";
 import type { SiteDocument } from "@shared/site-document";
 import type { SiteGoal } from "@shared/site-goal";
 import { experimentSchema, type Experiment } from "@shared/experiment";
 import type { TelemetryEvent, VariantStat } from "@shared/telemetry";
+import type { ProductEvent } from "@shared/funnel";
 
 export interface IStorage {
   // User operations
@@ -82,6 +84,9 @@ export interface IStorage {
   // Conversational builder transcript
   addChatMessage(msg: InsertChatMessage): Promise<ChatMessageRow>;
   getChatMessages(projectId: string, limit?: number): Promise<ChatMessageRow[]>;
+  // Product acquisition funnel (trial -> signup -> Pro)
+  recordProductEvent(e: ProductEvent): Promise<void>;
+  recentProductEvents(sinceMs: number, limit?: number): Promise<ProductEvent[]>;
 }
 
 // In-memory storage for development/fallback
@@ -357,6 +362,14 @@ export class MemStorage implements IStorage {
   async getChatMessages(projectId: string, limit = 200): Promise<ChatMessageRow[]> {
     return this.chatLog.filter((m) => m.projectId === projectId).slice(-limit);
   }
+
+  private productEventRows: ProductEvent[] = [];
+  async recordProductEvent(e: ProductEvent): Promise<void> {
+    this.productEventRows.push(e);
+  }
+  async recentProductEvents(sinceMs: number, limit = 100000): Promise<ProductEvent[]> {
+    return this.productEventRows.filter((e) => e.ts >= sinceMs).slice(-limit);
+  }
 }
 
 // PostgreSQL storage implementation
@@ -625,6 +638,26 @@ export class PostgresStorage implements IStorage {
       .orderBy(desc(chatMessages.createdAt))
       .limit(limit);
     return rows.reverse();
+  }
+
+  async recordProductEvent(e: ProductEvent): Promise<void> {
+    await this.db.insert(productEvents).values({
+      ts: e.ts, event: e.event, userId: e.userId, anonId: e.anonId, meta: e.meta,
+    } as any);
+  }
+
+  async recentProductEvents(sinceMs: number, limit = 100000): Promise<ProductEvent[]> {
+    const rows = await this.db.select().from(productEvents)
+      .where(gte(productEvents.ts, sinceMs))
+      .orderBy(desc(productEvents.ts))
+      .limit(limit);
+    return rows.map((r) => ({
+      ts: r.ts,
+      event: r.event as ProductEvent["event"],
+      userId: r.userId ?? undefined,
+      anonId: r.anonId ?? undefined,
+      meta: (r.meta as any) ?? undefined,
+    }));
   }
 }
 

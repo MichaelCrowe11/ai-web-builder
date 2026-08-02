@@ -3,6 +3,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { dailyLimitForPlan } from "./plan";
+import { track, anonIdFromIp } from "./funnel";
 import { ANON_DAILY_LIMIT, type User } from "@shared/schema";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -59,6 +60,7 @@ export async function enforceQuota(req: Request, res: Response, next: NextFuncti
       anonBuckets.set(ip, bucket);
     }
     if (bucket.count >= ANON_DAILY_LIMIT) {
+      track("trial_exhausted", { anonId: anonIdFromIp(ip) });
       return res.status(402).json({
         error: "Free trial limit reached",
         details: `You've used your ${ANON_DAILY_LIMIT} free generations. Sign up to get ${dailyLimitForPlan("free")} a day, or go Pro for unlimited.`,
@@ -90,6 +92,7 @@ export async function enforceQuota(req: Request, res: Response, next: NextFuncti
 
   const limit = dailyLimitForPlan(user.plan);
   if (limit !== null && used >= limit) {
+    track("free_limit_reached", { userId: user.id });
     return res.status(402).json({
       error: "Daily limit reached",
       details: `You've used all ${limit} generations for today. Upgrade to Pro for unlimited generations.`,
@@ -134,6 +137,8 @@ export async function quotaSnapshot(req: Request, opts: { consume?: boolean } = 
     if (opts.consume) bucket.count += 1;
     const used = bucket.count;
     const ok = used < ANON_DAILY_LIMIT;
+    if (opts.consume && ok) track("anon_trial_start", { anonId: anonIdFromIp(ip) });
+    if (!ok) track("trial_exhausted", { anonId: anonIdFromIp(ip) });
     return {
       ok,
       reason: ok ? undefined : "requiresAuth",
@@ -151,6 +156,7 @@ export async function quotaSnapshot(req: Request, opts: { consume?: boolean } = 
   }
   const limit = dailyLimitForPlan(user.plan);
   const ok = limit === null || used < limit;
+  if (!ok) track("free_limit_reached", { userId: user.id });
   return {
     ok,
     reason: ok ? undefined : "requiresUpgrade",
@@ -171,6 +177,9 @@ export async function consumeGeneration(req: Request): Promise<QuotaState> {
     const bucket = anonBuckets.get(ip);
     if (bucket) bucket.count += 1;
     const used = bucket?.count ?? 1;
+    // A real anonymous build happened: top of the acquisition funnel. Repeats
+    // by the same visitor dedupe to one subject in the aggregate.
+    track("anon_trial_start", { anonId: anonIdFromIp(ip) });
     return {
       plan: "anonymous",
       used,

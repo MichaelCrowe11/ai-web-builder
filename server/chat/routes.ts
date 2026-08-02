@@ -13,7 +13,7 @@ import { quotaSnapshot, consumeGeneration } from "../quota";
 import { runTurn } from "./agent-loop";
 import { buildServiceTools } from "./media-tools";
 import { ToolInputError } from "./site-tools";
-import { azureChatTools, modelsFromEnv, type ToolDef, type ToolWireMessage } from "../azure-chat";
+import { azureChatTools, modelsFromEnvForPlan, type ToolDef, type ToolWireMessage } from "../azure-chat";
 import { renderDocumentBody, renderDocumentCss } from "../renderer";
 import { runLimited, AtCapacityError } from "../gen-limiter";
 import { generateSiteImage } from "../azure-image";
@@ -111,7 +111,7 @@ export function registerChatRoutes(app: Express) {
         return id;
       },
       rebuildDocument: async (prompt: string) => {
-        const raw = await runLimited(() => generateDocument(prompt));
+        const raw = await runLimited(() => generateDocument(prompt, quota.state.plan));
         return resolveDocumentImages(raw, stockOpts());
       },
       onVideoStarted: (videoId: string) => send("video_started", { videoId }),
@@ -136,7 +136,7 @@ export function registerChatRoutes(app: Express) {
           // 2000 tokens: replies are 1-2 sentences, but edit_section arguments
           // can carry a full section's copy — 1200 risked truncated tool JSON.
           runLimited(() => azureChatTools(messages, 2000, tools, {
-            endpoint: ENDPOINT, apiKey: API_KEY, apiVersion: API_VERSION, models: modelsFromEnv(),
+            endpoint: ENDPOINT, apiKey: API_KEY, apiVersion: API_VERSION, models: modelsFromEnvForPlan(quota.state.plan),
             // Optimistic streaming: fragments paint as they arrive; turn_done's
             // reply is authoritative and replaces them (retry-safe).
             onDelta: (text) => send("assistant_delta", { text }),
@@ -174,7 +174,7 @@ export function registerChatRoutes(app: Express) {
       send("turn_done", { reply: result.reply, mutated: result.mutated, docVersion, quota: quotaState });
     } catch (error: any) {
       const detail = error instanceof AtCapacityError
-        ? "High demand right now — that didn't go through. Nothing was changed; try again in a moment."
+        ? "High demand right now, so that didn't go through. Nothing was changed; try again in a moment."
         : "That didn't go through. Nothing was changed.";
       log(`Chat turn error: ${error.message}`);
       send("error", { error: detail });

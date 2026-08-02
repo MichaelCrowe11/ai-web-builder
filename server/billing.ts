@@ -4,6 +4,7 @@ import type { Express, Request, Response } from "express";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { requireAuth } from "./auth";
+import { track } from "./funnel";
 import { log } from "./log";
 
 const SECRET = process.env.STRIPE_SECRET_KEY ?? "";
@@ -54,6 +55,7 @@ export function registerBillingRoutes(app: Express) {
         metadata: { userId: user.id },
       });
 
+      track("checkout_start", { userId: user.id });
       return res.json({ url: checkout.url });
     } catch (error: any) {
       log(`Checkout error: ${error.message}`);
@@ -114,6 +116,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
             stripeCustomerId: customerId,
             stripeSubscriptionId: subscriptionId,
           });
+          track("pro_converted", { userId });
           log(`User ${userId} upgraded to pro`);
         }
         break;

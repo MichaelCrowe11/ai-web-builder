@@ -188,3 +188,19 @@ export const chatMessages = pgTable("chat_messages", {
 }));
 export type ChatMessageRow = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = Omit<ChatMessageRow, "id" | "createdAt">;
+
+// Product acquisition funnel: append-only log of the stages a person moves
+// through from anonymous trial to paying Pro. Aggregated by shared/funnel.ts
+// and read at /api/admin/funnel. Never references users(id) so a hard user
+// delete can't orphan-fail an insert; anonId is a salted IP hash, not a PII.
+export const productEvents = pgTable("product_events", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  ts: bigint("ts", { mode: "number" }).notNull(),
+  event: text("event").notNull(),
+  userId: varchar("user_id", { length: 36 }),
+  anonId: text("anon_id"),
+  meta: jsonb("meta"),
+}, (t) => ({
+  byEventTs: index("product_events_event_ts_idx").on(t.event, t.ts),
+}));
+export type ProductEventRow = typeof productEvents.$inferSelect;

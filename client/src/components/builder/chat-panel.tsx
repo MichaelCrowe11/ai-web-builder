@@ -117,10 +117,10 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
         onDocUpdate(d.document, d.html, d.css);
         setMessages((m) => [...m, { role: "assistant", content: "Reverted to the previous version." }]);
       } else {
-        setMessages((m) => [...m, { role: "assistant", content: "Could not revert — the version may no longer be available." }]);
+        setMessages((m) => [...m, { role: "assistant", content: "Could not revert. That version may no longer be available." }]);
       }
     } catch {
-      setMessages((m) => [...m, { role: "assistant", content: "Could not revert — connection error." }]);
+      setMessages((m) => [...m, { role: "assistant", content: "Could not revert. Connection error." }]);
     } finally {
       setBusy(false);
     }
@@ -143,7 +143,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
       setMessages((m) => [
         ...m,
         { role: "user", content: message },
-        { role: "assistant", content: "Building your site — watch the preview…" },
+        { role: "assistant", content: "Building your site. Watch the preview…" },
       ]);
       try {
         await onFirstMessage(message);
@@ -225,7 +225,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
         }
       }
     } catch {
-      patchLast((a) => ({ ...a, content: "Connection dropped — the change may still have applied. Reload to see the latest." }));
+      patchLast((a) => ({ ...a, content: "Connection dropped. The change may still have applied, so reload to see the latest." }));
     } finally {
       onSectionFlash?.(null); // never leave a stale flash on the preview
       setBusy(false);
@@ -281,7 +281,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
               )}
               {m.content || (busy && i === messages.length - 1 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null)}
               {m.upsell && (
-                <div className="mt-2 rounded-2xl border border-gold/25 bg-black/35 p-3 shadow-[0_0_0_1px_rgba(191,166,105,0.06)]">
+                <div className="mt-2 rounded-2xl border border-gold/25 bg-black/35 p-3 shadow-[0_0_0_1px_rgba(210,173,98,0.06)]">
                   <div className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-gold/70">Pro feature</div>
                   <div className="mt-1 text-[13px] leading-relaxed text-parchment/92">
                     {upgradeCopy(m.upsellFeature).headline}
@@ -315,8 +315,8 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
         {messages.length === 0 && (
           <p className="mt-6 text-center text-sm text-parchment/45">
             {ready
-              ? "Tell the builder what to change — copy, sections, style."
-              : "Describe the site you want — the builder does the rest."}
+              ? "Tell the builder what to change: copy, sections, style."
+              : "Describe the site you want, and the builder does the rest."}
           </p>
         )}
       </div>

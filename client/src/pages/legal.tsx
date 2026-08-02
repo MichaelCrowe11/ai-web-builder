@@ -16,7 +16,7 @@ function LegalShell({ kicker, title, children }: { kicker: string; title: string
         <section className="relative overflow-hidden">
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(191,166,105,0.10), transparent 62%)" }}
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(210,173,98,0.10), transparent 62%)" }}
           />
           <div className="container relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-24 lg:pt-28">
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
@@ -47,7 +47,7 @@ export function PrivacyPage() {
       <S title="Who we are">
         <p>
           AI Web Builder (ai-webbuilder.com) is operated by Crowe Logic Inc. (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
-          This policy describes what we collect, why, and what we do with it — both for people who build
+          This policy describes what we collect, why, and what we do with it, both for people who build
           sites with us, and for people who visit sites our customers publish. Questions:{" "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-gold hover:underline">{CONTACT_EMAIL}</a>.
         </p>
@@ -57,7 +57,7 @@ export function PrivacyPage() {
         <p>When you create an account and build sites, we store:</p>
         <ul className="list-disc space-y-1.5 pl-5">
           <li>Your username and, if you provide one, your email address.</li>
-          <li>Your password — stored only as a salted hash (bcrypt), never in plain text.</li>
+          <li>Your password, stored only as a salted hash (bcrypt), never in plain text.</li>
           <li>Your plan, generation usage counters, and a session cookie that keeps you signed in.</li>
           <li>The prompts you write, the sites you generate, and media (images, video) generated for them.</li>
         </ul>
@@ -65,7 +65,7 @@ export function PrivacyPage() {
 
       <S title="Payments">
         <p>
-          Subscriptions are processed by Stripe. Your card details go directly to Stripe — we never see or
+          Subscriptions are processed by Stripe. Your card details go directly to Stripe, so we never see or
           store full card numbers. We keep only Stripe customer and subscription identifiers so we can manage
           your plan.
         </p>
@@ -82,13 +82,13 @@ export function PrivacyPage() {
       <S title="Published sites and their visitors">
         <p>
           Sites published through AI Web Builder can include contact forms. Submissions to those forms
-          (leads) are stored by us on behalf of the site owner, who controls that data — if you submitted a
+          (leads) are stored by us on behalf of the site owner, who controls that data. If you submitted a
           form on a published site, direct requests about your data to that site&rsquo;s owner.
         </p>
         <p>
           Published sites also record basic, first-party usage analytics for the site owner: a random
-          visitor identifier, session identifier, which sections were viewed or clicked, and — where the
-          owner runs content experiments — which variant was shown. We do not use advertising networks or
+          visitor identifier, session identifier, which sections were viewed or clicked, and, where the
+          owner runs content experiments, which variant was shown. We do not use advertising networks or
           cross-site tracking, and these identifiers are not linked to your identity.
         </p>
       </S>
@@ -103,8 +103,8 @@ export function PrivacyPage() {
       <S title="Where data lives, and who else touches it">
         <p>
           Data is hosted on Google Cloud in the United States. We share data only with the processors that
-          run the service — Stripe (billing), Microsoft Azure (AI generation), and Google Cloud
-          (hosting and database) — and never sell it.
+          run the service: Stripe (billing), Microsoft Azure (generation), and Google Cloud
+          (hosting and database). We never sell it.
         </p>
       </S>
 
@@ -161,7 +161,7 @@ export function TermsPage() {
       <S title="Your content">
         <p>
           You own the prompts you write and the sites you publish. You grant us the license needed to host,
-          process, and serve that content — that is all we use it for. To the extent AI-generated output is
+          process, and serve that content, and that is all we use it for. To the extent generated output is
           capable of ownership, we assign our interest in it to you. You are responsible for the accuracy
           and legality of what your site says about your business.
         </p>
@@ -180,7 +180,7 @@ export function TermsPage() {
       <S title="Your visitors' data">
         <p>
           If your published site collects leads through forms, that data belongs to you and you are
-          responsible for handling it lawfully — including any notice or consent your jurisdiction requires
+          responsible for handling it lawfully, including any notice or consent your jurisdiction requires
           from your visitors. We store and surface it to you as described in our{" "}
           <Link href="/privacy" className="text-gold hover:underline">Privacy Policy</Link>.
         </p>

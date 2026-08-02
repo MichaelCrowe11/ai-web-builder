@@ -105,7 +105,7 @@ export function ContentEditor({
             <Pencil className="h-5 w-5 text-gold" /> Edit content
           </DialogTitle>
           <DialogDescription className="text-parchment/55">
-            Edit your text and manage list items — add, remove, reorder. No regeneration, no AI.
+            Edit your text and manage list items: add, remove, reorder. Nothing is regenerated.
           </DialogDescription>
         </DialogHeader>
 

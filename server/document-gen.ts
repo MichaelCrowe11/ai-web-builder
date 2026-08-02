@@ -16,7 +16,7 @@ import {
   type SiteOutline,
 } from "@shared/site-document";
 
-import { azureChat, modelsFromEnv } from "./azure-chat";
+import { azureChat, modelsFromEnv, modelsFromEnvForPlan } from "./azure-chat";
 
 const ENDPOINT = process.env.AZURE_CORE_ENDPOINT ?? "";
 const API_KEY = process.env.AZURE_CORE_API_KEY ?? "";
@@ -26,12 +26,12 @@ const API_VERSION = process.env.AZURE_API_VERSION ?? "2024-12-01-preview";
 // with backoff (honoring Retry-After) and falls back across the model chain
 // (AI_WEBBUILDER_MODEL primary, then AI_WEBBUILDER_FALLBACK_MODELS) so a single
 // rate-limit blip no longer surfaces as "Failed to generate site".
-export async function chat(messages: Array<{ role: string; content: string }>, maxTokens = 3000): Promise<string> {
+export async function chat(messages: Array<{ role: string; content: string }>, maxTokens = 3000, plan?: string | null): Promise<string> {
   return azureChat(messages, maxTokens, {
     endpoint: ENDPOINT,
     apiKey: API_KEY,
     apiVersion: API_VERSION,
-    models: modelsFromEnv(),
+    models: modelsFromEnvForPlan(plan),
   });
 }
 
@@ -73,6 +73,7 @@ Rules:
 - VARY the layouts across sections so the page does not feel repetitive. Prefer image-rich layouts (hero "split" or "overlay", about "split", products "showcase") when a photo would strengthen the section.
 - Provide a concrete, photographable "imageHint" on hero, about, every product, and gallery entries: a real subject in 2-5 words (e.g. "sourdough loaf on a wooden board", not "food"). No brand names, no text-in-image. Do NOT output any image URLs; the system fills real photos from your hints.
 - Write real, specific, warm copy. Never lorem ipsum, never placeholder brackets.
+- Never use em dashes or emoji. Em dashes read as machine-written; use a comma, colon, or a second sentence instead.
 - Invent plausible details (sample menu items, services, a phone like 555-0100) the owner can edit.
 - Pick sections that match the business type (a plumber gets services, a cafe gets a menu, a shop gets products).
 - Output ONLY the JSON object. No prose, no code fences.`;
@@ -85,12 +86,12 @@ function validate(obj: unknown): SiteDocument {
 }
 
 /** Generate a fresh Site Document from a business description. */
-export async function generateDocument(prompt: string): Promise<SiteDocument> {
+export async function generateDocument(prompt: string, plan?: string | null): Promise<SiteDocument> {
   const messages = [
     { role: "system", content: SCHEMA_GUIDE },
     { role: "user", content: `Design a website for: ${prompt}` },
   ];
-  let text = await chat(messages, 3200);
+  let text = await chat(messages, 3200, plan);
   try {
     return validate(extractJson(text));
   } catch (err: any) {
@@ -100,7 +101,7 @@ export async function generateDocument(prompt: string): Promise<SiteDocument> {
       { role: "assistant", content: text },
       { role: "user", content: `That JSON was invalid (${err.message}). Return ONLY a corrected JSON object matching the schema exactly.` },
     ];
-    text = await chat(repair, 3200);
+    text = await chat(repair, 3200, plan);
     return validate(extractJson(text));
   }
 }
@@ -120,17 +121,17 @@ Rules:
 - Output ONLY the JSON object. No prose.`;
 
 /** Phase 1: fast outline (name + theme + section sequence with headlines). */
-export async function generateOutline(prompt: string): Promise<SiteOutline> {
+export async function generateOutline(prompt: string, plan?: string | null): Promise<SiteOutline> {
   const messages = [
     { role: "system", content: OUTLINE_GUIDE },
     { role: "user", content: `Outline a website for: ${prompt}` },
   ];
-  const text = await chat(messages, 800); // small output keeps this fast
+  const text = await chat(messages, 800, plan); // small output keeps this fast
   return siteOutlineSchema.parse(extractJson(text));
 }
 
 /** Phase 2: expand an approved outline into the full document, same structure. */
-export async function fillDocument(outline: SiteOutline, prompt: string): Promise<SiteDocument> {
+export async function fillDocument(outline: SiteOutline, prompt: string, plan?: string | null): Promise<SiteDocument> {
   const sys = `${SCHEMA_GUIDE}
 
 You are EXPANDING an approved outline into the COMPLETE site document. Keep the SAME meta.name, the SAME theme (preset + radius), and the SAME sequence of sections with the same "type", "layout", and headline/title. Fill in every remaining field: subheadlines, items with real names/prices/descriptions, body copy, imageHints, and contact details. Output ONLY the JSON object.`;
@@ -138,7 +139,7 @@ You are EXPANDING an approved outline into the COMPLETE site document. Keep the 
     { role: "system", content: sys },
     { role: "user", content: `Business: ${prompt}\n\nApproved outline:\n${JSON.stringify(outline)}` },
   ];
-  let text = await chat(messages, 3200);
+  let text = await chat(messages, 3200, plan);
   try {
     return validate(extractJson(text));
   } catch (err: any) {
@@ -147,20 +148,20 @@ You are EXPANDING an approved outline into the COMPLETE site document. Keep the 
       { role: "assistant", content: text },
       { role: "user", content: `That JSON was invalid (${err.message}). Return ONLY a corrected complete JSON document.` },
     ];
-    text = await chat(repair, 3200);
+    text = await chat(repair, 3200, plan);
     return validate(extractJson(text));
   }
 }
 
 /** Apply a scoped refine instruction to an existing document. Cheap + targeted. */
-export async function refineDocument(doc: SiteDocument, instruction: string): Promise<SiteDocument> {
+export async function refineDocument(doc: SiteDocument, instruction: string, plan?: string | null): Promise<SiteDocument> {
   const messages = [
     { role: "system", content: `${SCHEMA_GUIDE}
 
 You are EDITING an existing site document. Apply the user's change and return the COMPLETE updated JSON document. Keep everything else the same; change only what the instruction asks for. Output ONLY the JSON object.` },
     { role: "user", content: `Current document:\n${JSON.stringify(doc)}\n\nChange to make: ${instruction}` },
   ];
-  let text = await chat(messages, 3200);
+  let text = await chat(messages, 3200, plan);
   try {
     return validate(extractJson(text));
   } catch (err: any) {
@@ -169,7 +170,7 @@ You are EDITING an existing site document. Apply the user's change and return th
       { role: "assistant", content: text },
       { role: "user", content: `That JSON was invalid (${err.message}). Return ONLY the corrected complete JSON document.` },
     ];
-    text = await chat(repair, 3200);
+    text = await chat(repair, 3200, plan);
     return validate(extractJson(text));
   }
 }

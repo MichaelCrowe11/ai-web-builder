@@ -16,6 +16,7 @@ const stockOpts = () => ({
   provider: process.env.STOCK_IMAGE_PROVIDER as StockProvider | undefined,
 });
 import { enforceQuota, consumeGeneration } from "./quota";
+import { track, acquisitionFunnel } from "./funnel";
 import { runLimited, AtCapacityError, makeCapacityPayload } from "./gen-limiter";
 import { seedTurnZeroTranscript } from "./chat/seed";
 import { publicUser } from "./plan";
@@ -83,7 +84,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Prompt is required" });
       }
       log(`Generating document (${MODEL}) for: ${prompt.substring(0, 50)}...`);
-      const raw = await runLimited(() => generateDocument(prompt));
+      const raw = await runLimited(() => generateDocument(prompt, req.quotaState?.plan));
       const document = await resolveDocumentImages(raw, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
@@ -107,7 +108,7 @@ export async function registerRoutes(
       if (!prompt || typeof prompt !== "string") {
         return res.status(400).json({ error: "Prompt is required" });
       }
-      const outline = await runLimited(() => generateOutline(prompt));
+      const outline = await runLimited(() => generateOutline(prompt, req.quotaState?.plan));
       return res.json({ outline, html: renderOutlineBody(outline), css: renderOutlineCss(outline) });
     } catch (error: any) {
       if (error instanceof AtCapacityError) return sendCapacity(res, error);
@@ -127,7 +128,7 @@ export async function registerRoutes(
       if (!parsed.success) {
         return res.status(400).json({ error: "Valid outline is required" });
       }
-      const raw = await runLimited(() => fillDocument(parsed.data, prompt));
+      const raw = await runLimited(() => fillDocument(parsed.data, prompt, req.quotaState?.plan));
       const document = await resolveDocumentImages(raw, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
@@ -156,7 +157,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Valid document is required" });
       }
       log(`Refining document: ${instruction.substring(0, 50)}...`);
-      const refined = await runLimited(() => refineDocument(parsed.data, instruction));
+      const refined = await runLimited(() => refineDocument(parsed.data, instruction, req.quotaState?.plan));
       const updated = await resolveDocumentImages(refined, stockOpts());
       const quota = await consumeGeneration(req);
       return res.json({
@@ -321,7 +322,7 @@ export async function registerRoutes(
 
       log(`Generating website (${MODEL}) for prompt: ${prompt.substring(0, 50)}...`);
 
-      const text = await runLimited(() => generate(prompt));
+      const text = await runLimited(() => generate(prompt, req.quotaState?.plan));
       const result = parseSite(text);
 
       // Count this generation against the user's quota only on success.
@@ -406,6 +407,7 @@ export async function registerRoutes(
       });
 
       req.session.userId = user.id;
+      track("signup", { userId: user.id });
       log(`User registered: ${username}`);
       return res.status(201).json(publicUser(user));
     } catch (error: any) {
@@ -459,6 +461,22 @@ export async function registerRoutes(
       res.clearCookie("connect.sid");
       return res.json({ ok: true });
     });
+  });
+
+  // Acquisition funnel (trial -> signup -> checkout -> Pro). Guarded by an
+  // ADMIN_KEY shared secret; unset key or a mismatch 404s so the endpoint's
+  // existence isn't advertised. Pass ?days=N to widen the window.
+  app.get("/api/admin/funnel", async (req: Request, res: Response) => {
+    const key = process.env.ADMIN_KEY;
+    const provided = (req.headers["x-admin-key"] as string | undefined) ?? (req.query.key as string | undefined);
+    if (!key || provided !== key) return res.status(404).end();
+    const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
+    try {
+      return res.json(await acquisitionFunnel(days * 24 * 60 * 60 * 1000));
+    } catch (error: any) {
+      log(`Funnel read error: ${error.message}`);
+      return res.status(500).json({ error: "Could not build funnel" });
+    }
   });
 
   // ============ PROJECT ROUTES ============

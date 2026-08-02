@@ -61,7 +61,7 @@ export function JourneyRail({ current }: { current: JourneyStep }) {
 // The contextual nudge shown below the rail — plain language, one clear next action.
 export function JourneyNudge({ current }: { current: JourneyStep }) {
   const messages: Record<JourneyStep, string> = {
-    describe: "Describe your business below to get started — or tap a starter.",
+    describe: "Describe your business below to get started, or tap a starter.",
     refine: "Looking good! Tweak it with a suggestion below, or hit Publish when you're happy.",
     publish: "Ready to go live? Hit Publish to put your site online.",
     done: "Your site is live. Copy the link and share it with the world.",

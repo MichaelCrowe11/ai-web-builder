@@ -33,7 +33,7 @@ export function GenerationOverlay({ refining, queued }: { refining: boolean; que
         </div>
 
         <p className="mt-3 text-lg font-semibold tracking-tight text-parchment">
-          {queued ? "High demand right now — your site is queued. Hang tight…" : refining ? "Updating…" : `${STAGES[stage]}…`}
+          {queued ? "High demand right now. Your site is queued, hang tight…" : refining ? "Updating…" : `${STAGES[stage]}…`}
         </p>
 
         {/* indeterminate sweep */}

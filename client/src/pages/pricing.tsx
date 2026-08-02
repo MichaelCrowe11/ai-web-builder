@@ -12,15 +12,16 @@ import { Check, Sparkles } from "lucide-react";
 // gold-on-graphite identity, matching the home hero.
 const FREE = [
   "5 site generations per day",
-  "Full workspace — describe, refine, publish",
+  "Full workspace: describe, refine, publish",
   "One-click publish, hosting included",
   "Lead capture + owner content editing",
   "Publish to a crowe subdomain",
 ];
 const PRO = [
+  "Self-optimizing growth agent that A/B tests your copy and keeps the winners",
   "Unlimited site generations",
-  "AI photography on every section",
-  "AI hero video (Sora)",
+  "Generated photography on every section",
+  "Generated hero video",
   "Connect your own custom domain",
   "Code view + GitHub export",
   "Priority generation queue",
@@ -40,7 +41,7 @@ export default function Pricing() {
         <section className="relative overflow-hidden">
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(191,166,105,0.12), transparent 62%)" }}
+            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(210,173,98,0.12), transparent 62%)" }}
           />
           <div className="container relative z-10 mx-auto max-w-5xl px-6 pb-24 pt-24 lg:pt-28">
             <div className="text-center">
@@ -51,8 +52,9 @@ export default function Pricing() {
                 Start free. Upgrade when it's earning.
               </h1>
               <p className="mx-auto mt-4 max-w-xl text-[1.05rem] leading-relaxed text-parchment/55">
-                No card to start. Build and publish a real site today — go Pro when
-                you want custom domains, richer media, and unlimited builds.
+                No card to start. Build and publish a real site today. Go Pro when
+                you want a site that keeps improving itself, your own custom domain,
+                richer media, and unlimited builds.
               </p>
             </div>
 
@@ -83,7 +85,7 @@ export default function Pricing() {
               </div>
 
               {/* Pro */}
-              <div className="relative flex flex-col rounded-2xl border border-gold/40 bg-graphite-soft p-8 shadow-[0_30px_90px_-40px_rgba(191,166,105,0.5)]">
+              <div className="relative flex flex-col rounded-2xl border border-gold/40 bg-graphite-soft p-8 shadow-[0_30px_90px_-40px_rgba(210,173,98,0.5)]">
                 <div className="absolute right-6 top-6 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-gold">
                   Most popular
                 </div>
@@ -92,7 +94,7 @@ export default function Pricing() {
                   <span className="text-4xl font-semibold tracking-tight text-parchment">$29.99</span>
                   <span className="text-sm text-parchment/45">/ month</span>
                 </div>
-                <p className="mt-2 text-sm text-parchment/55">For sites that need to look and perform their best.</p>
+                <p className="mt-2 text-sm text-parchment/55">A living site that keeps improving itself, and looks its best.</p>
                 <ul className="mt-6 flex-1 space-y-3">
                   {PRO.map((f) => (
                     <li key={f} className="flex items-start gap-2.5 text-sm text-parchment/85">
@@ -102,7 +104,7 @@ export default function Pricing() {
                   ))}
                 </ul>
                 <Button
-                  className="mt-8 h-11 w-full rounded-xl bg-gold font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(191,166,105,0.75)]"
+                  className="mt-8 h-11 w-full rounded-xl bg-gold font-semibold text-graphite transition-all hover:shadow-[0_0_34px_-8px_rgba(210,173,98,0.75)]"
                   onClick={getPro}
                 >
                   <Sparkles className="mr-1.5 h-4 w-4" />
