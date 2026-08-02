@@ -46,7 +46,7 @@ export function PrivacyPage() {
     <LegalShell kicker="Legal" title="Privacy Policy">
       <S title="Who we are">
         <p>
-          AI Web Builder (ai-webbuilder.com) is operated by Crowe Logic Inc. (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
+          Trellis (ai-webbuilder.com) is operated by Crowe Logic Inc. (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
           This policy describes what we collect, why, and what we do with it, both for people who build
           sites with us, and for people who visit sites our customers publish. Questions:{" "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-gold hover:underline">{CONTACT_EMAIL}</a>.
@@ -81,7 +81,7 @@ export function PrivacyPage() {
 
       <S title="Published sites and their visitors">
         <p>
-          Sites published through AI Web Builder can include contact forms. Submissions to those forms
+          Sites published through Trellis can include contact forms. Submissions to those forms
           (leads) are stored by us on behalf of the site owner, who controls that data. If you submitted a
           form on a published site, direct requests about your data to that site&rsquo;s owner.
         </p>
@@ -136,14 +136,14 @@ export function TermsPage() {
     <LegalShell kicker="Legal" title="Terms of Service">
       <S title="The agreement">
         <p>
-          These terms govern your use of AI Web Builder (ai-webbuilder.com), a service of Crowe Logic Inc.
+          These terms govern your use of Trellis (ai-webbuilder.com), a service of Crowe Logic Inc.
           By creating an account or using the service you agree to them.
         </p>
       </S>
 
       <S title="The service">
         <p>
-          AI Web Builder generates, hosts, and publishes websites from your descriptions. The Free plan
+          Trellis generates, hosts, and publishes websites from your descriptions. The Free plan
           includes a limited number of generations per day and publishing to an ai-webbuilder.com subdomain.
           The Pro plan ($29.99/month) adds unlimited generations, richer media, and custom domains. Plan
           features may evolve; material reductions to a paid plan will be notified before they apply.

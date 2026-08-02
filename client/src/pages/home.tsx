@@ -6,10 +6,10 @@ import { Sparkles, Globe, Zap, ArrowUp, Eye, FlaskConical, TrendingUp } from "lu
 import { Showcase } from "@/components/showcase";
 import { STARTERS } from "@/lib/starters";
 
-// Crowe Logic AI Web Builder. The hero is a big central prompt (Replit-Agent
-// style): describe a business and land straight in the workspace, building.
-// The positioning leads with the differentiator — a LIVING site that keeps
-// testing and improving itself — not just "generate a page and leave."
+// Trellis, the Crowe Logic website builder. The hero is a big central prompt:
+// describe a business and land straight in the workspace, building. The
+// positioning leads with the differentiator, a LIVING site that keeps testing
+// and improving itself, not just "generate a page and leave."
 // Crowe identity (gold on graphite, parchment), clean modern sans.
 
 export default function Home() {
@@ -34,7 +34,7 @@ export default function Home() {
           <div className="container relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-20 pt-24 text-center lg:pt-28">
             <div className="rise mb-7 inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-gold/90">
               <span className="h-1 w-1 animate-pulse rounded-full bg-gold" />
-              Crowe Logic · AI Web Builder
+              A Crowe Logic product
             </div>
 
             <h1
