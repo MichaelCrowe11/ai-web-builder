@@ -3,19 +3,14 @@ import { Layout } from "@/components/layout";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { Sparkles, Globe, Zap, ArrowUp, Eye, FlaskConical, TrendingUp } from "lucide-react";
+import { Showcase } from "@/components/showcase";
+import { STARTERS } from "@/lib/starters";
 
 // Crowe Logic AI Web Builder. The hero is a big central prompt (Replit-Agent
 // style): describe a business and land straight in the workspace, building.
 // The positioning leads with the differentiator — a LIVING site that keeps
 // testing and improving itself — not just "generate a page and leave."
 // Crowe identity (gold on graphite, parchment), clean modern sans.
-const STARTERS = [
-  "A cozy coffee shop in Tucson with a menu and online reservations",
-  "A freelance photographer portfolio",
-  "A local plumbing company with service booking",
-  "An online store for handmade ceramics",
-  "A yoga studio with a class schedule",
-];
 
 export default function Home() {
   const [, navigate] = useLocation();
@@ -66,7 +61,7 @@ export default function Home() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(prompt);
                   }}
-                  rows={3}
+                  rows={2}
                   placeholder="e.g. a neighborhood coffee shop in Tucson with a menu and online reservations"
                   className="w-full resize-none bg-transparent px-3.5 py-3 text-[1.05rem] leading-relaxed text-parchment outline-none placeholder:text-parchment/35"
                   autoFocus
@@ -103,16 +98,22 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ============ PROOF: real rendered output ============
+            Placed directly under the hero on purpose. The first question after
+            "describe your business" is "and what do I get", and the answer used
+            to be four hundred pixels of prose before anything was shown. */}
+        <Showcase />
+
         {/* ============ HOW IT WORKS (clean, compact) ============ */}
         <section id="how-it-works" className="scroll-mt-20 border-t border-gold/10 py-20">
           <div className="container mx-auto px-6">
-            <div className="grid gap-px overflow-hidden rounded-2xl border border-gold/15 bg-gold/15 md:grid-cols-3">
+            <div className="crowe-panel grid gap-px overflow-hidden rounded-2xl bg-line md:grid-cols-3">
               {[
                 { n: "01", icon: Zap, title: "Describe it", body: "Tell us what your business does in one sentence, or pick a starter above." },
                 { n: "02", icon: Globe, title: "Refine and ship it", body: "A polished site appears in seconds. Adjust the look and copy by chatting, then publish with one click. Hosting is included." },
                 { n: "03", icon: TrendingUp, title: "Let it grow", body: "Once it is live, the site watches real visits and keeps improving its copy to convert more of them." },
               ].map((f) => (
-                <div key={f.n} className="group bg-graphite p-8 transition-colors duration-300 hover:bg-graphite-soft">
+                <div key={f.n} className="group bg-graphite-soft p-8 transition-colors duration-200 hover:bg-graphite-raised">
                   <div className="flex items-center justify-between">
                     <f.icon className="h-6 w-6 text-gold" strokeWidth={1.6} />
                     <span className="font-mono text-xs text-gold/70">{f.n}</span>
@@ -147,18 +148,13 @@ export default function Home() {
                 { icon: FlaskConical, title: "Tests", body: "It proposes stronger copy for the weakest section and runs a clean, honest A/B split." },
                 { icon: TrendingUp, title: "Improves", body: "It keeps the winning version and moves to the next weak spot. Your approval is one click." },
               ].map((c) => (
-                <div key={c.title} className="rounded-2xl border border-gold/15 bg-graphite-soft/60 p-7">
+                <div key={c.title} className="crowe-panel crowe-lift rounded-2xl p-7">
                   <c.icon className="h-6 w-6 text-gold" strokeWidth={1.6} />
                   <h3 className="mt-5 text-lg font-semibold tracking-tight text-parchment">{c.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-parchment/55">{c.body}</p>
                 </div>
               ))}
             </div>
-
-            <p className="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-parchment/45">
-              Every site is assembled from hand-designed sections, so it looks
-              like a studio made it, not a template.
-            </p>
 
             <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
               <Button

@@ -35,3 +35,47 @@
   --tracking-status: var(--crowe-tracking-status);
   --tracking-tight: var(--crowe-tracking-tight);
 }
+
+/* ---- Elevation utilities ----------------------------------------------
+ * colors.css has carried --crowe-z1..z4 and --crowe-hair-top since the palette
+ * was ported, and nothing used them: every card on the marketing page was a
+ * hairline outline drawn straight on the base colour. That is the flat look.
+ *
+ * A surface rises by getting LIGHTER and lighting its top edge. The shadow only
+ * seats it. Applying that consistently is what these three classes are for, so
+ * the depth system lives in one place instead of as arbitrary values sprinkled
+ * through JSX.
+ */
+.crowe-panel {
+  background: var(--crowe-surface-panel);
+  border: 1px solid var(--crowe-line);
+  border-top-color: var(--crowe-hair-top);
+  box-shadow: var(--crowe-z2);
+}
+
+.crowe-raised {
+  background: var(--crowe-surface-raised);
+  border: 1px solid var(--crowe-line-strong);
+  border-top-color: var(--crowe-hair-top);
+  box-shadow: var(--crowe-z3);
+}
+
+/* Hover lift for a card that is also a control. Transform only, so it composites. */
+.crowe-lift {
+  transition: transform var(--crowe-dur-slow) var(--crowe-ease),
+    box-shadow var(--crowe-dur-slow) var(--crowe-ease),
+    border-color var(--crowe-dur-slow) var(--crowe-ease);
+}
+.crowe-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--crowe-z3);
+  border-color: var(--crowe-gold-border);
+  border-top-color: var(--crowe-hair-top);
+}
+@media (prefers-reduced-motion: reduce) {
+  .crowe-lift,
+  .crowe-lift:hover {
+    transition: none;
+    transform: none;
+  }
+}

@@ -711,7 +711,7 @@ export function renderDocumentFull(doc: SiteDocument): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${esc(doc.meta.name)}${doc.meta.tagline ? ` — ${esc(doc.meta.tagline)}` : ""}</title>
+  <title>${esc(doc.meta.name)}${doc.meta.tagline ? ` | ${esc(doc.meta.tagline)}` : ""}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=${t.fontImport}&display=swap" rel="stylesheet">

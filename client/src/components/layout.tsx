@@ -146,7 +146,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="mt-20 border-t border-gold/15 bg-graphite-soft pb-8 pt-12">
+      <footer className="border-t border-gold/15 bg-graphite-soft pb-8 pt-12">
         <div className="container mx-auto grid gap-8 px-4 md:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center gap-2.5">
