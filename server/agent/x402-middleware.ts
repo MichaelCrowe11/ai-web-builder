@@ -2,10 +2,32 @@
 // "accepts" payment-requirements array. On a paid request, attach req.settlePayment
 // so the ROUTE can capture funds only after the work succeeds.
 import type { Request, Response, NextFunction } from "express";
-import type { PaymentVerifier } from "./payments";
+import type { PaymentChallenge, PaymentVerifier } from "./payments";
 
 declare module "express-serve-static-core" {
   interface Request { settlePayment?: () => Promise<void>; }
+}
+
+// x402-standard 402 body: an `accepts` array of payment requirements. Shared by
+// the HTTP middleware (402 responses) and the MCP endpoint (payment_required
+// tool results) so every surface hands payers the exact same requirements.
+export function acceptsBody(challenge: PaymentChallenge, price: number) {
+  return {
+    x402Version: 1,
+    accepts: [{
+      scheme: "exact",
+      network: challenge.network ?? "base",
+      asset: challenge.asset ?? "USDC",
+      payTo: challenge.payTo,
+      // real X402Verifier supplies challenge.maxAmountRequired in atomic units (micro-USDC); String(price) is only a dev/test fallback.
+      maxAmountRequired: challenge.maxAmountRequired ?? String(price),
+      resource: challenge.resource,
+      ...(challenge.description !== undefined && { description: challenge.description }),
+      ...(challenge.mimeType !== undefined && { mimeType: challenge.mimeType }),
+      ...(challenge.maxTimeoutSeconds !== undefined && { maxTimeoutSeconds: challenge.maxTimeoutSeconds }),
+      ...(challenge.extra !== undefined && { extra: challenge.extra }),
+    }],
+  };
 }
 
 export function requirePayment(priceFor: (req: Request) => number, verifier: PaymentVerifier) {
@@ -24,23 +46,7 @@ export function requirePayment(priceFor: (req: Request) => number, verifier: Pay
       return res.status(503).json({ error: "payment_verification_unavailable" });
     }
     if (!result) {
-      // x402-standard 402 body: an `accepts` array of payment requirements.
-      return res.status(402).json({
-        x402Version: 1,
-        accepts: [{
-          scheme: "exact",
-          network: challenge.network ?? "base",
-          asset: challenge.asset ?? "USDC",
-          payTo: challenge.payTo,
-          // real X402Verifier supplies challenge.maxAmountRequired in atomic units (micro-USDC); String(price) is only a dev/test fallback.
-          maxAmountRequired: challenge.maxAmountRequired ?? String(price),
-          resource: challenge.resource,
-          ...(challenge.description !== undefined && { description: challenge.description }),
-          ...(challenge.mimeType !== undefined && { mimeType: challenge.mimeType }),
-          ...(challenge.maxTimeoutSeconds !== undefined && { maxTimeoutSeconds: challenge.maxTimeoutSeconds }),
-          ...(challenge.extra !== undefined && { extra: challenge.extra }),
-        }],
-      });
+      return res.status(402).json(acceptsBody(challenge, price));
     }
 
     req.settlePayment = () => verifier.settle(result);

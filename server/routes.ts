@@ -19,6 +19,7 @@ const stockOpts = () => ({
 import { enforceQuota, consumeGeneration } from "./quota";
 
 import { track, acquisitionFunnel, anonIdFromIp } from "./funnel";
+import { trackLandingViews } from "./landing-track";
 import { runLimited, AtCapacityError, makeCapacityPayload } from "./gen-limiter";
 import { seedTurnZeroTranscript } from "./chat/seed";
 import { publicUser } from "./plan";
@@ -55,6 +56,11 @@ export async function registerRoutes(
     res.setHeader("Retry-After", String(retryAfterSeconds));
     return res.status(503).json(body);
   };
+
+  // Top of the acquisition funnel. Registered FIRST so it observes GET / before
+  // express.static answers it — serveStatic() is installed after registerRoutes,
+  // and once it responds no later middleware runs.
+  app.use(trackLandingViews());
 
   // Billing routes (Stripe checkout + portal)
   registerBillingRoutes(app);

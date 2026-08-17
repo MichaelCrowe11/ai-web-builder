@@ -14,6 +14,7 @@ import { renderDocumentBody, renderDocumentCss } from "../renderer";
 import { tokensMatch } from "./claim-tokens";
 import { log } from "../log";
 import { registerDiscoveryRoutes } from "./discovery";
+import { registerMcpEndpoint } from "./mcp";
 
 export interface AgentRouteDeps {
   storage: IStorage;
@@ -185,4 +186,10 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
   // they are mounted before the SPA catch-all in serveStatic (index.ts calls
   // registerRoutes → registerAgentRoutes BEFORE serveStatic is set up).
   registerDiscoveryRoutes(app, prices, process.env.X402_PAY_TO_ADDRESS ?? "");
+
+  // ── MCP endpoint (/mcp) ──────────────────────────────────────────────────────
+  // The same five capabilities over Model Context Protocol, for ChatGPT
+  // (Apps SDK / connectors), Claude, Cursor and any MCP client. Shares this
+  // route module's storage/verifier/prices so both surfaces stay in lockstep.
+  registerMcpEndpoint(app, deps);
 }

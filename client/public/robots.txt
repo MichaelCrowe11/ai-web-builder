@@ -5,6 +5,7 @@ Allow: /
 # One paid HTTP call returns a finished, designed, live website.
 # Start here:
 #   /llms.txt                 - agent-facing docs
+#   /mcp                      - MCP server (ChatGPT, Claude, Cursor)
 #   /.well-known/agent.json   - agent card
 #   /.well-known/x402         - x402 pricing (USDC on Base)
 #   /openapi.json             - OpenAPI spec

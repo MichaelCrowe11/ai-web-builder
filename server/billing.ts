@@ -129,6 +129,10 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         if (user) {
           // active/trialing → pro; anything else (canceled, past_due, unpaid) → free.
           const isActive = sub.status === "active" || sub.status === "trialing";
+          // Churn is recorded on the pro → not-pro EDGE only. Firing on every
+          // inactive webhook would double-count: Stripe sends both `updated` and
+          // `deleted` for one cancellation, and re-sends on retry.
+          if (!isActive && user.plan === "pro") track("pro_churned", { userId: user.id });
           await storage.updateUser(user.id, {
             plan: isActive ? "pro" : "free",
             stripeSubscriptionId: isActive ? sub.id : null,

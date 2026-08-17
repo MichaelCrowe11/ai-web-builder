@@ -11,12 +11,15 @@ import { z } from "zod";
 // ============================================================================
 
 export const PRODUCT_EVENTS = [
+  "landing_view",       // a human loaded the marketing page (top of funnel)
+  "bot_view",           // an automated client loaded it — counted apart, never as a visitor
   "anon_trial_start",   // an anonymous visitor ran a build
   "trial_exhausted",    // an anonymous visitor hit the free-trial cap
   "signup",             // created an account
   "free_limit_reached", // a signed-in free user hit the daily cap (upgrade pressure)
   "checkout_start",     // opened Stripe checkout for Pro
   "pro_converted",      // subscription active — now paying
+  "pro_churned",        // a paying subscriber lapsed back to free
 ] as const;
 export type ProductEventName = (typeof PRODUCT_EVENTS)[number];
 
@@ -31,7 +34,11 @@ export const productEventSchema = z.object({
 export type ProductEvent = z.infer<typeof productEventSchema>;
 
 // The ordered stages that sit on the main conversion path, with human labels.
+// `landing_view` is first on purpose: with the funnel topped by "Trial started",
+// every rate below was measured against people who had already engaged, so the
+// arrive-and-leave drop — the biggest one — was invisible.
 export const FUNNEL_STAGES: Array<{ event: ProductEventName; label: string }> = [
+  { event: "landing_view", label: "Landed" },
   { event: "anon_trial_start", label: "Trial started" },
   { event: "signup", label: "Signed up" },
   { event: "checkout_start", label: "Checkout opened" },
@@ -53,6 +60,9 @@ export interface AcquisitionFunnel {
   // Off-path diagnostic signals: pressure points where people stall.
   trialExhausted: number;   // distinct anon visitors who hit the trial cap
   freeLimitReached: number; // distinct free users who hit the daily cap
+  botViews: number;         // distinct automated clients, excluded from `stages`
+  proChurned: number;       // distinct subscribers who lapsed — gross conversions
+                            // alone can look healthy while the base shrinks
 }
 
 // A subject is a signed-in user when known, else the hashed anonymous id.
@@ -102,5 +112,7 @@ export function buildAcquisitionFunnel(events: ProductEvent[], windowMs: number)
     stages,
     trialExhausted: distinct.get("trial_exhausted")!.size,
     freeLimitReached: distinct.get("free_limit_reached")!.size,
+    botViews: distinct.get("bot_view")!.size,
+    proChurned: distinct.get("pro_churned")!.size,
   };
 }
