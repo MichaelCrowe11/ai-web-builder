@@ -27,6 +27,7 @@ Payment settles ONLY after your site is built and live — a failed build never 
 When payments are not yet enabled, paid endpoints return HTTP 503 { "error": "payments_unavailable" }.
 
 ## Discovery
+- MCP server (Streamable HTTP, stateless): POST ${baseUrl}/mcp — tools: build_site, refine_site, get_site, claim_site, read_leads. Works in ChatGPT (Apps SDK / connectors), Claude, Cursor, and any MCP client. Paid tools take the x402 payload in an \`x_payment\` argument.
 - OpenAPI: ${baseUrl}/openapi.json
 - x402 pricing: ${baseUrl}/.well-known/x402
 - Agent card: ${baseUrl}/.well-known/agent.json
@@ -81,7 +82,7 @@ When payments are not yet enabled, paid endpoints return HTTP 503 { "error": "pa
       "Agent-first website builder. One x402-paid call returns a finished, designed, live website: structured sections, bespoke AI photography, lead capture, hosting, and a growth agent that keeps optimizing it after launch. Payment settles only after the site is live.",
     capabilities: ["build_site", "refine_site", "claim_site", "read_site", "read_leads"],
     auth: { type: "x402", network: "base", asset: "USDC" },
-    discovery: { openapi: "/openapi.json", llms: "/llms.txt", x402: "/.well-known/x402" },
+    discovery: { openapi: "/openapi.json", llms: "/llms.txt", x402: "/.well-known/x402", mcp: "/mcp" },
   };
 
   return { llmsTxt, openapi, x402, agentJson };

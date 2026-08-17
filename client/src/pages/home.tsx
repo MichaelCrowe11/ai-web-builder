@@ -250,7 +250,7 @@ POST again + X-PAYMENT -> { "siteUrl": "…", "claimToken": "…" }`}
               </div>
               <div className="lg:pt-2">
                 {[
-                  { k: "Discover", body: "Machine-readable docs at /llms.txt, an agent card at /.well-known/agent.json, and the full OpenAPI spec at /openapi.json." },
+                  { k: "Discover", body: "Connect over MCP at /mcp from ChatGPT, Claude, or Cursor — or go raw HTTP with /llms.txt, /.well-known/agent.json, and the OpenAPI spec." },
                   { k: "Pay", body: "x402 micropayments in USDC on Base. No API keys, no account, no card. A failed build never charges you." },
                   { k: "Deliver", body: "Every build ships designed sections, generated photography, and a growth agent that keeps optimizing the site after you hand it off." },
                 ].map((b, i, arr) => (
