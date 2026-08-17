@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { Showcase } from "@/components/showcase";
+import { Reveal } from "@/components/reveal";
 import { STARTERS } from "@/lib/starters";
 
 // AI Web Builder. The hero is a prompt: describe a business and land straight in
@@ -141,28 +142,31 @@ export default function Home() {
         {/* ============ HOW IT WORKS ============ */}
         <section id="how-it-works" className="scroll-mt-20 border-t border-line py-24">
           <div className="container mx-auto max-w-5xl px-6">
-            <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
-              How it works
-            </p>
+            <Reveal>
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
+                How it works
+              </p>
+            </Reveal>
 
             <div className="mt-10">
               {STEPS.map((s, i) => (
-                <div
-                  key={s.n}
-                  className={`rule-row grid gap-x-8 gap-y-3 py-9 md:grid-cols-[4.5rem_15rem_1fr] ${
-                    i === STEPS.length - 1 ? "border-b border-line" : ""
-                  }`}
-                >
-                  <span className="font-display text-[1.6rem] leading-none text-accent/70">
-                    {s.n}
-                  </span>
-                  <h3 className="font-display text-[1.45rem] leading-tight tracking-[-0.01em] text-parchment">
-                    {s.title}
-                  </h3>
-                  <p className="max-w-xl text-[0.98rem] leading-relaxed text-parchment/55">
-                    {s.body}
-                  </p>
-                </div>
+                <Reveal key={s.n} delay={i * 70}>
+                  <div
+                    className={`rule-row grid gap-x-8 gap-y-3 py-9 md:grid-cols-[4.5rem_15rem_1fr] ${
+                      i === STEPS.length - 1 ? "border-b border-line" : ""
+                    }`}
+                  >
+                    <span className="font-display text-[1.6rem] leading-none text-accent/70">
+                      {s.n}
+                    </span>
+                    <h3 className="font-display text-[1.45rem] leading-tight tracking-[-0.01em] text-parchment">
+                      {s.title}
+                    </h3>
+                    <p className="max-w-xl text-[0.98rem] leading-relaxed text-parchment/55">
+                      {s.body}
+                    </p>
+                  </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -173,49 +177,52 @@ export default function Home() {
           <div className="container mx-auto max-w-5xl px-6">
             <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[22rem_1fr]">
               <div className="lg:sticky lg:top-28 lg:self-start">
-                <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
-                  The living site
-                </p>
-                <h2 className="mt-5 font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
-                  It does not just launch. It learns.
-                </h2>
-                <p className="mt-5 text-[1rem] leading-relaxed text-parchment/55">
-                  Most builders hand you a page and walk away. This one stays on
-                  the job, and the difference compounds every month you leave it
-                  running.
-                </p>
-                <div className="mt-8 flex flex-wrap items-center gap-3">
-                  <Button
-                    onClick={() => navigate("/builder")}
-                    className="h-11 rounded-lg bg-accent px-6 font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)]"
-                  >
-                    Start building free
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/pricing")}
-                    className="h-11 rounded-lg border-accent/30 px-6 text-parchment hover:bg-accent/10"
-                  >
-                    See pricing
-                  </Button>
-                </div>
+                <Reveal>
+                  <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
+                    The living site
+                  </p>
+                  <h2 className="mt-5 font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
+                    It does not just launch. It learns.
+                  </h2>
+                  <p className="mt-5 text-[1rem] leading-relaxed text-parchment/55">
+                    Most builders hand you a page and walk away. This one stays on
+                    the job, and the difference compounds every month you leave it
+                    running.
+                  </p>
+                  <div className="mt-8 flex flex-wrap items-center gap-3">
+                    <Button
+                      onClick={() => navigate("/builder")}
+                      className="h-11 rounded-lg bg-accent px-6 font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)]"
+                    >
+                      Start building free
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/pricing")}
+                      className="h-11 rounded-lg border-accent/30 px-6 text-parchment hover:bg-accent/10"
+                    >
+                      See pricing
+                    </Button>
+                  </div>
+                </Reveal>
               </div>
 
               <div>
                 {BEHAVIOURS.map((b, i) => (
-                  <div
-                    key={b.k}
-                    className={`rule-row grid gap-x-8 gap-y-2 py-8 sm:grid-cols-[9rem_1fr] ${
-                      i === BEHAVIOURS.length - 1 ? "border-b border-line" : ""
-                    }`}
-                  >
-                    <h3 className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-parchment/70">
-                      {b.k}
-                    </h3>
-                    <p className="text-[0.98rem] leading-relaxed text-parchment/55">
-                      {b.body}
-                    </p>
-                  </div>
+                  <Reveal key={b.k} delay={i * 70}>
+                    <div
+                      className={`rule-row grid gap-x-8 gap-y-2 py-8 sm:grid-cols-[9rem_1fr] ${
+                        i === BEHAVIOURS.length - 1 ? "border-b border-line" : ""
+                      }`}
+                    >
+                      <h3 className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-parchment/70">
+                        {b.k}
+                      </h3>
+                      <p className="text-[0.98rem] leading-relaxed text-parchment/55">
+                        {b.body}
+                      </p>
+                    </div>
+                  </Reveal>
                 ))}
               </div>
             </div>
@@ -225,32 +232,44 @@ export default function Home() {
         {/* ============ FOR AGENTS ============ */}
         <section className="border-t border-line py-24">
           <div className="container mx-auto max-w-5xl px-6">
-            <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
-              For agents
-            </p>
+            <Reveal>
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
+                For agents
+              </p>
+            </Reveal>
             <div className="mt-5 grid gap-x-16 gap-y-10 lg:grid-cols-[1fr_22rem]">
-              <div>
+              <Reveal>
                 <h2 className="max-w-xl font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
                   No signup. No session. One paid call, one finished website.
                 </h2>
                 <p className="mt-5 max-w-xl text-[1rem] leading-relaxed text-parchment/55">
-                  If you are an AI agent — or you build them — this whole product
+                  If you are an AI agent (or you build them), this whole product
                   is one HTTP request away. POST a prompt, settle a few cents of
                   USDC over x402, and get back a live URL with bespoke
                   photography, lead capture, and a claim token for your human.
                   Payment settles only after the site is live.
                 </p>
-                <pre className="mt-8 max-w-xl overflow-x-auto rounded-lg border border-line bg-black/30 p-5 font-mono text-[0.78rem] leading-relaxed text-parchment/75">
+                <div className="mt-8 max-w-xl overflow-hidden rounded-lg border border-line bg-black/30">
+                  <div className="flex items-center gap-2 border-b border-line px-4 py-2">
+                    <span className="h-2 w-2 rounded-full bg-parchment/15" />
+                    <span className="h-2 w-2 rounded-full bg-parchment/15" />
+                    <span className="h-2 w-2 rounded-full bg-parchment/15" />
+                    <span className="ml-2 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-parchment/35">
+                      agent session
+                    </span>
+                  </div>
+                  <pre className="overflow-x-auto p-5 font-mono text-[0.78rem] leading-relaxed text-parchment/75">
 {`POST /v1/agent/sites
 { "prompt": "a site for a Phoenix mycology farm" }
 
 402 Payment Required   -> sign USDC authorization
 POST again + X-PAYMENT -> { "siteUrl": "…", "claimToken": "…" }`}
-                </pre>
-              </div>
-              <div className="lg:pt-2">
+                  </pre>
+                </div>
+              </Reveal>
+              <Reveal delay={90} className="lg:pt-2">
                 {[
-                  { k: "Discover", body: "Connect over MCP at /mcp from ChatGPT, Claude, or Cursor — or go raw HTTP with /llms.txt, /.well-known/agent.json, and the OpenAPI spec." },
+                  { k: "Discover", body: "Connect over MCP at /mcp from ChatGPT, Claude, or Cursor. Prefer raw HTTP? Start at /llms.txt, /.well-known/agent.json, or the OpenAPI spec." },
                   { k: "Pay", body: "x402 micropayments in USDC on Base. No API keys, no account, no card. A failed build never charges you." },
                   { k: "Deliver", body: "Every build ships designed sections, generated photography, and a growth agent that keeps optimizing the site after you hand it off." },
                 ].map((b, i, arr) => (
@@ -274,7 +293,7 @@ POST again + X-PAYMENT -> { "siteUrl": "…", "claimToken": "…" }`}
                 >
                   Read /llms.txt →
                 </a>
-              </div>
+              </Reveal>
             </div>
           </div>
         </section>
