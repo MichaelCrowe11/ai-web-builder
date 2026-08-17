@@ -29,7 +29,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-graphite text-parchment flex flex-col font-sans">
-      <header className="border-b border-accent/15 bg-graphite/95 backdrop-blur supports-[backdrop-filter]:bg-graphite/70 sticky top-0 z-50">
+      <div aria-hidden className="grain" />
+      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-graphite/55 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-graphite/55">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
             <div className="group flex cursor-pointer items-center gap-2.5">
