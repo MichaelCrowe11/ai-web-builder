@@ -52,10 +52,16 @@ const NETWORK_TOKEN_DEFAULTS: Record<
   },
 };
 
+// Minimum seconds an authorization must still be valid for at /verify time.
+// See hasSettlementRunway() for why this floor exists.
+const DEFAULT_MIN_SETTLE_RUNWAY_SECONDS = 120;
+
 export interface X402Config {
   payTo: string;
   facilitatorUrl: string;
   network: string;
+  /** Reject authorizations expiring sooner than this many seconds from now. */
+  minSettleRunwaySeconds?: number;
   /** ERC-20 contract address of the payment token. Defaults per network. */
   asset?: string;
   /** EIP-712 domain name of the token. Defaults per network. */
@@ -117,6 +123,16 @@ export class X402Verifier implements PaymentVerifier {
 
     const paymentPayload = decodePaymentHeader(header);
     if (!paymentPayload) return null;
+
+    // Refuse an authorization that will expire before the work can finish. The
+    // facilitator judges validity as of NOW, but we settle only after the build —
+    // so a deliberately short-lived authorization passes /verify, buys a site, and
+    // then fails /settle. That window is ours to police, not the facilitator's.
+    const runway = this.cfg.minSettleRunwaySeconds ?? DEFAULT_MIN_SETTLE_RUNWAY_SECONDS;
+    if (!hasSettlementRunway(paymentPayload, runway)) {
+      log(`x402: rejecting payment — authorization expires within ${runway}s, too soon to survive the build`);
+      return null;
+    }
 
     const paymentRequirements = this.buildRequirements(priceUsdc, req.path);
     const res = await this.fetchImpl(`${this.cfg.facilitatorUrl}/verify`, {
@@ -183,6 +199,20 @@ export class X402Verifier implements PaymentVerifier {
   }
 }
 
+// True if the payload's EIP-3009 authorization stays valid at least `minSeconds`
+// longer — i.e. long enough that settle(), which runs after the build, can still
+// capture it.
+//
+// Permissive on anything unparseable: a payload without a readable validBefore is
+// not something we can judge, and the facilitator rejects it at /verify anyway, so
+// letting it through defers the decision rather than granting free work.
+function hasSettlementRunway(payload: Record<string, unknown>, minSeconds: number): boolean {
+  const auth = (payload as any)?.payload?.authorization;
+  const validBefore = Number(auth?.validBefore);
+  if (!Number.isFinite(validBefore)) return true;
+  return validBefore >= Math.floor(Date.now() / 1000) + minSeconds;
+}
+
 // Decode the X-PAYMENT header: base64 → JSON object. Returns null (treated as
 // unpaid) on any malformed input rather than throwing into the route.
 function decodePaymentHeader(header: string): Record<string, unknown> | null {
@@ -206,6 +236,8 @@ function decodePaymentHeader(header: string): Record<string, unknown> | null {
 //   X402_ASSET             — payment token contract address (default: USDC for the network)
 //   X402_ASSET_NAME        — token EIP-712 domain name (default per network)
 //   X402_ASSET_VERSION     — token EIP-712 domain version (default per network)
+//   X402_MIN_SETTLE_RUNWAY_SECONDS — reject authorizations expiring sooner than
+//                            this (default 120). Raise it if builds run long.
 export function makeVerifier(): PaymentVerifier {
   const payTo = process.env.X402_PAY_TO_ADDRESS;
   const facilitatorUrl = process.env.X402_FACILITATOR_URL;
@@ -222,6 +254,9 @@ export function makeVerifier(): PaymentVerifier {
       asset: process.env.X402_ASSET || undefined,
       assetName: process.env.X402_ASSET_NAME || undefined,
       assetVersion: process.env.X402_ASSET_VERSION || undefined,
+      minSettleRunwaySeconds: process.env.X402_MIN_SETTLE_RUNWAY_SECONDS
+        ? Number(process.env.X402_MIN_SETTLE_RUNWAY_SECONDS)
+        : undefined,
       baseUrl: process.env.APP_URL ?? "",
     };
     log(`x402: verifier active — payTo=${payTo} facilitator=${cfg.facilitatorUrl} network=${cfg.network}`);

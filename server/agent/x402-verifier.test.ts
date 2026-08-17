@@ -53,6 +53,36 @@ describe("X402Verifier", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  // settle() runs only after the build, so an authorization that is valid NOW but
+  // expires seconds later passes the facilitator's /verify and then fails /settle —
+  // buying a site for free. The floor is enforced here, before any facilitator call.
+  function headerExpiringIn(seconds: number): string {
+    const validBefore = String(Math.floor(Date.now() / 1000) + seconds);
+    return paymentHeader({
+      x402Version: 1, scheme: "exact", network: "base",
+      payload: { signature: "0xsig", authorization: { validBefore } },
+    });
+  }
+
+  it("verify rejects an authorization expiring too soon to survive the build", async () => {
+    const fetchImpl = vi.fn();
+    const v = new X402Verifier(cfg, fetchImpl);
+    expect(await v.verify(reqWith(headerExpiringIn(30)), 1)).toBeNull();
+    expect(fetchImpl).not.toHaveBeenCalled(); // rejected before we bother the facilitator
+  });
+
+  it("verify accepts an authorization with ample runway", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ isValid: true }) });
+    const v = new X402Verifier(cfg, fetchImpl);
+    expect(await v.verify(reqWith(headerExpiringIn(3600)), 1)).not.toBeNull();
+  });
+
+  it("minSettleRunwaySeconds is configurable", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ isValid: true }) });
+    const v = new X402Verifier({ ...cfg, minSettleRunwaySeconds: 10 }, fetchImpl);
+    expect(await v.verify(reqWith(headerExpiringIn(30)), 1)).not.toBeNull(); // 30s clears a 10s floor
+  });
+
   it("verify posts spec body to /verify and returns a result when facilitator says valid", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ isValid: true }) });
     const v = new X402Verifier(cfg, fetchImpl);

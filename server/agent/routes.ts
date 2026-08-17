@@ -30,6 +30,26 @@ function sendCapacity(res: Response, err: AtCapacityError): Response {
   return res.status(503).json(body);
 }
 
+// Capture funds for a request whose work has ALREADY succeeded and been published.
+//
+// NEVER throws. By the time this runs the site exists and the caller is owed it, so
+// a facilitator failure is a revenue incident to log — not a build error to report.
+// Letting it throw into the route's catch would produce three wrong outcomes at once:
+// the caller gets `build_failed` for a build that worked, never receives the claim
+// token for a site that is live, and the log blames the generator for a payment fault.
+//
+// Returns whether funds were actually captured, which the route echoes back as
+// `paymentSettled` so the caller knows whether it was charged.
+async function settleOrLog(req: Request, ctx: Record<string, unknown>): Promise<boolean> {
+  try {
+    await req.settlePayment!();
+    return true;
+  } catch (err: any) {
+    log(`x402 SETTLEMENT FAILED — work delivered, funds NOT captured: ${JSON.stringify(ctx)} — ${err.message}`);
+    return false;
+  }
+}
+
 // Proof-of-ownership gate: caller must present the site's one-time claim token
 // (the bearer credential returned at build) in X-Claim-Token. Used by refine + leads.
 function requireClaimToken(storage: IStorage) {
@@ -58,13 +78,19 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
       }
       try {
         const result = await buildAndPublishSite(prompt, { storage, generate: deps.generate });
-        await req.settlePayment!();
+        const paymentSettled = await settleOrLog(req, {
+          route: "build",
+          projectId: result.projectId,
+          slug: result.slug,
+          siteUrl: result.siteUrl,
+        });
         return res.json({
           projectId: result.projectId,
           slug: result.slug,
           siteUrl: result.siteUrl,
           claimToken: result.claimToken,
           document: result.document,
+          paymentSettled,
         });
       } catch (err: any) {
         if (err instanceof AtCapacityError) return sendCapacity(res, err);
@@ -96,8 +122,8 @@ export function registerAgentRoutes(app: Express, deps: AgentRouteDeps): void {
           css: renderDocumentCss(refined),
         });
         await storage.saveDocumentVersion(req.params.id, refined);
-        await req.settlePayment!();
-        return res.json({ projectId: req.params.id, document: refined });
+        const paymentSettled = await settleOrLog(req, { route: "refine", projectId: req.params.id });
+        return res.json({ projectId: req.params.id, document: refined, paymentSettled });
       } catch (err: any) {
         if (err instanceof AtCapacityError) return sendCapacity(res, err);
         log(`Agent refine error: ${err.message}`);
