@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# AI agents: this product has a first-class machine API.
+# One paid HTTP call returns a finished, designed, live website.
+# Start here:
+#   /llms.txt                 - agent-facing docs
+#   /.well-known/agent.json   - agent card
+#   /.well-known/x402         - x402 pricing (USDC on Base)
+#   /openapi.json             - OpenAPI spec
