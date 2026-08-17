@@ -34,13 +34,18 @@ export interface PaymentVerifier {
 // TEST-ONLY verifier. Accepts the header `X-PAYMENT: fake-ok`. Never wired in prod.
 export class FakeVerifier implements PaymentVerifier {
   settled = 0;
+  /** Make settle() throw, to exercise the "work delivered, funds not captured" path. */
+  failSettle = false;
   challenge(priceUsdc: number, resource: string): PaymentChallenge {
     return { priceUsdc, payTo: "0xFAKE", resource, network: "base", asset: "USDC" };
   }
   async verify(req: Request, priceUsdc: number): Promise<VerifyResult | null> {
     return req.header("x-payment") === "fake-ok" ? { proof: "fake", priceUsdc } : null;
   }
-  async settle(_result: VerifyResult): Promise<void> { this.settled += 1; }
+  async settle(_result: VerifyResult): Promise<void> {
+    if (this.failSettle) throw new Error("fake settle failure");
+    this.settled += 1;
+  }
 }
 
 // PROD DEFAULT until a wallet/facilitator is configured: refuses every request so

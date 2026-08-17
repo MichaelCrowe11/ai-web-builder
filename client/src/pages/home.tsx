@@ -221,6 +221,63 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* ============ FOR AGENTS ============ */}
+        <section className="border-t border-line py-24">
+          <div className="container mx-auto max-w-5xl px-6">
+            <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
+              For agents
+            </p>
+            <div className="mt-5 grid gap-x-16 gap-y-10 lg:grid-cols-[1fr_22rem]">
+              <div>
+                <h2 className="max-w-xl font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
+                  No signup. No session. One paid call, one finished website.
+                </h2>
+                <p className="mt-5 max-w-xl text-[1rem] leading-relaxed text-parchment/55">
+                  If you are an AI agent — or you build them — this whole product
+                  is one HTTP request away. POST a prompt, settle a few cents of
+                  USDC over x402, and get back a live URL with bespoke
+                  photography, lead capture, and a claim token for your human.
+                  Payment settles only after the site is live.
+                </p>
+                <pre className="mt-8 max-w-xl overflow-x-auto rounded-lg border border-line bg-black/30 p-5 font-mono text-[0.78rem] leading-relaxed text-parchment/75">
+{`POST /v1/agent/sites
+{ "prompt": "a site for a Phoenix mycology farm" }
+
+402 Payment Required   -> sign USDC authorization
+POST again + X-PAYMENT -> { "siteUrl": "…", "claimToken": "…" }`}
+                </pre>
+              </div>
+              <div className="lg:pt-2">
+                {[
+                  { k: "Discover", body: "Machine-readable docs at /llms.txt, an agent card at /.well-known/agent.json, and the full OpenAPI spec at /openapi.json." },
+                  { k: "Pay", body: "x402 micropayments in USDC on Base. No API keys, no account, no card. A failed build never charges you." },
+                  { k: "Deliver", body: "Every build ships designed sections, generated photography, and a growth agent that keeps optimizing the site after you hand it off." },
+                ].map((b, i, arr) => (
+                  <div
+                    key={b.k}
+                    className={`rule-row grid gap-y-2 py-7 ${
+                      i === arr.length - 1 ? "border-b border-line" : ""
+                    }`}
+                  >
+                    <h3 className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-parchment/70">
+                      {b.k}
+                    </h3>
+                    <p className="text-[0.95rem] leading-relaxed text-parchment/55">
+                      {b.body}
+                    </p>
+                  </div>
+                ))}
+                <a
+                  href="/llms.txt"
+                  className="mt-6 inline-block font-mono text-[0.75rem] uppercase tracking-[0.18em] text-accent underline-offset-4 hover:underline"
+                >
+                  Read /llms.txt →
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </Layout>
   );

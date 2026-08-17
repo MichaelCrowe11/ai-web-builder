@@ -46,4 +46,29 @@ describe("buildAndPublishSite", () => {
     const generate = vi.fn().mockRejectedValue(new AtCapacityError(8000));
     await expect(buildAndPublishSite("x", { storage: s, generate })).rejects.toBeInstanceOf(AtCapacityError);
   });
+
+  it("runs image enrichment on the generated document and persists the enriched version", async () => {
+    const generate = vi.fn().mockResolvedValue(fakeDoc);
+    const enrichedDoc: SiteDocument = {
+      ...fakeDoc,
+      sections: [{ ...fakeDoc.sections[0], image: { url: "https://img.test/hero.jpg", alt: "hero" } } as any],
+    };
+    const enrichImages = vi.fn().mockResolvedValue(enrichedDoc);
+    const r = await buildAndPublishSite("a cafe site", { storage: s, generate, enrichImages });
+
+    expect(enrichImages).toHaveBeenCalledWith(fakeDoc);
+    expect(r.document).toBe(enrichedDoc);
+    const saved = await s.getLatestDocument(r.projectId);
+    expect((saved!.document.sections[0] as any).image?.url).toBe("https://img.test/hero.jpg");
+  });
+
+  it("ships the text-only document when image enrichment throws (a paid build never dies on images)", async () => {
+    const generate = vi.fn().mockResolvedValue(fakeDoc);
+    const enrichImages = vi.fn().mockRejectedValue(new Error("image backend down"));
+    const r = await buildAndPublishSite("a cafe site", { storage: s, generate, enrichImages });
+
+    expect(r.document).toBe(fakeDoc);
+    const project = await s.getProject(r.projectId);
+    expect(project?.isPublished).toBe(true);
+  });
 });

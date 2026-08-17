@@ -50,6 +50,36 @@ describe("agent routes", () => {
     expect(verifier.settled).toBe(1);
   });
 
+  // A facilitator failure AFTER a successful build must not masquerade as a build
+  // failure: the site is live, so the caller still needs its claim token, and we
+  // need the incident visible as lost revenue rather than a generator error.
+  it("settlement failure after a successful build -> 200 with site + claimToken, paymentSettled false", async () => {
+    verifier.failSettle = true;
+    const r = await call(appWith(storage, verifier, generate), "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    expect(r.status).toBe(200);
+    expect(r.json.error).toBeUndefined();
+    expect(r.json.claimToken).toMatch(/^[0-9a-f]{64}$/);
+    expect(r.json.siteUrl).toContain(r.json.slug);
+    expect(r.json.paymentSettled).toBe(false);
+    expect(verifier.settled).toBe(0);
+  });
+
+  it("successful build reports paymentSettled true", async () => {
+    const r = await call(appWith(storage, verifier, generate), "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    expect(r.json.paymentSettled).toBe(true);
+  });
+
+  it("settlement failure on refine -> 200 with refined document, paymentSettled false", async () => {
+    const app = appWith(storage, verifier, generate, vi.fn().mockResolvedValue(fakeDoc));
+    const built = await call(app, "POST", "/v1/agent/sites", { "x-payment": "fake-ok" }, { prompt: "cafe" });
+    verifier.failSettle = true;
+    const r = await call(app, "POST", `/v1/agent/sites/${built.json.projectId}/refine`,
+      { "x-payment": "fake-ok", "x-claim-token": built.json.claimToken }, { instruction: "shorter headline" });
+    expect(r.status).toBe(200);
+    expect(r.json.document).toBeTruthy();
+    expect(r.json.paymentSettled).toBe(false);
+  });
+
   it("at-capacity -> 503 and DOES NOT settle", async () => {
     const { AtCapacityError } = await import("../gen-limiter");
     generate = vi.fn().mockRejectedValue(new AtCapacityError(8000));
