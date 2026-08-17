@@ -26,7 +26,7 @@ function appWith(storage: MemStorage, verifier: FakeVerifier | DisabledVerifier)
 }
 
 // Each MCP call is an independent JSON-RPC POST (stateless Streamable HTTP).
-async function rpc(app: any, body: unknown, method = "POST") {
+async function rpc(app: any, body: unknown, method = "POST", headers: Record<string, string> = {}) {
   const { createServer } = await import("http");
   const server = createServer(app).listen(0);
   const port = (server.address() as any).port;
@@ -35,6 +35,7 @@ async function rpc(app: any, body: unknown, method = "POST") {
     headers: {
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
+      ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -76,6 +77,80 @@ describe("MCP endpoint", () => {
     const { json } = await rpc(appWith(s, v), { jsonrpc: "2.0", id: 1, method: "tools/list" });
     const names = json.result.tools.map((t: any) => t.name).sort();
     expect(names).toEqual(["build_site", "claim_site", "get_site", "read_leads", "refine_site"]);
+  });
+
+  // ── Account payment path ───────────────────────────────────────────────────
+  // The connector's whole point is reaching people inside ChatGPT/Claude/Cursor,
+  // and those clients hold no wallet. Without an account rail every human caller
+  // is quoted an EIP-3009 signing ritual they cannot perform.
+  async function userWithKey(storage: MemStorage, plan = "free") {
+    const { mintApiKey } = await import("../api-keys");
+    const user = await storage.createUser({ username: `u${Math.random()}`, password: "x", email: null } as any);
+    if (plan !== "free") await storage.updateUser(user.id, { plan });
+    const { key, hash } = mintApiKey();
+    await storage.createApiKey(user.id, hash, "test");
+    return { user, key };
+  }
+  const auth = (key: string) => ({ authorization: `Bearer ${key}` });
+
+  it("build_site with a valid API key builds and bills the account, no wallet needed", async () => {
+    const { key } = await userWithKey(s);
+    const { json } = await rpc(appWith(s, v), callTool("build_site", { prompt: "a cafe" }), "POST", auth(key));
+    const out = toolJson(json);
+    expect(json.result.isError).toBeFalsy();
+    expect(out.siteUrl).toContain(out.slug);
+    expect(out.claimToken).toMatch(/^[0-9a-f]{64}$/);
+    expect(out.paidWith).toBe("account");
+    expect(out.quota.used).toBe(1);
+    expect(v.settled).toBe(0); // the crypto rail was never touched
+  });
+
+  it("rejects an unknown key outright rather than silently quoting crypto requirements", async () => {
+    const { mintApiKey } = await import("../api-keys");
+    const { status, json } = await rpc(appWith(s, v), callTool("build_site", { prompt: "a cafe" }), "POST", auth(mintApiKey().key));
+    expect(status).toBe(401);
+    expect(json.error.message).toContain("Invalid or revoked API key");
+  });
+
+  it("stops honouring a key once it is revoked", async () => {
+    const { user, key } = await userWithKey(s);
+    const [row] = await s.listApiKeys(user.id);
+    expect(await s.revokeApiKey(row.id, user.id)).toBe(true);
+    const { status } = await rpc(appWith(s, v), callTool("build_site", { prompt: "a cafe" }), "POST", auth(key));
+    expect(status).toBe(401);
+  });
+
+  it("refuses a build once the account's daily quota is spent, and points at plans not checkout", async () => {
+    const { user, key } = await userWithKey(s);
+    const { FREE_DAILY_LIMIT } = await import("@shared/schema");
+    await s.updateUserGenerations(user.id, FREE_DAILY_LIMIT);
+    const { json } = await rpc(appWith(s, v), callTool("build_site", { prompt: "a cafe" }), "POST", auth(key));
+    const out = toolJson(json);
+    expect(json.result.isError).toBe(true);
+    expect(out.error).toBe("quota_exceeded");
+  });
+
+  it("a pro account is not daily-capped", async () => {
+    const { user, key } = await userWithKey(s, "pro");
+    await s.updateUserGenerations(user.id, 999);
+    const { json } = await rpc(appWith(s, v), callTool("build_site", { prompt: "a cafe" }), "POST", auth(key));
+    expect(toolJson(json).paidWith).toBe("account");
+  });
+
+  // Both rails must stay open: agents with wallets keep working unchanged.
+  it("still accepts x402 payment when no API key is presented", async () => {
+    const { json } = await rpc(appWith(s, v), callTool("build_site", { prompt: "a cafe", x_payment: "fake-ok" }));
+    const out = toolJson(json);
+    expect(out.paidWith).toBe("x402");
+    expect(out.paymentSettled).toBe(true);
+    expect(v.settled).toBe(1);
+  });
+
+  it("the unpaid message offers the account route before the crypto one", async () => {
+    const { json } = await rpc(appWith(s, v), callTool("build_site", { prompt: "a cafe" }));
+    const out = toolJson(json);
+    expect(out.apiKeyUrl).toBeTruthy();
+    expect(out.message.indexOf("ACCOUNT")).toBeLessThan(out.message.indexOf("x402"));
   });
 
   it("build_site without x_payment returns the x402 accepts requirements", async () => {

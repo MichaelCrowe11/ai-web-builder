@@ -204,3 +204,23 @@ export const productEvents = pgTable("product_events", {
   byEventTs: index("product_events_event_ts_idx").on(t.event, t.ts),
 }));
 export type ProductEventRow = typeof productEvents.$inferSelect;
+
+// API keys: the credential a person supplies to their MCP client (ChatGPT,
+// Claude, Cursor) so paid tool calls bill their account through Stripe rather
+// than requiring a signed on-chain payment. Only the sha256 hash is stored —
+// see server/api-keys.ts — so a database read never yields a usable key.
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
+  keyHash: text("key_hash").notNull().unique(),
+  name: text("name"),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+  // Soft delete: revoked keys are retained so an audit can still explain what
+  // a past call was authorised by.
+  revokedAt: timestamp("revoked_at"),
+}, (t) => ({
+  byHash: index("api_keys_hash_idx").on(t.keyHash),
+  byUser: index("api_keys_user_idx").on(t.userId),
+}));
+export type ApiKeyRow = typeof apiKeys.$inferSelect;

@@ -20,6 +20,12 @@ export const PRODUCT_EVENTS = [
   "checkout_start",     // opened Stripe checkout for Pro
   "pro_converted",      // subscription active — now paying
   "pro_churned",        // a paying subscriber lapsed back to free
+  // MCP surface (ChatGPT / Claude / Cursor connectors). Its own mini-funnel:
+  // a client listing tools is the closest thing to an install signal, and the
+  // gap between that and a completed build is where connector users are lost.
+  "mcp_tools_list",     // an MCP client enumerated our tools (install/refresh)
+  "mcp_payment_required", // a paid tool was called but the caller could not pay
+  "mcp_build",          // a site was actually built through MCP
 ] as const;
 export type ProductEventName = (typeof PRODUCT_EVENTS)[number];
 
@@ -63,6 +69,11 @@ export interface AcquisitionFunnel {
   botViews: number;         // distinct automated clients, excluded from `stages`
   proChurned: number;       // distinct subscribers who lapsed — gross conversions
                             // alone can look healthy while the base shrinks
+  // MCP connector funnel, kept off `stages` because it is a parallel entry
+  // path: these callers never touch the marketing page at all.
+  mcpClients: number;       // distinct clients that listed tools
+  mcpPaymentRequired: number; // distinct callers turned away at the paywall
+  mcpBuilds: number;        // distinct callers who completed a build
 }
 
 // A subject is a signed-in user when known, else the hashed anonymous id.
@@ -114,5 +125,8 @@ export function buildAcquisitionFunnel(events: ProductEvent[], windowMs: number)
     freeLimitReached: distinct.get("free_limit_reached")!.size,
     botViews: distinct.get("bot_view")!.size,
     proChurned: distinct.get("pro_churned")!.size,
+    mcpClients: distinct.get("mcp_tools_list")!.size,
+    mcpPaymentRequired: distinct.get("mcp_payment_required")!.size,
+    mcpBuilds: distinct.get("mcp_build")!.size,
   };
 }

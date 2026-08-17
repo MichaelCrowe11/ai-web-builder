@@ -43,6 +43,23 @@ export const ADDITIVE_MIGRATIONS: Array<{ name: string; statements: string[] }> 
       `CREATE INDEX IF NOT EXISTS product_events_event_ts_idx ON product_events(event, ts)`,
     ],
   },
+  {
+    name: "api_keys (account credential for MCP callers)",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS api_keys (
+        id           varchar(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id      varchar(36) NOT NULL REFERENCES users(id),
+        key_hash     text NOT NULL UNIQUE,
+        name         text,
+        created_at   timestamp DEFAULT now(),
+        last_used_at timestamp,
+        revoked_at   timestamp
+      )`,
+      // Lookup is by hash on every authenticated MCP call, so it must be indexed.
+      `CREATE INDEX IF NOT EXISTS api_keys_hash_idx ON api_keys(key_hash)`,
+      `CREATE INDEX IF NOT EXISTS api_keys_user_idx ON api_keys(user_id)`,
+    ],
+  },
 ];
 
 /**
