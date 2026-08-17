@@ -1,24 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
-import { Showcase } from "@/components/showcase";
+import { BuildFrame } from "@/components/showcase";
 import { Reveal } from "@/components/reveal";
 import { STARTERS } from "@/lib/starters";
 
-// AI Web Builder. The hero is a prompt: describe a business and land straight in
-// the workspace, building. The positioning leads with the differentiator, a
-// LIVING site that keeps testing and improving itself, not "generate a page and
-// leave."
+// AI Web Builder. The hero is a working demonstration: the prompt on the left,
+// and on the right the product visibly building real sites, above the fold,
+// before a single word of marketing is read. The positioning leads with the
+// differentiator, a LIVING site that keeps testing and improving itself, not
+// "generate a page and leave."
 //
 // The page is deliberately NOT a stack of centred blocks with three-card grids
-// and an icon in every card. That shape, plus a radial glow behind the hero and
-// a sparkle on every button, is the house style of a generated app, and a
-// product whose whole claim is that its output does not look generated cannot
-// afford to look generated itself. So: one centred element, the prompt, which
-// earns it, then editorial rows with hanging numerals, a split with a sticky
-// column, and hairline rules doing the work boxes were doing.
+// and an icon in every card. That shape is the house style of a generated app,
+// and a product whose whole claim is that its output does not look generated
+// cannot afford to look generated itself. So: a split hero where the proof sits
+// beside the promise, then editorial rows with hanging numerals, a split with a
+// sticky column, and hairline rules doing the work boxes were doing.
 
 const STEPS = [
   {
@@ -53,9 +53,55 @@ const BEHAVIOURS = [
   },
 ];
 
+const TYPE_MS = 26;
+const HOLD_MS = 2600;
+
+/**
+ * The composer placeholder types the starter prompts to itself while the field
+ * is idle, so the first thing a visitor sees is the product being used. It
+ * stops the moment they focus or type, and reduced motion gets a static
+ * example.
+ */
+function useTypingPlaceholder(idle: boolean) {
+  const [typed, setTyped] = useState(STARTERS[0].prompt);
+  const reduced = useRef(false);
+
+  useEffect(() => {
+    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  useEffect(() => {
+    if (!idle || reduced.current) {
+      setTyped(STARTERS[0].prompt);
+      return;
+    }
+    let starter = 0;
+    let pos = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const full = STARTERS[starter % STARTERS.length].prompt;
+      pos += 1;
+      setTyped(full.slice(0, pos));
+      if (pos >= full.length) {
+        starter += 1;
+        pos = 0;
+        timer = setTimeout(tick, HOLD_MS);
+      } else {
+        timer = setTimeout(tick, TYPE_MS);
+      }
+    };
+    timer = setTimeout(tick, 600);
+    return () => clearTimeout(timer);
+  }, [idle]);
+
+  return typed;
+}
+
 export default function Home() {
   const [, navigate] = useLocation();
   const [prompt, setPrompt] = useState("");
+  const [focused, setFocused] = useState(false);
+  const placeholder = useTypingPlaceholder(!focused && prompt === "");
 
   const start = (p: string) => {
     const text = p.trim();
@@ -66,78 +112,121 @@ export default function Home() {
   return (
     <Layout>
       <div className="bg-graphite text-parchment">
-        {/* ============ PROMPT HERO ============ */}
+        {/* ============ SPLIT HERO: the promise beside the proof ============ */}
         <section className="relative overflow-hidden">
           <div aria-hidden className="ground-grid pointer-events-none absolute inset-0" />
+          {/* Atmosphere: two large accent blooms, one seated behind the frame,
+              one low on the text side. Accent blue only; violet is mark-only. */}
+          <div aria-hidden className="aurora hero-bloom-a pointer-events-none absolute inset-0" />
+          <div
+            aria-hidden
+            className="aurora hero-bloom-b pointer-events-none absolute inset-0"
+            style={{ animationDelay: "-9s" }}
+          />
 
-          <div className="container relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-24 pt-24 text-center lg:pt-32">
-            <h1 className="rise font-display text-[clamp(2.3rem,5.2vw,3.9rem)] font-medium leading-[1.03] tracking-[-0.022em] text-parchment">
-              What do you want to build?
-            </h1>
-            <p
-              className="rise mt-5 max-w-md text-[1.05rem] leading-relaxed text-parchment/55"
-              style={{ ["--d" as any]: "80ms" }}
-            >
-              Describe your business in a sentence. You get a finished site that
-              goes on improving itself after it is live.
-            </p>
+          <div className="container relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-16 lg:pt-24">
+            <div className="grid items-center gap-x-14 gap-y-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.02fr)]">
+              {/* Left: the prompt. */}
+              <div className="flex flex-col items-start text-left">
+                <h1 className="rise font-display text-[clamp(2.7rem,5vw,4.4rem)] font-medium leading-[1.02] tracking-[-0.025em] text-parchment">
+                  What do you
+                  <br />
+                  want to <em className="accent-sheen not-italic">build</em>?
+                </h1>
+                <p
+                  className="rise mt-6 max-w-md text-[1.08rem] leading-relaxed text-parchment/60"
+                  style={{ ["--d" as any]: "80ms" }}
+                >
+                  Describe your business in a sentence. You get a finished site
+                  that goes on improving itself after it is live.
+                </p>
 
-            {/* The composer. The one element that gets a light source. */}
-            <div className="rise relative mt-11 w-full" style={{ ["--d" as any]: "160ms" }}>
-              <div aria-hidden className="composer-bloom pointer-events-none absolute -inset-x-10 -inset-y-8" />
-              <div className="crowe-raised relative rounded-xl p-2.5 text-left transition-colors duration-150 focus-within:border-accent/45">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(prompt);
-                  }}
-                  rows={2}
-                  placeholder="e.g. a neighborhood coffee shop in Tucson with a menu and online reservations"
-                  className="w-full resize-none bg-transparent px-3.5 py-3 text-[1.05rem] leading-relaxed text-parchment outline-none placeholder:text-parchment/35"
-                  autoFocus
-                />
-                <div className="flex items-center justify-between gap-4 px-2 pb-0.5">
-                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/35">
-                    Free to start · no card · ⌘↵ to build
+                {/* The composer. The one element that gets a light source. */}
+                <div className="rise relative mt-9 w-full" style={{ ["--d" as any]: "160ms" }}>
+                  <div aria-hidden className="composer-bloom pointer-events-none absolute -inset-x-12 -inset-y-10" />
+                  <div className="crowe-raised relative rounded-xl p-2.5 text-left transition-[border-color,box-shadow] duration-150 focus-within:border-accent/55 focus-within:shadow-[var(--crowe-z3),var(--crowe-accent-glow)]">
+                    <textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      onFocus={() => setFocused(true)}
+                      onBlur={() => setFocused(false)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(prompt);
+                      }}
+                      rows={3}
+                      placeholder={placeholder}
+                      className="w-full resize-none bg-transparent px-3.5 py-3 text-[1.05rem] leading-relaxed text-parchment outline-none placeholder:text-parchment/40"
+                    />
+                    <div className="flex items-center justify-between gap-4 px-2 pb-0.5">
+                      <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/35">
+                        Free to start · no card · ⌘↵ to build
+                      </span>
+                      <Button
+                        onClick={() => start(prompt)}
+                        disabled={!prompt.trim()}
+                        className="h-10 shrink-0 rounded-lg bg-accent px-5 font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)] disabled:opacity-55"
+                      >
+                        Build it
+                        <ArrowUp className="ml-1.5 h-4 w-4 rotate-45" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Openers as text, not a field of pills. */}
+                <div
+                  className="rise mt-6 flex flex-wrap items-center gap-x-5 gap-y-2.5"
+                  style={{ ["--d" as any]: "240ms" }}
+                >
+                  <span className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-parchment/30">
+                    Or start from
                   </span>
-                  <Button
-                    onClick={() => start(prompt)}
-                    disabled={!prompt.trim()}
-                    className="h-10 shrink-0 rounded-lg bg-accent px-5 font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)] disabled:opacity-35"
-                  >
-                    Build it
-                    <ArrowUp className="ml-1.5 h-4 w-4 rotate-45" />
-                  </Button>
+                  {STARTERS.slice(0, 3).map((s) => (
+                    <button
+                      key={s.prompt}
+                      onClick={() => start(s.prompt)}
+                      title={s.prompt}
+                      className="border-b border-transparent pb-0.5 text-sm text-parchment/55 transition-colors duration-150 hover:border-accent/50 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55"
+                    >
+                      {s.short}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
 
-            {/* Openers as text, not a field of pills. */}
-            <div
-              className="rise mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5"
-              style={{ ["--d" as any]: "240ms" }}
-            >
-              <span className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-parchment/30">
-                Or start from
-              </span>
-              {STARTERS.slice(0, 3).map((s) => (
-                <button
-                  key={s.prompt}
-                  onClick={() => start(s.prompt)}
-                  title={s.prompt}
-                  className="border-b border-transparent pb-0.5 text-sm text-parchment/55 transition-colors duration-150 hover:border-accent/50 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55"
-                >
-                  {s.short}
-                </button>
-              ))}
+              {/* Right: the proof. The product building real sites, above the
+                  fold, on a loop. */}
+              <BuildFrame className="rise" />
             </div>
           </div>
         </section>
 
-        {/* Proof, directly under the hero: the first question after "describe
-            your business" is "and what do I get". */}
-        <Showcase />
+        {/* ============ REAL OUTPUT (the honesty claim) ============ */}
+        <section className="border-t border-line py-20">
+          <div className="container mx-auto max-w-5xl px-6">
+            <div className="grid gap-x-16 gap-y-6 lg:grid-cols-[22rem_1fr]">
+              <Reveal>
+                <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
+                  Real output
+                </p>
+                <h2 className="mt-5 font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
+                  Not a template with your name in it.
+                </h2>
+              </Reveal>
+              <Reveal delay={90} className="lg:pt-12">
+                <p className="max-w-xl text-[1rem] leading-relaxed text-parchment/55">
+                  Every site is assembled from hand-designed sections and a
+                  curated palette, so the layout, the type and the rhythm change
+                  with the business. The photography is generated for the site
+                  rather than pulled from a stock library, which is why no other
+                  page on the internet has these pictures. The three sites
+                  replaying in the frame above came out of the same builder you
+                  are about to use.
+                </p>
+              </Reveal>
+            </div>
+          </div>
+        </section>
 
         {/* ============ HOW IT WORKS ============ */}
         <section id="how-it-works" className="scroll-mt-20 border-t border-line py-24">
@@ -295,6 +384,33 @@ POST again + X-PAYMENT -> { "siteUrl": "…", "claimToken": "…" }`}
                 </a>
               </Reveal>
             </div>
+          </div>
+        </section>
+
+        {/* ============ CLOSER ============ */}
+        <section className="relative overflow-hidden border-t border-line">
+          <div aria-hidden className="closer-bloom pointer-events-none absolute inset-0" />
+          <div className="container relative z-10 mx-auto max-w-5xl px-6 py-28">
+            <Reveal>
+              <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
+                <h2 className="max-w-2xl font-display text-[clamp(2.2rem,4.6vw,3.4rem)] font-medium leading-[1.04] tracking-[-0.022em] text-parchment">
+                  Your next site is one
+                  <br />
+                  sentence away.
+                </h2>
+                <div className="flex shrink-0 flex-wrap items-center gap-4 md:pb-2">
+                  <Button
+                    onClick={() => navigate("/builder")}
+                    className="h-12 rounded-lg bg-accent px-7 text-[1rem] font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)]"
+                  >
+                    Start building free
+                  </Button>
+                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/35">
+                    No card required
+                  </span>
+                </div>
+              </div>
+            </Reveal>
           </div>
         </section>
       </div>
