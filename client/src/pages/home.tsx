@@ -164,7 +164,7 @@ export default function Home() {
                       <Button
                         onClick={() => start(prompt)}
                         disabled={!prompt.trim()}
-                        className="h-10 shrink-0 rounded-lg bg-accent px-5 font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)] disabled:opacity-55"
+                        className="btn-jewel h-10 shrink-0 rounded-lg bg-accent px-5 font-semibold text-on-accent disabled:opacity-55"
                       >
                         Build it
                         <ArrowUp className="ml-1.5 h-4 w-4 rotate-45" />
@@ -204,7 +204,7 @@ export default function Home() {
         {/* ============ REAL OUTPUT (the honesty claim) ============ */}
         <section className="border-t border-line py-20">
           <div className="container mx-auto max-w-5xl px-6">
-            <div className="grid gap-x-16 gap-y-6 lg:grid-cols-[22rem_1fr]">
+            <div className="grid gap-x-16 gap-y-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
               <Reveal>
                 <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
                   Real output
@@ -264,7 +264,7 @@ export default function Home() {
         {/* ============ THE LIVING SITE ============ */}
         <section className="border-t border-line py-24">
           <div className="container mx-auto max-w-5xl px-6">
-            <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[22rem_1fr]">
+            <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[22rem_minmax(0,1fr)]">
               <div className="lg:sticky lg:top-28 lg:self-start">
                 <Reveal>
                   <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
@@ -281,7 +281,7 @@ export default function Home() {
                   <div className="mt-8 flex flex-wrap items-center gap-3">
                     <Button
                       onClick={() => navigate("/builder")}
-                      className="h-11 rounded-lg bg-accent px-6 font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)]"
+                      className="btn-jewel h-11 rounded-lg bg-accent px-6 font-semibold text-on-accent"
                     >
                       Start building free
                     </Button>
@@ -326,8 +326,8 @@ export default function Home() {
                 For agents
               </p>
             </Reveal>
-            <div className="mt-5 grid gap-x-16 gap-y-10 lg:grid-cols-[1fr_22rem]">
-              <Reveal>
+            <div className="mt-5 grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
+              <Reveal className="min-w-0">
                 <h2 className="max-w-xl font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
                   No signup. No session. One paid call, one finished website.
                 </h2>
@@ -356,7 +356,7 @@ POST again + X-PAYMENT -> { "siteUrl": "…", "claimToken": "…" }`}
                   </pre>
                 </div>
               </Reveal>
-              <Reveal delay={90} className="lg:pt-2">
+              <Reveal delay={90} className="min-w-0 lg:pt-2">
                 {[
                   { k: "Discover", body: "Connect over MCP at /mcp from ChatGPT, Claude, or Cursor. Prefer raw HTTP? Start at /llms.txt, /.well-known/agent.json, or the OpenAPI spec." },
                   { k: "Pay", body: "x402 micropayments in USDC on Base. No API keys, no account, no card. A failed build never charges you." },
@@ -401,7 +401,7 @@ POST again + X-PAYMENT -> { "siteUrl": "…", "claimToken": "…" }`}
                 <div className="flex shrink-0 flex-wrap items-center gap-4 md:pb-2">
                   <Button
                     onClick={() => navigate("/builder")}
-                    className="h-12 rounded-lg bg-accent px-7 text-[1rem] font-semibold text-on-accent transition-shadow hover:shadow-[var(--crowe-accent-glow)]"
+                    className="btn-jewel h-12 rounded-lg bg-accent px-7 text-[1rem] font-semibold text-on-accent"
                   >
                     Start building free
                   </Button>
