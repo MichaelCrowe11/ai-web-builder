@@ -7,6 +7,8 @@ import {
   type AgentClaimTokenRow,
   type ChatMessageRow,
   type InsertChatMessage,
+  type ApiKeyRow,
+  apiKeys,
   users,
   projects,
   siteDocuments,
@@ -87,6 +89,13 @@ export interface IStorage {
   // Product acquisition funnel (trial -> signup -> Pro)
   recordProductEvent(e: ProductEvent): Promise<void>;
   recentProductEvents(sinceMs: number, limit?: number): Promise<ProductEvent[]>;
+  // API keys — account credential for MCP callers (see server/api-keys.ts)
+  createApiKey(userId: string, keyHash: string, name?: string): Promise<ApiKeyRow>;
+  /** Resolve a presented key's hash to its owner. Revoked keys resolve to undefined. */
+  getUserByApiKeyHash(keyHash: string): Promise<User | undefined>;
+  listApiKeys(userId: string): Promise<ApiKeyRow[]>;
+  revokeApiKey(id: string, userId: string): Promise<boolean>;
+  touchApiKey(keyHash: string): Promise<void>;
 }
 
 // In-memory storage for development/fallback
@@ -364,11 +373,43 @@ export class MemStorage implements IStorage {
   }
 
   private productEventRows: ProductEvent[] = [];
+  private apiKeyRows: ApiKeyRow[] = [];
   async recordProductEvent(e: ProductEvent): Promise<void> {
     this.productEventRows.push(e);
   }
   async recentProductEvents(sinceMs: number, limit = 100000): Promise<ProductEvent[]> {
     return this.productEventRows.filter((e) => e.ts >= sinceMs).slice(-limit);
+  }
+
+  async createApiKey(userId: string, keyHash: string, name?: string): Promise<ApiKeyRow> {
+    const row = {
+      id: randomUUID(), userId, keyHash, name: name ?? null,
+      createdAt: new Date(), lastUsedAt: null, revokedAt: null,
+    } as ApiKeyRow;
+    this.apiKeyRows.push(row);
+    return row;
+  }
+
+  async getUserByApiKeyHash(keyHash: string): Promise<User | undefined> {
+    const row = this.apiKeyRows.find((k) => k.keyHash === keyHash && !k.revokedAt);
+    return row ? this.users.get(row.userId) : undefined;
+  }
+
+  async listApiKeys(userId: string): Promise<ApiKeyRow[]> {
+    return this.apiKeyRows.filter((k) => k.userId === userId && !k.revokedAt);
+  }
+
+  async revokeApiKey(id: string, userId: string): Promise<boolean> {
+    // Scoped by userId so one account cannot revoke another's key by guessing an id.
+    const row = this.apiKeyRows.find((k) => k.id === id && k.userId === userId && !k.revokedAt);
+    if (!row) return false;
+    row.revokedAt = new Date();
+    return true;
+  }
+
+  async touchApiKey(keyHash: string): Promise<void> {
+    const row = this.apiKeyRows.find((k) => k.keyHash === keyHash);
+    if (row) row.lastUsedAt = new Date();
   }
 }
 
@@ -658,6 +699,45 @@ export class PostgresStorage implements IStorage {
       anonId: r.anonId ?? undefined,
       meta: (r.meta as any) ?? undefined,
     }));
+  }
+
+  async createApiKey(userId: string, keyHash: string, name?: string): Promise<ApiKeyRow> {
+    const [row] = await this.db.insert(apiKeys)
+      .values({ userId, keyHash, name: name ?? null })
+      .returning();
+    return row;
+  }
+
+  async getUserByApiKeyHash(keyHash: string): Promise<User | undefined> {
+    // isNull(revokedAt) is the enforcement point for revocation: a revoked key
+    // stays in the table for audit but must never resolve to an account again.
+    const [row] = await this.db.select({ user: users })
+      .from(apiKeys)
+      .innerJoin(users, eq(apiKeys.userId, users.id))
+      .where(and(eq(apiKeys.keyHash, keyHash), isNull(apiKeys.revokedAt)))
+      .limit(1);
+    return row?.user;
+  }
+
+  async listApiKeys(userId: string): Promise<ApiKeyRow[]> {
+    return this.db.select().from(apiKeys)
+      .where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt)))
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async revokeApiKey(id: string, userId: string): Promise<boolean> {
+    // Scoped by userId so one account cannot revoke another's key by guessing an id.
+    const rows = await this.db.update(apiKeys)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt)))
+      .returning({ id: apiKeys.id });
+    return rows.length > 0;
+  }
+
+  async touchApiKey(keyHash: string): Promise<void> {
+    await this.db.update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.keyHash, keyHash));
   }
 }
 

@@ -111,6 +111,43 @@ export async function enforceQuota(req: Request, res: Response, next: NextFuncti
   next();
 }
 
+/**
+ * Quota for a user resolved WITHOUT an Express session.
+ *
+ * The session-based helpers above all start from req.session.userId, which the
+ * MCP surface never has: its callers authenticate with an API key from inside
+ * ChatGPT or Claude, where there is no cookie jar. Same daily limits, same
+ * reset semantics — only the way the user was identified differs.
+ */
+export async function userQuota(user: User): Promise<{ ok: boolean; state: QuotaState; user: User }> {
+  let used = user.generationsUsed;
+  if (needsReset(user.generationsResetAt)) {
+    used = 0;
+    await storage.updateUser(user.id, { generationsUsed: 0, generationsResetAt: new Date() });
+  }
+  const limit = dailyLimitForPlan(user.plan);
+  const ok = limit === null || used < limit;
+  if (!ok) track("free_limit_reached", { userId: user.id });
+  return {
+    ok,
+    user: { ...user, generationsUsed: used },
+    state: { plan: user.plan, used, limit, remaining: limit === null ? null : Math.max(0, limit - used) },
+  };
+}
+
+/** Increment a user's counter after successful work on a session-less surface. */
+export async function consumeUserGeneration(user: User): Promise<QuotaState> {
+  const used = user.generationsUsed + 1;
+  await storage.updateUserGenerations(user.id, used);
+  const limit = dailyLimitForPlan(user.plan);
+  return {
+    plan: user.plan,
+    used,
+    limit,
+    remaining: limit === null ? null : Math.max(0, limit - used),
+  };
+}
+
 export interface QuotaSnapshot {
   ok: boolean;            // false = a mutating generation would be refused
   state: QuotaState;

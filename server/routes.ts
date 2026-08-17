@@ -20,6 +20,7 @@ import { enforceQuota, consumeGeneration } from "./quota";
 
 import { track, acquisitionFunnel, anonIdFromIp } from "./funnel";
 import { trackLandingViews } from "./landing-track";
+import { registerApiKeyRoutes } from "./api-key-routes";
 import { runLimited, AtCapacityError, makeCapacityPayload } from "./gen-limiter";
 import { seedTurnZeroTranscript } from "./chat/seed";
 import { publicUser } from "./plan";
@@ -64,6 +65,10 @@ export async function registerRoutes(
 
   // Billing routes (Stripe checkout + portal)
   registerBillingRoutes(app);
+
+  // API keys — the credential that lets a person pay for MCP calls by account
+  // instead of signing an on-chain payment.
+  registerApiKeyRoutes(app);
 
   // Publishing routes (publish/unpublish + /s/:slug serving)
   registerPublishRoutes(app);
