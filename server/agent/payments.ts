@@ -11,6 +11,13 @@ export interface PaymentChallenge {
   asset?: string;       // USDC contract / symbol
   unavailable?: boolean; // DisabledVerifier => respond "payments not configured"
   maxAmountRequired?: string; // verifier-supplied wire amount (asset's smallest unit, e.g. micro-USDC). When set, the 402 body uses this instead of the raw float price.
+  // Optional x402-spec paymentRequirements passthroughs. When the verifier
+  // supplies them, the 402 middleware includes them so real x402 clients can
+  // sign against the exact same requirements the facilitator will verify.
+  description?: string;
+  mimeType?: string;
+  maxTimeoutSeconds?: number;
+  extra?: Record<string, string>; // token EIP-712 domain ({ name, version })
 }
 
 export interface VerifyResult {
