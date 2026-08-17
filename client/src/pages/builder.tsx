@@ -22,14 +22,11 @@ import { postWithCapacityRetry } from "@/lib/generate-fetch";
 import { AiwbMark } from "@/components/brand/aiwb-mark";
 import { ChatPanel } from "@/components/builder/chat-panel";
 
-// Clean, modern workspace empty state (rarely seen - arriving from the home
-// prompt auto-builds). Crowe gold-on-graphite, clean sans.
-const INITIAL_HTML = `<div class="stage"><p class="kicker">Workspace</p><h1>Describe a website to begin.</h1><p class="sub">Type what you want in the bar below (a business, a vibe, a few details) and the workspace builds it live.</p></div>`;
+const INITIAL_HTML = `<main class="stage"><section class="copy"><p class="kicker">New website</p><h1>Start with what the business does.</h1><p class="sub">Write one sentence in the bar below. The first draft will take shape here as sections, type, and imagery.</p><div class="steps"><span>01 Structure</span><span>02 Writing</span><span>03 Imagery</span></div></section><div class="page" aria-hidden="true"><div class="page-head"><i></i><i></i><i></i></div><div class="page-body"><b></b><b class="short"></b><p></p><p class="small"></p><div class="page-grid"><i></i><i></i><i></i></div></div></div></main>`;
 // The empty-state document, rendered inside the preview iframe. Literal values,
 // not tokens, because the app's custom properties do not cross the iframe
-// boundary. Keep in step with styles/crowe/colors.css: base #0a0a0b, text
-// #e9e9ec, muted #9a9aa2, gold #3b82f6.
-const INITIAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap');*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:grid;place-items:end center;background:#0a0a0b;color:#e9e9ec;font-family:'Inter',system-ui,sans-serif;padding:4rem 2rem 13rem;text-align:center;position:relative}body::before{content:'';position:absolute;inset:0;background:radial-gradient(42rem 26rem at 50% -10%,rgba(59,130,246,0.14),transparent 62%);pointer-events:none}.stage{position:relative;z-index:1;max-width:38rem}.kicker{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#3b82f6;margin-bottom:1.4rem}h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:clamp(2.2rem,5vw,3.4rem);line-height:1.05;letter-spacing:-0.02em}.sub{margin:1.2rem auto 0;font-size:1rem;line-height:1.6;color:#9a9aa2;max-width:24rem}`;
+// boundary. Keep in step with styles/crowe/colors.css.
+const INITIAL_CSS = `@font-face{font-family:Fraunces;src:url('/fonts/fraunces-var.woff2')}@font-face{font-family:Inter;src:url('/fonts/inter-var.woff2')}@font-face{font-family:'JetBrains Mono';src:url('/fonts/jetbrains-mono-var.woff2')}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f3ea;color:#1a1714;font-family:Inter,Arial,sans-serif;padding:clamp(2rem,6vw,5rem);position:relative;overflow:hidden}body::before{content:'';position:absolute;inset:0;background:linear-gradient(to right,rgba(26,23,20,.055) 1px,transparent 1px),linear-gradient(to bottom,rgba(26,23,20,.055) 1px,transparent 1px);background-size:72px 72px;mask-image:linear-gradient(to bottom right,#000,transparent 80%);pointer-events:none}.stage{position:relative;z-index:1;width:min(100%,62rem);display:grid;grid-template-columns:1.05fr .75fr;gap:clamp(3rem,7vw,7rem);align-items:center}.kicker{margin:0 0 1.4rem;font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:#92702f}h1{margin:0;max-width:10ch;font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(2.7rem,5.4vw,5rem);line-height:.98;letter-spacing:-.035em}.sub{margin:1.5rem 0 0;max-width:30rem;font-size:1rem;line-height:1.7;color:#6b6457}.steps{display:flex;flex-wrap:wrap;gap:1rem 1.5rem;margin-top:2rem;padding-top:1.25rem;border-top:1px solid rgba(26,23,20,.13);font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:.16em;text-transform:uppercase;color:#6b6457}.page{background:#fffdf8;border:1px solid rgba(26,23,20,.16);box-shadow:0 22px 60px rgba(26,23,20,.13);transform:rotate(1.5deg)}.page-head{height:2rem;display:flex;align-items:center;gap:.35rem;padding:0 .8rem;background:#1a1714}.page-head i{width:.35rem;height:.35rem;border-radius:50%;background:rgba(247,243,234,.28)}.page-body{padding:2rem}.page-body b,.page-body p,.page-grid i{display:block;background:#1a1714}.page-body b{width:78%;height:.8rem}.page-body b.short{width:52%;margin-top:.55rem}.page-body p{width:92%;height:.28rem;margin:1.5rem 0 0;opacity:.24}.page-body p.small{width:68%;margin-top:.45rem}.page-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;margin-top:2.2rem}.page-grid i{aspect-ratio:1;opacity:.09}.page-grid i:first-child{background:#b8893a;opacity:.4}@media(max-width:760px){body{padding:2rem}.stage{grid-template-columns:1fr}.page{display:none}.steps{gap:.7rem 1rem}}`;
 
 // The conversational builder is the DEFAULT interface (C3 complete, flag
 // flipped 2026-06-07). ?chat=0 is the escape hatch back to the legacy dock —
@@ -477,38 +474,44 @@ export default function Builder() {
   const hasGenerated = doc !== null;
 
   return (
-    <div className="h-screen flex flex-col bg-graphite font-sans overflow-hidden text-parchment">
+    <div className="flex h-screen flex-col overflow-hidden bg-graphite font-sans text-parchment">
+      <div aria-hidden className="grain" />
       {/* Top bar */}
-      <header className="h-16 border-b border-accent/20 flex items-center justify-between px-5 bg-graphite-soft z-10">
-        <div className="flex items-center gap-4">
+      <header className="z-10 flex h-14 items-center justify-between border-b border-white/[0.08] bg-[#0c0f13] px-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-3">
           <Link href="/">
-            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-accent/20 text-parchment/70 transition-colors hover:bg-graphite-soft">
+            <button className="flex h-8 w-8 items-center justify-center border border-white/[0.1] text-parchment/60 transition-colors hover:border-white/[0.2] hover:text-parchment">
               <ArrowLeft className="h-4 w-4" />
             </button>
           </Link>
-          <div className="flex items-center gap-2.5">
-            <AiwbMark size={22} />
-            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="w-44 bg-transparent font-heading text-base font-medium tracking-tight outline-none transition-colors focus:border-b focus:border-accent" />
+          <div className="flex min-w-0 items-center gap-2.5">
+            <AiwbMark size={20} className="shrink-0 text-parchment" />
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              className="w-36 truncate bg-transparent text-sm font-medium text-parchment outline-none transition-colors focus:border-b focus:border-accent sm:w-44"
+            />
           </div>
         </div>
 
-        {/* Journey rail — center */}
-        <JourneyRail current={step} />
+        <div className="hidden lg:block">
+          <JourneyRail current={step} />
+        </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {user ? (
-            <span className="mr-1 font-mono text-xs text-parchment/55">{user.username}{user.plan === "pro" && <span className="ml-1 font-semibold text-accent">· PRO</span>}</span>
+            <span className="mr-1 hidden font-mono text-[0.68rem] text-parchment/50 sm:inline">{user.username}{user.plan === "pro" && <span className="ml-1 font-semibold text-accent">· PRO</span>}</span>
           ) : (
-            <Button variant="ghost" size="sm" onClick={() => setShowAuth(true)}>Sign in</Button>
+            <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setShowAuth(true)}>Sign in</Button>
           )}
           {user?.plan !== "pro" && (
-            <button onClick={() => setShowBilling(true)} className="rounded-full border border-accent px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/10">Upgrade</button>
+            <button onClick={() => setShowBilling(true)} className="hidden h-8 border border-accent/50 px-3 text-xs font-semibold text-accent transition-colors hover:bg-accent/10 sm:block">Upgrade</button>
           )}
           {/* Utility actions only exist once there's a site to act on — before
               that they'd just clutter the empty state as a row of grey buttons. */}
           {hasGenerated && (
             <>
-              <div className="mx-1 h-5 w-px bg-accent/20" />
+              <div className="mx-1 h-5 w-px bg-white/[0.1]" />
               <Button variant="ghost" size="sm" className="gap-1.5 text-parchment/80" onClick={saveProject} disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save
               </Button>
@@ -526,7 +529,7 @@ export default function Builder() {
               </Button>
             </>
           )}
-          <Button size="sm" className="gap-1.5 rounded-full bg-accent px-5 font-semibold text-graphite transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_-8px_rgba(59,130,246,0.7)]" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
+          <Button size="sm" className="h-8 gap-1.5 rounded-md bg-accent px-4 font-semibold text-on-accent hover:bg-accent-soft" onClick={handlePublish} disabled={isPublishing || !hasGenerated}>
             {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}{isPublishing ? "Publishing" : "Publish"}
           </Button>
         </div>
@@ -580,13 +583,13 @@ export default function Builder() {
 
           {isGenerating && !filling && <GenerationOverlay refining={hasGenerated} queued={queued} />}
           {filling && (
-            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-accent/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
+            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-md border border-accent/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
               <span className="font-mono text-xs text-parchment/80">Writing your copy…</span>
             </div>
           )}
           {imaging && !filling && (
-            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-accent/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
+            <div className="pointer-events-none absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-md border border-accent/25 bg-graphite-soft/90 px-4 py-2 shadow-xl backdrop-blur-sm">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
               <span className="font-mono text-xs text-parchment/80">Generating photos…</span>
             </div>

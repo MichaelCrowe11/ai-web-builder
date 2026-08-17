@@ -21,10 +21,15 @@
   --color-graphite-raised: var(--crowe-graphite-raised);
   --color-parchment: var(--crowe-parchment);
   --color-parchment-dim: var(--crowe-parchment-dim);
+  --color-paper: var(--crowe-paper);
+  --color-paper-deep: var(--crowe-paper-deep);
+  --color-paper-raised: var(--crowe-paper-raised);
+  --color-ink: var(--crowe-ink);
+  --color-warm-dim: var(--crowe-warm-dim);
+  --color-paper-line: var(--crowe-paper-line);
   --color-accent: var(--crowe-accent);
   --color-accent-soft: var(--crowe-accent-soft);
   --color-accent-dim: var(--crowe-accent-dim);
-  --color-accent-violet: var(--crowe-accent-violet);
   --color-on-accent: var(--crowe-on-accent);
   --color-error: var(--crowe-error);
   --color-ok: var(--crowe-ok);

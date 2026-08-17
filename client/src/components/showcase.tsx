@@ -142,7 +142,7 @@ export function BuildFrame({ className = "" }: { className?: string }) {
         id="showcase-frame"
         ref={frameRef}
         aria-busy={building}
-        className="crowe-raised mt-4 overflow-hidden rounded-xl shadow-[var(--crowe-z3),0_36px_100px_-36px_rgba(59,130,246,0.3)]"
+        className="crowe-raised mt-4 overflow-hidden rounded-xl shadow-[var(--crowe-z3),0_36px_100px_-36px_rgba(184,137,58,0.28)]"
       >
         <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
           <span className="h-2.5 w-2.5 rounded-full bg-parchment/15" />

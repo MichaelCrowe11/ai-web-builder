@@ -57,37 +57,35 @@
  * is right, because that is where the accent is defined. */
 :root {
   /* Surfaces step: base -> panel -> raised, each lighter as it rises. */
-  --background: 240 5% 4%;          /* graphite       #0a0a0b */
-  --foreground: 240 7% 92%;         /* text           #e9e9ec */
+  --background: 216 24% 4%;          /* graphite       #080a0d */
+  --foreground: 45 17% 91%;          /* text           #eceae4 */
 
-  --card: 240 5% 8%;                /* panel          #141416 */
-  --card-foreground: 240 7% 92%;
+  --card: 216 23% 9%;                /* panel          #11151b */
+  --card-foreground: 45 17% 91%;
 
-  --popover: 240 5% 12%;            /* raised         #1c1c1f */
-  --popover-foreground: 240 7% 92%;
+  --popover: 216 22% 12%;            /* raised         #171c24 */
+  --popover-foreground: 45 17% 91%;
 
-  /* Primary: the product accent #3b82f6. Its foreground stays DARK: near-black
-   * on this blue is 5.7:1, white on it is 3.7:1 and fails AA for button text. */
-  --primary: 217 91% 60%;
-  --primary-foreground: 210 79% 6%; /* on-accent      #04101f */
+  --primary: 38 52% 47%;             /* editorial gold #b8893a */
+  --primary-foreground: 30 13% 9%;  /* on-accent      #1a1714 */
 
-  --secondary: 240 5% 12%;
-  --secondary-foreground: 240 7% 92%;
+  --secondary: 216 22% 12%;
+  --secondary-foreground: 45 17% 91%;
 
-  --muted: 240 5% 12%;
-  --muted-foreground: 240 4% 62%;   /* muted          #9a9aa2 */
+  --muted: 216 22% 12%;
+  --muted-foreground: 45 6% 62%;    /* muted          #a3a097 */
 
-  --accent: 217 91% 60%;
-  --accent-foreground: 210 79% 6%;
+  --accent: 38 52% 47%;
+  --accent-foreground: 30 13% 9%;
 
   --destructive: 11 62% 63%;        /* error          #db7c66 */
-  --destructive-foreground: 240 7% 92%;
+  --destructive-foreground: 45 17% 91%;
 
   /* Neutral hairline, not accent. shadcn's --border cannot carry alpha, so this is
    * the solid equivalent of white at 8% over the base surface. */
-  --border: 240 5% 16%;
-  --input: 240 5% 16%;
-  --ring: 217 91% 60%;              /* focus is the accent */
+  --border: 216 10% 17%;
+  --input: 216 10% 17%;
+  --ring: 38 52% 47%;               /* focus is the accent */
 
   /* Radius: 9px is --crowe-r-lg. The scale derives the rest from it, so the
    * shadcn steps land on 5 / 7 / 9 / 13 rather than the old uniform 8. */
@@ -95,14 +93,14 @@
 
   /* The sidebar tokens shipped as shadcn's LIGHT defaults, which is why any
    * sidebar surface rendered as a white slab inside a dark app. Now on-palette. */
-  --sidebar: 240 5% 8%;
-  --sidebar-foreground: 240 7% 92%;
-  --sidebar-primary: 217 91% 60%;
-  --sidebar-primary-foreground: 210 79% 6%;
-  --sidebar-accent: 240 5% 12%;
-  --sidebar-accent-foreground: 240 7% 92%;
-  --sidebar-border: 240 5% 16%;
-  --sidebar-ring: 217 91% 60%;
+  --sidebar: 216 23% 9%;
+  --sidebar-foreground: 45 17% 91%;
+  --sidebar-primary: 38 52% 47%;
+  --sidebar-primary-foreground: 30 13% 9%;
+  --sidebar-accent: 216 22% 12%;
+  --sidebar-accent-foreground: 45 17% 91%;
+  --sidebar-border: 216 10% 17%;
+  --sidebar-ring: 38 52% 47%;
 }
 
 /* No .dark block: accent-on-graphite (above) is the single canonical theme.
@@ -277,76 +275,9 @@
     100% { transform: translateX(360%); }
   }
 
-  /* Slow accent aurora drift for hero atmosphere. */
-  @keyframes drift {
-    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-    50%      { transform: translate3d(2%, -3%, 0) scale(1.08); }
-  }
-  .aurora { animation: drift 18s ease-in-out infinite; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .aurora { animation: none; }
-  }
-
-  /* Fine letterpress sheen on accent display text. */
-  .accent-sheen {
-    background: linear-gradient(
-      180deg,
-      var(--crowe-accent-soft) 0%,
-      var(--crowe-accent) 55%,
-      var(--crowe-accent-dim) 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
 }
 
 @layer components {
-  /* Structural page ground.
-   *
-   * The hero used to sit on a radial accent bloom, which is the single most
-   * common background in a generated app and reads as atmosphere applied to
-   * a page rather than a page with structure. This is a hairline grid at the
-   * layout's own 72px rhythm, masked so it fades before it reaches content.
-   * It says "built to a measure", which is the claim the product is making.
-   */
-  .ground-grid {
-    background-image:
-      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 72px 72px;
-    -webkit-mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 80%);
-    mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 80%);
-  }
-
-  /* Hero atmosphere: two large accent blooms. One seats behind the build
-   * frame (upper right), one grounds the text column (lower left). Accent
-   * blue only; violet is mark-only. Low alpha keeps text at 4.5:1. */
-  .hero-bloom-a {
-    background: radial-gradient(
-      46rem 30rem at 76% 18%,
-      rgba(59, 130, 246, 0.17),
-      transparent 68%
-    );
-  }
-  .hero-bloom-b {
-    background: radial-gradient(
-      40rem 26rem at 12% 88%,
-      rgba(76, 127, 224, 0.1),
-      transparent 70%
-    );
-  }
-
-  /* Quiet echo of the hero light under the closing statement. */
-  .closer-bloom {
-    background: radial-gradient(
-      44rem 24rem at 50% 115%,
-      rgba(59, 130, 246, 0.12),
-      transparent 72%
-    );
-  }
-
   /* Fine photographic grain over the whole surface. Large soft gradients on
    * dark backgrounds band without it; with it they read as atmosphere. Static
    * by design, so it costs nothing after first paint. */
@@ -361,31 +292,4 @@
     background-size: 180px 180px;
   }
 
-  /* Accent button as a lit object: a top bevel at rest, glow on approach. */
-  .btn-jewel {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
-    transition: box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .btn-jewel:hover:not(:disabled) {
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      var(--crowe-accent-glow);
-  }
-
-  /* A single restrained bloom, kept behind the one element that is the point
-   * (the composer) rather than washed across the whole viewport. */
-  .composer-bloom {
-    background: radial-gradient(
-      38rem 18rem at 50% 50%,
-      rgba(59, 130, 246, 0.2),
-      transparent 70%
-    );
-  }
-
-  /* Editorial row: a hairline rule above, and a display numeral hanging in the
-   * left margin. Used instead of a card grid, because three boxes in a row is
-   * the shape every generated page reaches for. */
-  .rule-row {
-    border-top: 1px solid var(--crowe-line);
-  }
 }
