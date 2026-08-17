@@ -2,66 +2,68 @@ import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
 import { useLocation } from "wouter";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowRight, ArrowUp } from "lucide-react";
 import { BuildFrame } from "@/components/showcase";
 import { Reveal } from "@/components/reveal";
 import { STARTERS } from "@/lib/starters";
 
-// AI Web Builder. The hero is a working demonstration: the prompt on the left,
-// and on the right the product visibly building real sites, above the fold,
-// before a single word of marketing is read. The positioning leads with the
-// differentiator, a LIVING site that keeps testing and improving itself, not
-// "generate a page and leave."
-//
-// The page is deliberately NOT a stack of centred blocks with three-card grids
-// and an icon in every card. That shape is the house style of a generated app,
-// and a product whose whole claim is that its output does not look generated
-// cannot afford to look generated itself. So: a split hero where the proof sits
-// beside the promise, then editorial rows with hanging numerals, a split with a
-// sticky column, and hairline rules doing the work boxes were doing.
-
 const STEPS = [
   {
     n: "01",
-    title: "Describe it",
-    body: "One sentence about your business: what you do, where, and for whom. Or take one of the openers above and change it later.",
+    title: "Describe the business",
+    body: "Say what you do, where you work, and who you serve. One useful sentence is enough.",
   },
   {
     n: "02",
-    title: "Refine and ship it",
-    body: "A finished site appears in seconds. Change the copy, the sections and the look by talking to it, then publish. Hosting and the subdomain are included.",
+    title: "Shape the first draft",
+    body: "The site appears in seconds. Refine the writing, sections, imagery, and tone by talking to it.",
   },
   {
     n: "03",
-    title: "Let it grow",
-    body: "Once it is live it watches real visits, finds the section losing people, and proposes a sharper version. You approve with one click.",
+    title: "Publish, then improve",
+    body: "Hosting is included. After launch, the site finds weak sections and tests stronger versions.",
   },
 ];
 
 const BEHAVIOURS = [
   {
     k: "Watches",
-    body: "It reads which sections earn attention and which lose it, on real visits rather than guesses, and it knows which one is costing you the most.",
+    body: "Reads which sections earn attention and which lose it, using real visits rather than guesses.",
   },
   {
     k: "Tests",
-    body: "It writes a stronger version of the weakest section and runs an honest split against the original. Nothing changes on your live site until one of them wins.",
+    body: "Writes a stronger version of the weakest section and runs an honest split against the original.",
   },
   {
-    k: "Improves",
-    body: "It keeps the winner, retires the loser, and moves to the next weak spot. The site you published in March is not the site working for you in June.",
+    k: "Keeps",
+    body: "Promotes the winner, retires the loser, and moves to the next opportunity. You stay in control.",
   },
 ];
+
+const OUTPUTS = [
+  {
+    id: "bakery",
+    label: "Rye & Ember",
+    category: "Neighborhood bakery",
+    src: "/showcase/bakery.webp",
+  },
+  {
+    id: "trades",
+    label: "Halvorsen Plumbing",
+    category: "Local service company",
+    src: "/showcase/trades.webp",
+  },
+  {
+    id: "studio",
+    label: "Meridian Yoga",
+    category: "Movement studio",
+    src: "/showcase/studio.webp",
+  },
+] as const;
 
 const TYPE_MS = 26;
 const HOLD_MS = 2600;
 
-/**
- * The composer placeholder types the starter prompts to itself while the field
- * is idle, so the first thing a visitor sees is the product being used. It
- * stops the moment they focus or type, and reduced motion gets a static
- * example.
- */
 function useTypingPlaceholder(idle: boolean) {
   const [typed, setTyped] = useState(STARTERS[0].prompt);
   const reduced = useRef(false);
@@ -103,156 +105,215 @@ export default function Home() {
   const [focused, setFocused] = useState(false);
   const placeholder = useTypingPlaceholder(!focused && prompt === "");
 
-  const start = (p: string) => {
-    const text = p.trim();
+  const start = (value: string) => {
+    const text = value.trim();
     if (!text) return;
     navigate(`/builder?prompt=${encodeURIComponent(text)}`);
   };
 
   return (
     <Layout>
-      <div className="bg-graphite text-parchment">
-        {/* ============ SPLIT HERO: the promise beside the proof ============ */}
-        <section className="relative overflow-hidden">
-          <div aria-hidden className="ground-grid pointer-events-none absolute inset-0" />
-          {/* Atmosphere: two large accent blooms, one seated behind the frame,
-              one low on the text side. Accent blue only; violet is mark-only. */}
-          <div aria-hidden className="aurora hero-bloom-a pointer-events-none absolute inset-0" />
-          <div
-            aria-hidden
-            className="aurora hero-bloom-b pointer-events-none absolute inset-0"
-            style={{ animationDelay: "-9s" }}
-          />
-
-          <div className="container relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-16 lg:pt-24">
-            <div className="grid items-center gap-x-14 gap-y-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.02fr)]">
-              {/* Left: the prompt. */}
-              <div className="flex flex-col items-start text-left">
-                <h1 className="rise font-display text-[clamp(2.7rem,5vw,4.4rem)] font-medium leading-[1.02] tracking-[-0.025em] text-parchment">
-                  What do you
+      <div className="bg-paper text-ink">
+        {/* The product and the prompt share the first viewport. */}
+        <section className="relative overflow-hidden border-b border-paper-line">
+          <div aria-hidden className="editorial-orbit absolute -right-44 -top-56 h-[42rem] w-[42rem] rounded-full" />
+          <div className="container relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-16 lg:pb-24 lg:pt-24">
+            <div className="grid items-center gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+              <div>
+                <p className="rise font-mono text-[0.64rem] uppercase tracking-[0.24em] text-accent-dim">
+                  The living website
+                </p>
+                <h1
+                  className="rise mt-6 max-w-[11ch] font-display text-[clamp(3.3rem,6.5vw,5.8rem)] font-medium leading-[0.94] tracking-[-0.038em] text-ink"
+                  style={{ ["--d" as any]: "60ms" }}
+                >
+                  One sentence.
                   <br />
-                  want to <em className="accent-sheen not-italic">build</em>?
+                  A finished site.
                 </h1>
                 <p
-                  className="rise mt-6 max-w-md text-[1.08rem] leading-relaxed text-parchment/60"
-                  style={{ ["--d" as any]: "80ms" }}
+                  className="rise mt-7 max-w-lg text-[1.08rem] leading-[1.7] text-warm-dim"
+                  style={{ ["--d" as any]: "110ms" }}
                 >
-                  Describe your business in a sentence. You get a finished site
-                  that goes on improving itself after it is live.
+                  Describe the business. The builder designs the page, writes the
+                  copy, generates the imagery, and publishes it. Then the live site
+                  keeps testing what works.
                 </p>
 
-                {/* The composer. The one element that gets a light source. */}
-                <div className="rise relative mt-9 w-full" style={{ ["--d" as any]: "160ms" }}>
-                  <div aria-hidden className="composer-bloom pointer-events-none absolute -inset-x-12 -inset-y-10" />
-                  <div className="crowe-raised relative rounded-xl p-2.5 text-left transition-[border-color,box-shadow] duration-150 focus-within:border-accent/55 focus-within:shadow-[var(--crowe-z3),var(--crowe-accent-glow)]">
-                    <textarea
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      onFocus={() => setFocused(true)}
-                      onBlur={() => setFocused(false)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(prompt);
-                      }}
-                      rows={3}
-                      placeholder={placeholder}
-                      className="w-full resize-none bg-transparent px-3.5 py-3 text-[1.05rem] leading-relaxed text-parchment outline-none placeholder:text-parchment/40"
-                    />
-                    <div className="flex items-center justify-between gap-4 px-2 pb-0.5">
-                      <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/35">
-                        Free to start · no card · ⌘↵ to build
-                      </span>
-                      <Button
-                        onClick={() => start(prompt)}
-                        disabled={!prompt.trim()}
-                        className="btn-jewel h-10 shrink-0 rounded-lg bg-accent px-5 font-semibold text-on-accent disabled:opacity-55"
-                      >
-                        Build it
-                        <ArrowUp className="ml-1.5 h-4 w-4 rotate-45" />
-                      </Button>
-                    </div>
+                <div
+                  className="rise mt-9 rounded-[14px] bg-ink p-3 text-left shadow-[0_24px_70px_rgba(26,23,20,0.18)]"
+                  style={{ ["--d" as any]: "160ms" }}
+                >
+                  <textarea
+                    value={prompt}
+                    onChange={(event) => setPrompt(event.target.value)}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                        start(prompt);
+                      }
+                    }}
+                    rows={3}
+                    placeholder={placeholder}
+                    className="w-full resize-none bg-transparent px-3 py-3 text-[1.02rem] leading-relaxed text-parchment outline-none placeholder:text-parchment/42"
+                  />
+                  <div className="flex items-center justify-between gap-4 px-2 pb-0.5">
+                    <span className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-parchment/38">
+                      Free to start · no card · ⌘↵
+                    </span>
+                    <Button
+                      onClick={() => start(prompt)}
+                      disabled={!prompt.trim()}
+                      className="h-10 shrink-0 rounded-md bg-accent px-5 font-semibold text-on-accent hover:bg-accent-soft disabled:opacity-45"
+                    >
+                      Build it
+                      <ArrowUp className="ml-1.5 h-4 w-4 rotate-45" />
+                    </Button>
                   </div>
                 </div>
 
-                {/* Openers as text, not a field of pills. */}
                 <div
                   className="rise mt-6 flex flex-wrap items-center gap-x-5 gap-y-2.5"
-                  style={{ ["--d" as any]: "240ms" }}
+                  style={{ ["--d" as any]: "210ms" }}
                 >
-                  <span className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-parchment/30">
-                    Or start from
+                  <span className="font-mono text-[0.58rem] uppercase tracking-[0.2em] text-warm-dim/65">
+                    Start with
                   </span>
-                  {STARTERS.slice(0, 3).map((s) => (
+                  {STARTERS.slice(0, 3).map((starter) => (
                     <button
-                      key={s.prompt}
-                      onClick={() => start(s.prompt)}
-                      title={s.prompt}
-                      className="border-b border-transparent pb-0.5 text-sm text-parchment/55 transition-colors duration-150 hover:border-accent/50 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55"
+                      key={starter.prompt}
+                      onClick={() => start(starter.prompt)}
+                      title={starter.prompt}
+                      className="border-b border-paper-line pb-0.5 text-sm text-warm-dim transition-colors duration-100 hover:border-accent hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
-                      {s.short}
+                      {starter.short}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Right: the proof. The product building real sites, above the
-                  fold, on a loop. */}
-              <BuildFrame className="rise" />
+              <div className="rise lg:pt-3" style={{ ["--d" as any]: "120ms" }}>
+                <div className="relative rounded-[18px] bg-graphite p-4 text-parchment shadow-[0_35px_90px_rgba(26,23,20,0.24)] sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/[0.08] pb-3">
+                    <span className="font-mono text-[0.58rem] uppercase tracking-[0.22em] text-accent">
+                      Live product
+                    </span>
+                    <span className="flex items-center gap-2 font-mono text-[0.58rem] uppercase tracking-[0.18em] text-parchment/38">
+                      <span className="h-1.5 w-1.5 rounded-full bg-ok" />
+                      Building now
+                    </span>
+                  </div>
+                  <BuildFrame />
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-4 px-1">
+                  <p className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-warm-dim/70">
+                    Actual renderer output
+                  </p>
+                  <p className="text-sm text-warm-dim">Three businesses. Three systems.</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
 
-        {/* ============ REAL OUTPUT (the honesty claim) ============ */}
-        <section className="border-t border-line py-20">
-          <div className="container mx-auto max-w-5xl px-6">
-            <div className="grid gap-x-16 gap-y-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
-              <Reveal>
-                <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
-                  Real output
-                </p>
-                <h2 className="mt-5 font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
-                  Not a template with your name in it.
-                </h2>
-              </Reveal>
-              <Reveal delay={90} className="lg:pt-12">
-                <p className="max-w-xl text-[1rem] leading-relaxed text-parchment/55">
-                  Every site is assembled from hand-designed sections and a
-                  curated palette, so the layout, the type and the rhythm change
-                  with the business. The photography is generated for the site
-                  rather than pulled from a stock library, which is why no other
-                  page on the internet has these pictures. The three sites
-                  replaying in the frame above came out of the same builder you
-                  are about to use.
-                </p>
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* ============ HOW IT WORKS ============ */}
-        <section id="how-it-works" className="scroll-mt-20 border-t border-line py-24">
-          <div className="container mx-auto max-w-5xl px-6">
-            <Reveal>
-              <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
-                How it works
-              </p>
-            </Reveal>
-
-            <div className="mt-10">
-              {STEPS.map((s, i) => (
-                <Reveal key={s.n} delay={i * 70}>
+            <div className="mt-16 grid border-y border-paper-line py-5 text-sm text-warm-dim sm:grid-cols-3">
+              {["Hosting included", "Publish on the free plan", "No template lock-in"].map(
+                (item, index) => (
                   <div
-                    className={`rule-row grid gap-x-8 gap-y-3 py-9 md:grid-cols-[4.5rem_15rem_1fr] ${
-                      i === STEPS.length - 1 ? "border-b border-line" : ""
+                    key={item}
+                    className={`flex items-center gap-3 py-2 ${
+                      index > 0 ? "sm:border-l sm:border-paper-line sm:pl-8" : ""
                     }`}
                   >
-                    <span className="font-display text-[1.6rem] leading-none text-accent/70">
-                      {s.n}
-                    </span>
-                    <h3 className="font-display text-[1.45rem] leading-tight tracking-[-0.01em] text-parchment">
-                      {s.title}
+                    <span className="font-mono text-[0.6rem] text-accent">0{index + 1}</span>
+                    {item}
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* A visual portfolio, not a claim about visual quality. */}
+        <section className="bg-paper-deep py-24">
+          <div className="container mx-auto max-w-6xl px-6">
+            <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
+              <Reveal>
+                <p className="font-mono text-[0.64rem] uppercase tracking-[0.24em] text-accent-dim">
+                  Real output
+                </p>
+                <h2 className="mt-5 max-w-md font-display text-[clamp(2.5rem,4.8vw,4rem)] font-medium leading-[1] tracking-[-0.03em] text-ink">
+                  The business changes. The design follows.
+                </h2>
+              </Reveal>
+              <Reveal delay={80}>
+                <p className="max-w-xl text-[1.02rem] leading-[1.7] text-warm-dim lg:ml-auto">
+                  These are not theme previews. Each came from the production
+                  renderer with a different layout, type system, palette, and
+                  generated photography.
+                </p>
+              </Reveal>
+            </div>
+
+            <div className="mt-12 grid gap-5 lg:grid-cols-3">
+              {OUTPUTS.map((output, index) => (
+                <Reveal key={output.id} delay={index * 60}>
+                  <article className="group overflow-hidden border border-paper-line bg-paper-raised shadow-[0_12px_35px_rgba(26,23,20,0.08)]">
+                    <div className="flex items-center gap-1.5 bg-ink px-3 py-2.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-parchment/25" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-parchment/25" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-parchment/25" />
+                    </div>
+                    <div className="aspect-[4/3] overflow-hidden">
+                      <img
+                        src={output.src}
+                        width={1600}
+                        height={1500}
+                        loading="lazy"
+                        decoding="async"
+                        alt={`${output.label}, a website built with Web Builder`}
+                        className="h-full w-full object-cover object-top transition-transform duration-[280ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.015] motion-reduce:transition-none"
+                      />
+                    </div>
+                    <div className="flex items-end justify-between gap-4 border-t border-paper-line px-5 py-4">
+                      <div>
+                        <h3 className="font-display text-xl font-medium text-ink">{output.label}</h3>
+                        <p className="mt-1 text-sm text-warm-dim">{output.category}</p>
+                      </div>
+                      <span className="font-mono text-[0.58rem] uppercase tracking-[0.18em] text-accent-dim">
+                        0{index + 1}
+                      </span>
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* The dark band previews the product surface and creates page rhythm. */}
+        <section id="how-it-works" className="scroll-mt-20 bg-graphite py-24 text-parchment">
+          <div className="container mx-auto max-w-6xl px-6">
+            <Reveal>
+              <p className="font-mono text-[0.64rem] uppercase tracking-[0.24em] text-accent">
+                From prompt to published
+              </p>
+            </Reveal>
+            <div className="mt-10 grid border-t border-white/[0.1] lg:grid-cols-3">
+              {STEPS.map((step, index) => (
+                <Reveal
+                  key={step.n}
+                  delay={index * 60}
+                  className={
+                    index > 0 ? "lg:border-l lg:border-white/[0.1] lg:pl-8" : ""
+                  }
+                >
+                  <div className="py-9 lg:pr-8">
+                    <span className="font-mono text-[0.62rem] text-accent">{step.n}</span>
+                    <h3 className="mt-6 font-display text-[1.8rem] font-medium leading-tight text-parchment">
+                      {step.title}
                     </h3>
-                    <p className="max-w-xl text-[0.98rem] leading-relaxed text-parchment/55">
-                      {s.body}
+                    <p className="mt-4 text-[0.96rem] leading-relaxed text-parchment/55">
+                      {step.body}
                     </p>
                   </div>
                 </Reveal>
@@ -261,154 +322,113 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ============ THE LIVING SITE ============ */}
-        <section className="border-t border-line py-24">
-          <div className="container mx-auto max-w-5xl px-6">
-            <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[22rem_minmax(0,1fr)]">
-              <div className="lg:sticky lg:top-28 lg:self-start">
-                <Reveal>
-                  <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
-                    The living site
-                  </p>
-                  <h2 className="mt-5 font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
-                    It does not just launch. It learns.
-                  </h2>
-                  <p className="mt-5 text-[1rem] leading-relaxed text-parchment/55">
-                    Most builders hand you a page and walk away. This one stays on
-                    the job, and the difference compounds every month you leave it
-                    running.
-                  </p>
-                  <div className="mt-8 flex flex-wrap items-center gap-3">
-                    <Button
-                      onClick={() => navigate("/builder")}
-                      className="btn-jewel h-11 rounded-lg bg-accent px-6 font-semibold text-on-accent"
-                    >
-                      Start building free
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate("/pricing")}
-                      className="h-11 rounded-lg border-accent/30 px-6 text-parchment hover:bg-accent/10"
-                    >
-                      See pricing
-                    </Button>
+        <section className="border-b border-paper-line bg-paper py-24">
+          <div className="container mx-auto grid max-w-6xl gap-14 px-6 lg:grid-cols-[0.8fr_1.2fr]">
+            <Reveal>
+              <p className="font-mono text-[0.64rem] uppercase tracking-[0.24em] text-accent-dim">
+                The living site
+              </p>
+              <h2 className="mt-5 max-w-md font-display text-[clamp(2.5rem,4.8vw,4rem)] font-medium leading-[1] tracking-[-0.03em] text-ink">
+                Launch is the first version.
+              </h2>
+              <p className="mt-6 max-w-md text-[1rem] leading-[1.7] text-warm-dim">
+                Most builders hand over a page and stop. This one stays on the
+                job, learns from real visits, and proposes the next improvement.
+              </p>
+              <Button
+                onClick={() => navigate("/builder")}
+                className="mt-8 h-11 rounded-md bg-ink px-6 font-semibold text-paper hover:bg-ink/90"
+              >
+                Start building
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Reveal>
+
+            <div className="border border-paper-line bg-paper-raised shadow-[0_12px_35px_rgba(26,23,20,0.07)]">
+              {BEHAVIOURS.map((behaviour, index) => (
+                <Reveal key={behaviour.k} delay={index * 60}>
+                  <div
+                    className={`grid gap-4 px-6 py-7 sm:grid-cols-[8rem_1fr] sm:px-8 ${
+                      index > 0 ? "border-t border-paper-line" : ""
+                    }`}
+                  >
+                    <h3 className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-accent-dim">
+                      {behaviour.k}
+                    </h3>
+                    <p className="text-[0.96rem] leading-relaxed text-warm-dim">
+                      {behaviour.body}
+                    </p>
                   </div>
                 </Reveal>
-              </div>
-
-              <div>
-                {BEHAVIOURS.map((b, i) => (
-                  <Reveal key={b.k} delay={i * 70}>
-                    <div
-                      className={`rule-row grid gap-x-8 gap-y-2 py-8 sm:grid-cols-[9rem_1fr] ${
-                        i === BEHAVIOURS.length - 1 ? "border-b border-line" : ""
-                      }`}
-                    >
-                      <h3 className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-parchment/70">
-                        {b.k}
-                      </h3>
-                      <p className="text-[0.98rem] leading-relaxed text-parchment/55">
-                        {b.body}
-                      </p>
-                    </div>
-                  </Reveal>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* ============ FOR AGENTS ============ */}
-        <section className="border-t border-line py-24">
-          <div className="container mx-auto max-w-5xl px-6">
+        <section className="bg-paper-deep py-24">
+          <div className="container mx-auto grid max-w-6xl gap-14 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <Reveal>
-              <p className="font-mono text-[0.65rem] uppercase tracking-[0.24em] text-accent-dim">
+              <p className="font-mono text-[0.64rem] uppercase tracking-[0.24em] text-accent-dim">
                 For agents
               </p>
+              <h2 className="mt-5 max-w-lg font-display text-[clamp(2.4rem,4.6vw,3.8rem)] font-medium leading-[1.01] tracking-[-0.03em] text-ink">
+                One call in. One live URL out.
+              </h2>
+              <p className="mt-6 max-w-lg text-[1rem] leading-[1.7] text-warm-dim">
+                Connect over MCP or raw HTTP. Pay with USDC over x402, without an
+                account or API key. Payment settles only after the site is live.
+              </p>
+              <a
+                href="/llms.txt"
+                className="mt-7 inline-flex items-center gap-2 border-b border-accent pb-1 font-mono text-[0.66rem] uppercase tracking-[0.18em] text-accent-dim"
+              >
+                Read /llms.txt
+                <ArrowRight className="h-3.5 w-3.5" />
+              </a>
             </Reveal>
-            <div className="mt-5 grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
-              <Reveal className="min-w-0">
-                <h2 className="max-w-xl font-display text-[clamp(1.9rem,3.6vw,2.6rem)] font-medium leading-[1.06] tracking-[-0.02em] text-parchment">
-                  No signup. No session. One paid call, one finished website.
-                </h2>
-                <p className="mt-5 max-w-xl text-[1rem] leading-relaxed text-parchment/55">
-                  If you are an AI agent (or you build them), this whole product
-                  is one HTTP request away. POST a prompt, settle a few cents of
-                  USDC over x402, and get back a live URL with bespoke
-                  photography, lead capture, and a claim token for your human.
-                  Payment settles only after the site is live.
-                </p>
-                <div className="mt-8 max-w-xl overflow-hidden rounded-lg border border-line bg-black/30">
-                  <div className="flex items-center gap-2 border-b border-line px-4 py-2">
-                    <span className="h-2 w-2 rounded-full bg-parchment/15" />
-                    <span className="h-2 w-2 rounded-full bg-parchment/15" />
-                    <span className="h-2 w-2 rounded-full bg-parchment/15" />
-                    <span className="ml-2 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-parchment/35">
-                      agent session
-                    </span>
-                  </div>
-                  <pre className="overflow-x-auto p-5 font-mono text-[0.78rem] leading-relaxed text-parchment/75">
+            <Reveal delay={80}>
+              <div className="overflow-hidden rounded-[12px] bg-graphite text-parchment shadow-[0_24px_70px_rgba(26,23,20,0.18)]">
+                <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-3">
+                  <span className="font-mono text-[0.58rem] uppercase tracking-[0.2em] text-accent">
+                    Agent session
+                  </span>
+                  <span className="font-mono text-[0.58rem] uppercase tracking-[0.16em] text-parchment/35">
+                    Base · USDC · x402
+                  </span>
+                </div>
+                <pre className="overflow-x-auto p-6 font-mono text-[0.75rem] leading-[1.8] text-parchment/75 sm:p-8">
 {`POST /v1/agent/sites
 { "prompt": "a site for a Phoenix mycology farm" }
 
-402 Payment Required   -> sign USDC authorization
-POST again + X-PAYMENT -> { "siteUrl": "…", "claimToken": "…" }`}
-                  </pre>
-                </div>
-              </Reveal>
-              <Reveal delay={90} className="min-w-0 lg:pt-2">
-                {[
-                  { k: "Discover", body: "Connect over MCP at /mcp from ChatGPT, Claude, or Cursor. Prefer raw HTTP? Start at /llms.txt, /.well-known/agent.json, or the OpenAPI spec." },
-                  { k: "Pay", body: "x402 micropayments in USDC on Base. No API keys, no account, no card. A failed build never charges you." },
-                  { k: "Deliver", body: "Every build ships designed sections, generated photography, and a growth agent that keeps optimizing the site after you hand it off." },
-                ].map((b, i, arr) => (
-                  <div
-                    key={b.k}
-                    className={`rule-row grid gap-y-2 py-7 ${
-                      i === arr.length - 1 ? "border-b border-line" : ""
-                    }`}
-                  >
-                    <h3 className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-parchment/70">
-                      {b.k}
-                    </h3>
-                    <p className="text-[0.95rem] leading-relaxed text-parchment/55">
-                      {b.body}
-                    </p>
-                  </div>
-                ))}
-                <a
-                  href="/llms.txt"
-                  className="mt-6 inline-block font-mono text-[0.75rem] uppercase tracking-[0.18em] text-accent underline-offset-4 hover:underline"
-                >
-                  Read /llms.txt →
-                </a>
-              </Reveal>
-            </div>
+402 Payment Required
+POST again + X-PAYMENT
+
+{ "siteUrl": "…", "claimToken": "…" }`}
+                </pre>
+              </div>
+            </Reveal>
           </div>
         </section>
 
-        {/* ============ CLOSER ============ */}
-        <section className="relative overflow-hidden border-t border-line">
-          <div aria-hidden className="closer-bloom pointer-events-none absolute inset-0" />
-          <div className="container relative z-10 mx-auto max-w-5xl px-6 py-28">
+        <section className="border-t border-paper-line bg-paper py-28">
+          <div className="container mx-auto max-w-6xl px-6">
             <Reveal>
-              <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
-                <h2 className="max-w-2xl font-display text-[clamp(2.2rem,4.6vw,3.4rem)] font-medium leading-[1.04] tracking-[-0.022em] text-parchment">
-                  Your next site is one
-                  <br />
-                  sentence away.
-                </h2>
-                <div className="flex shrink-0 flex-wrap items-center gap-4 md:pb-2">
-                  <Button
-                    onClick={() => navigate("/builder")}
-                    className="btn-jewel h-12 rounded-lg bg-accent px-7 text-[1rem] font-semibold text-on-accent"
-                  >
-                    Start building free
-                  </Button>
-                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-parchment/35">
-                    No card required
-                  </span>
+              <div className="grid gap-9 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div>
+                  <p className="font-mono text-[0.64rem] uppercase tracking-[0.24em] text-accent-dim">
+                    Start with the sentence
+                  </p>
+                  <h2 className="mt-5 max-w-3xl font-display text-[clamp(3rem,6vw,5.4rem)] font-medium leading-[0.96] tracking-[-0.035em] text-ink">
+                    Your next site can be live today.
+                  </h2>
                 </div>
+                <Button
+                  onClick={() => navigate("/builder")}
+                  className="h-12 rounded-md bg-ink px-7 text-[1rem] font-semibold text-paper hover:bg-ink/90 lg:mb-2"
+                >
+                  Start building free
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </Reveal>
           </div>

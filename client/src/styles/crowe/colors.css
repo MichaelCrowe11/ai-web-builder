@@ -1,47 +1,31 @@
-/* AI Web Builder palette, dark console.
+/* Web Builder brand palette.
  *
- * The surfaces, neutrals, lines and elevation are the Crowe Logic desktop
- * system (renderer/styles.css, body.dark), which is where that system is
- * maintained. Two things about it are worth keeping in mind, because they are
- * why the greys look the way they do:
- *
- * 1. Neutrals are neutral. The old parchment (#e8e2cf) was a warm cream and the
- *    old dim was that cream at 60%, which painted every label and every line of
- *    body copy warm. Warmth is the accent's job, and an accent can only read as
- *    an accent against something that is not it. Text is #e9e9ec, a hair cool.
- *
- * 2. Surfaces step: #0a0a0b base, #141416 panel, #1c1c1f raised. Depth here
- *    comes from a surface getting lighter as it rises plus a lit top hairline,
- *    not from a heavier drop shadow. Shadows are near-black, never warm-black.
- *
- * THE ACCENT IS NOT THE HOUSE GOLD. This product has its own mark, an angular
- * monogram in blue through violet, and the accent follows the mark rather than
- * the parent. Crowe Logic gold appears in exactly one place, the endorsement
- * lockup in the footer, which is what makes the endorsement read as an
- * endorsement instead of as the product's own colour.
- *
- * The tokens are named `accent`, not `blue`. If the accent moves again, the
- * names stay true. They were named `gold` until 2026-08-02, and a utility
- * called text-gold that renders blue is a trap for whoever reads it next, so
- * the rename went through every call site at the same time as the value.
- *
- * #3B82F6 was chosen to do both jobs the old gold did: 5.6:1 as text on the
- * base surface, and 5.7:1 as a fill under near-black button text. A brighter
- * blue fails the second, a deeper one fails the first.
+ * Public pages use warm paper, ink, and one restrained editorial gold.
+ * Product surfaces use the same gold on a canonical dark-console ladder.
+ * Sharing one accent lets the marketing site and builder feel related without
+ * forcing both of them onto the same background.
  */
 
 :root {
-  /* Canonical palette */
-  --crowe-accent: #3b82f6;
-  --crowe-accent-soft: #7dd3fc;
-  --crowe-accent-dim: #4c7fe0;
-  /* Terminus of the monogram gradient. Mark only, never a UI fill. */
-  --crowe-accent-violet: #a855f7;
-  --crowe-graphite: #0a0a0b;
-  --crowe-graphite-soft: #141416;
-  --crowe-graphite-raised: #1c1c1f;
-  --crowe-parchment: #e9e9ec;
-  --crowe-parchment-dim: #9a9aa2;
+  /* Editorial marketing surface */
+  --crowe-paper: #f7f3ea;
+  --crowe-paper-deep: #eee7da;
+  --crowe-paper-raised: #fffdf8;
+  --crowe-ink: #1a1714;
+  --crowe-warm-dim: #6b6457;
+  --crowe-paper-line: rgba(26, 23, 20, 0.13);
+
+  /* Shared accent */
+  --crowe-accent: #b8893a;
+  --crowe-accent-soft: #d6b66f;
+  --crowe-accent-dim: #92702f;
+
+  /* Dark console surface */
+  --crowe-graphite: #080a0d;
+  --crowe-graphite-soft: #11151b;
+  --crowe-graphite-raised: #171c24;
+  --crowe-parchment: #eceae4;
+  --crowe-parchment-dim: #a3a097;
   --crowe-error: #db7c66;
   --crowe-ok: #8cb87c;
 
@@ -58,22 +42,22 @@
   --crowe-glass-edge: rgba(255, 255, 255, 0.1);
 
   /* Derived accent alphas, for washes, focus and the deliberate accent edge. */
-  --crowe-accent-border: rgba(59, 130, 246, 0.24);
-  --crowe-accent-border-hover: rgba(59, 130, 246, 0.46);
-  --crowe-accent-focus: rgba(59, 130, 246, 0.55);
-  --crowe-accent-panel: rgba(59, 130, 246, 0.06);
-  --crowe-accent-highlight: rgba(59, 130, 246, 0.16);
-  --crowe-accent-glow: 0 0 30px rgba(59, 130, 246, 0.2);
-  --crowe-accent-wash: rgba(59, 130, 246, 0.14);
-  --crowe-focus-halo: rgba(59, 130, 246, 0.24);
-  --crowe-selection: rgba(59, 130, 246, 0.32);
+  --crowe-accent-border: rgba(184, 137, 58, 0.28);
+  --crowe-accent-border-hover: rgba(184, 137, 58, 0.52);
+  --crowe-accent-focus: rgba(184, 137, 58, 0.62);
+  --crowe-accent-panel: rgba(184, 137, 58, 0.07);
+  --crowe-accent-highlight: rgba(184, 137, 58, 0.17);
+  --crowe-accent-glow: 0 0 30px rgba(184, 137, 58, 0.2);
+  --crowe-accent-wash: rgba(184, 137, 58, 0.14);
+  --crowe-focus-halo: rgba(184, 137, 58, 0.24);
+  --crowe-selection: rgba(184, 137, 58, 0.28);
 
   /* Elevation. Each step lightens the surface and lights its top edge; the
    * shadow only seats it. z4 is the floating/overlay step. */
-  --crowe-z1: 0 1px 2px rgba(3, 3, 5, 0.42);
-  --crowe-z2: 0 4px 12px rgba(3, 3, 5, 0.48), inset 0 1px 0 var(--crowe-hair-top);
-  --crowe-z3: 0 12px 32px rgba(3, 3, 5, 0.54), inset 0 1px 0 var(--crowe-hair-top);
-  --crowe-z4: 0 16px 42px rgba(3, 3, 5, 0.58), inset 0 1px 0 var(--crowe-glass-edge);
+  --crowe-z1: 0 1px 2px rgba(8, 10, 13, 0.4);
+  --crowe-z2: 0 4px 12px rgba(8, 10, 13, 0.45), inset 0 1px 0 var(--crowe-hair-top);
+  --crowe-z3: 0 12px 32px rgba(8, 10, 13, 0.5), inset 0 1px 0 var(--crowe-hair-top);
+  --crowe-z4: 0 24px 64px rgba(8, 10, 13, 0.55), inset 0 1px 0 var(--crowe-glass-edge);
 
   /* Semantic roles. Prefer these in components. */
   --crowe-surface: var(--crowe-graphite);
@@ -83,9 +67,7 @@
   --crowe-text-muted: var(--crowe-parchment-dim);
   --crowe-divider: var(--crowe-line);
   --crowe-danger: var(--crowe-error);
-  /* Text sitting on an accent fill. The accent is mid-tone, so this stays dark:
-   * near-black on #3B82F6 is 5.7:1, white on it is 3.7:1 and fails AA. */
-  --crowe-on-accent: #04101f;
+  --crowe-on-accent: #1a1714;
 
   /* Focus ring: the accent, the brand's restrained outline. */
   --crowe-focus-ring: var(--crowe-accent-focus);

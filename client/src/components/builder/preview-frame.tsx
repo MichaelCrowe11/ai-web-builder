@@ -8,7 +8,7 @@ interface PreviewFrameProps {
   css: string;
   device: "desktop" | "tablet" | "mobile";
   onDeviceChange: (device: "desktop" | "tablet" | "mobile") => void;
-  /** Section being touched by the chat agent: gold outline + badge on the
+  /** Section being touched by the chat agent: accent outline + badge on the
    *  matching [data-section-key] inside the iframe while a tool runs. */
   flash?: SectionFlash | null;
 }
@@ -16,12 +16,12 @@ interface PreviewFrameProps {
 // Tool-theater styles injected into the preview document. The srcDoc iframe is
 // same-origin, so the flash effect toggles the class directly on the section.
 // Values are literal, not tokens: this CSS crosses into the iframe, where the
-// app's custom properties do not exist. Keep the gold in step with
-// --crowe-gold (#3b82f6) in styles/crowe/colors.css.
+// app's custom properties do not exist. Keep the accent in step with
+// --crowe-accent (#b8893a) in styles/crowe/colors.css.
 const FLASH_CSS = `
-[data-section-key].cw-flash { position: relative; outline: 2px solid #3b82f6; outline-offset: -2px; animation: cw-flash-pulse 1.4s ease-in-out infinite; }
-[data-section-key].cw-flash::before { content: attr(data-cw-flash-label); position: absolute; top: 12px; left: 12px; z-index: 60; padding: 5px 11px; border: 1px solid #3b82f6; border-radius: 999px; background: rgba(4, 16, 31, 0.92); color: #3b82f6; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; }
-@keyframes cw-flash-pulse { 0%, 100% { outline-color: rgba(59, 130, 246, 0.95); } 50% { outline-color: rgba(59, 130, 246, 0.4); } }
+[data-section-key].cw-flash { position: relative; outline: 2px solid #b8893a; outline-offset: -2px; animation: cw-flash-pulse 1.4s ease-in-out infinite; }
+[data-section-key].cw-flash::before { content: attr(data-cw-flash-label); position: absolute; top: 12px; left: 12px; z-index: 60; padding: 5px 11px; border: 1px solid #b8893a; border-radius: 4px; background: rgba(8, 10, 13, 0.94); color: #d6b66f; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; }
+@keyframes cw-flash-pulse { 0%, 100% { outline-color: rgba(184, 137, 58, 0.95); } 50% { outline-color: rgba(184, 137, 58, 0.4); } }
 `;
 
 export function PreviewFrame({ html, css, device, onDeviceChange, flash }: PreviewFrameProps) {
@@ -87,11 +87,11 @@ export function PreviewFrame({ html, css, device, onDeviceChange, flash }: Previ
     }`;
 
   return (
-    <div className="flex h-full flex-1 flex-col bg-graphite">
+    <div className="flex h-full flex-1 flex-col bg-[#0b0e12]">
       {/* toolbar */}
-      <div className="flex h-12 items-center justify-between border-b border-accent/15 bg-graphite-soft px-3">
+      <div className="flex h-11 items-center justify-between border-b border-white/[0.08] bg-[#0f1318] px-3">
         {/* left: view toggle */}
-        <div className="flex items-center gap-0.5 rounded-lg border border-accent/15 p-0.5">
+        <div className="flex items-center gap-0.5 border border-white/[0.08] p-0.5">
           <button className={segBtn(view === "preview")} onClick={() => setView("preview")}>
             <Eye className="h-3.5 w-3.5" /> Preview
           </button>
@@ -103,7 +103,7 @@ export function PreviewFrame({ html, css, device, onDeviceChange, flash }: Previ
         {/* center: device tabs (preview only) */}
         {view === "preview" ? (
           <Tabs value={device} onValueChange={(v) => onDeviceChange(v as any)}>
-            <TabsList className="h-8 bg-graphite">
+            <TabsList className="h-8 rounded-md bg-graphite">
               <TabsTrigger value="desktop"><Monitor className="h-4 w-4" /></TabsTrigger>
               <TabsTrigger value="tablet"><Tablet className="h-4 w-4" /></TabsTrigger>
               <TabsTrigger value="mobile"><Smartphone className="h-4 w-4" /></TabsTrigger>
@@ -120,7 +120,7 @@ export function PreviewFrame({ html, css, device, onDeviceChange, flash }: Previ
           {view === "code" && (
             <button
               onClick={() => copy("all", fullHtml)}
-              className="flex items-center gap-1.5 rounded-md border border-accent/20 px-2.5 py-1 text-xs font-medium text-parchment/70 transition-colors hover:border-accent/40 hover:text-accent"
+              className="flex items-center gap-1.5 rounded-sm border border-white/[0.1] px-2.5 py-1 text-xs font-medium text-parchment/70 transition-colors hover:border-accent/40 hover:text-accent"
             >
               {copied === "all" ? <Check className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
               {copied === "all" ? "Copied" : "Copy file"}
@@ -130,9 +130,9 @@ export function PreviewFrame({ html, css, device, onDeviceChange, flash }: Previ
       </div>
 
       {view === "preview" ? (
-        <div className="flex flex-1 justify-center overflow-auto py-8">
+        <div className="flex flex-1 justify-center overflow-auto p-4 sm:p-6">
           <div
-            className="origin-top bg-white shadow-2xl transition-all duration-500 ease-in-out"
+            className="origin-top overflow-hidden rounded-[10px] border border-white/[0.1] bg-white shadow-[0_24px_70px_rgba(8,10,13,0.65)] transition-[width] duration-200 ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none"
             style={{ width, height: device === "desktop" ? "100%" : "800px", minHeight: "100%" }}
           >
             <iframe
@@ -150,8 +150,8 @@ export function PreviewFrame({ html, css, device, onDeviceChange, flash }: Previ
             { label: "index.html (body)", text: html },
             { label: "styles.css", text: css },
           ].map((block) => (
-            <div key={block.label} className="overflow-hidden rounded-xl border border-accent/15 bg-graphite-soft">
-              <div className="flex items-center justify-between border-b border-accent/15 px-4 py-2">
+            <div key={block.label} className="overflow-hidden rounded-md border border-white/[0.08] bg-graphite-soft">
+              <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-2">
                 <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-accent/80">{block.label}</span>
                 <button
                   onClick={() => copy(block.label, block.text)}

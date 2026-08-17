@@ -72,7 +72,7 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <Layout>
+    <Layout variant="console">
       <div className="min-h-screen bg-graphite text-parchment">
         <div className="container mx-auto max-w-3xl px-6 py-24">
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">

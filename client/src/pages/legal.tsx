@@ -12,19 +12,19 @@ const EFFECTIVE_DATE = "June 6, 2026";
 function LegalShell({ kicker, title, children }: { kicker: string; title: string; children: React.ReactNode }) {
   return (
     <Layout>
-      <div className="bg-graphite text-parchment">
-        <section className="relative overflow-hidden">
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(52rem 30rem at 50% -12%, rgba(59,130,246,0.10), transparent 62%)" }}
-          />
-          <div className="container relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-24 lg:pt-28">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/[0.04] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.24em] text-accent/90">
+      <div className="bg-paper text-ink">
+        <section className="border-b border-paper-line">
+          <div className="container mx-auto max-w-3xl px-6 pb-24 pt-20 lg:pt-24">
+            <div className="mb-6 font-mono text-[0.62rem] uppercase tracking-[0.24em] text-accent-dim">
               {kicker}
             </div>
-            <h1 className="font-display text-[clamp(1.8rem,4vw,2.6rem)] font-medium leading-[1.08] tracking-[-0.02em] text-parchment">{title}</h1>
-            <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em] text-parchment/45">Effective {EFFECTIVE_DATE}</p>
-            <div className="mt-10 space-y-8">{children}</div>
+            <h1 className="font-display text-[clamp(2.8rem,5vw,4.5rem)] font-medium leading-[1] tracking-[-0.03em] text-ink">
+              {title}
+            </h1>
+            <p className="mt-4 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-warm-dim">
+              Effective {EFFECTIVE_DATE}
+            </p>
+            <div className="mt-14 space-y-10">{children}</div>
           </div>
         </section>
       </div>
@@ -35,8 +35,12 @@ function LegalShell({ kicker, title, children }: { kicker: string; title: string
 function S({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="font-heading text-sm font-semibold uppercase tracking-[0.16em] text-accent">{title}</h2>
-      <div className="mt-3 space-y-3 text-[0.95rem] leading-relaxed text-parchment/70">{children}</div>
+      <h2 className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-accent-dim">
+        {title}
+      </h2>
+      <div className="mt-3 space-y-3 text-[0.96rem] leading-[1.75] text-warm-dim">
+        {children}
+      </div>
     </div>
   );
 }
@@ -49,7 +53,7 @@ export function PrivacyPage() {
           AI Web Builder (ai-webbuilder.com) is operated by Crowe Logic Inc. (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
           This policy describes what we collect, why, and what we do with it, both for people who build
           sites with us, and for people who visit sites our customers publish. Questions:{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent hover:underline">{CONTACT_EMAIL}</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent-dim hover:underline">{CONTACT_EMAIL}</a>.
         </p>
       </S>
 
@@ -112,7 +116,7 @@ export function PrivacyPage() {
         <p>
           Your sites and leads are kept while your account is active. Deleting a project deletes its leads
           and analytics. To delete your account and its data entirely, email{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent hover:underline">{CONTACT_EMAIL}</a> and
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent-dim hover:underline">{CONTACT_EMAIL}</a> and
           we will action it promptly.
         </p>
       </S>
@@ -124,8 +128,8 @@ export function PrivacyPage() {
         </p>
       </S>
 
-      <p className="border-t border-accent/15 pt-6 text-sm text-parchment/45">
-        See also our <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link>.
+      <p className="border-t border-paper-line pt-6 text-sm text-warm-dim">
+        See also our <Link href="/terms" className="text-accent-dim hover:underline">Terms of Service</Link>.
       </p>
     </LegalShell>
   );
@@ -182,7 +186,7 @@ export function TermsPage() {
           If your published site collects leads through forms, that data belongs to you and you are
           responsible for handling it lawfully, including any notice or consent your jurisdiction requires
           from your visitors. We store and surface it to you as described in our{" "}
-          <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>.
+          <Link href="/privacy" className="text-accent-dim hover:underline">Privacy Policy</Link>.
         </p>
       </S>
 
@@ -215,7 +219,7 @@ export function TermsPage() {
       <S title="Contact">
         <p>
           Questions about these terms:{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent hover:underline">{CONTACT_EMAIL}</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent-dim hover:underline">{CONTACT_EMAIL}</a>.
         </p>
       </S>
 

@@ -236,13 +236,13 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
   };
 
   return (
-    // Desktop: fixed 370px side column. Mobile (<md): a bottom sheet over the
+    // Desktop: fixed 350px side column. Mobile (<md): a bottom sheet over the
     // full-bleed preview — collapsed to the slim composer, the handle expands
     // the transcript; sending a message auto-expands so tool theater is seen.
     <div
-      className={`flex flex-col bg-graphite-soft fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-accent/25 shadow-[0_-8px_30px_rgba(0,0,0,0.45)] ${
+      className={`fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-xl border-t border-white/[0.1] bg-[#0f1318] shadow-[0_-12px_36px_rgba(8,10,13,0.55)] ${
         sheetOpen ? "h-[72vh]" : ""
-      } md:static md:z-auto md:h-auto md:w-[370px] md:min-w-[370px] md:rounded-none md:border-t-0 md:border-r md:border-accent/15 md:shadow-none`}
+      } md:static md:z-auto md:h-auto md:w-[350px] md:min-w-[350px] md:rounded-none md:border-r md:border-t-0 md:border-white/[0.08] md:shadow-none`}
     >
       <button
         type="button"
@@ -252,10 +252,10 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
       >
         <span className="h-1 w-10 rounded-full bg-accent/40" />
       </button>
-      <div className={`${sheetOpen ? "flex" : "hidden"} items-center justify-between border-b border-accent/10 px-4 py-3 md:flex`}>
-        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-parchment/55">Conversation</span>
+      <div className={`${sheetOpen ? "flex" : "hidden"} items-center justify-between border-b border-white/[0.08] px-4 py-3 md:flex`}>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-accent">Conversation</span>
         {quota != null && (
-          <span className="rounded-full border border-accent/30 px-2.5 py-0.5 font-mono text-[10px] text-accent">
+          <span className="border border-white/[0.1] px-2 py-0.5 font-mono text-[9.5px] text-parchment/45">
             {quota.limit != null ? `${quota.used} / ${quota.limit} today` : "Unlimited"}
           </span>
         )}
@@ -264,7 +264,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
       <div ref={streamRef} className={`${sheetOpen ? "flex" : "hidden"} flex-1 flex-col gap-3.5 overflow-y-auto p-4 md:flex`}>
         {messages.map((m, i) =>
           m.role === "user" ? (
-            <div key={i} className="max-w-[85%] self-end rounded-[14px_14px_4px_14px] border border-accent/20 bg-accent/10 px-3 py-2 text-[13.5px] leading-snug">
+            <div key={i} className="max-w-[86%] self-end rounded-md border border-accent/20 bg-accent/10 px-3 py-2 text-[13.5px] leading-snug">
               {m.content}
             </div>
           ) : (
@@ -275,7 +275,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
               {(m.toolEvents?.length ?? 0) > 0 && (
                 <div className="my-1.5 flex flex-col gap-1">
                   {m.toolEvents!.map((t, j) => (
-                    <div key={j} className="flex items-center gap-2 rounded-lg border border-accent/10 bg-black/30 px-2.5 py-1.5 font-mono text-[11px] text-parchment/60">
+                    <div key={j} className="flex items-center gap-2 rounded-sm border border-white/[0.08] bg-graphite/55 px-2.5 py-1.5 font-mono text-[11px] text-parchment/60">
                       <span className={`text-accent ${t.running ? "animate-pulse" : ""}`}>{t.running ? "[ .. ]" : t.ok ? "[done]" : "[fail]"}</span>
                       <span className="text-parchment/85">{t.detail}</span>
                     </div>
@@ -284,7 +284,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
               )}
               {m.content || (busy && i === messages.length - 1 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" /> : null)}
               {m.upsell && (
-                <div className="mt-2 rounded-2xl border border-accent/25 bg-black/35 p-3 shadow-[0_0_0_1px_rgba(59,130,246,0.06)]">
+                <div className="mt-2 rounded-md border border-accent/25 bg-graphite/55 p-3 shadow-[0_0_0_1px_rgba(184,137,58,0.06)]">
                   <div className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-accent/70">Pro feature</div>
                   <div className="mt-1 text-[13px] leading-relaxed text-parchment/92">
                     {upgradeCopy(m.upsellFeature).headline}
@@ -296,7 +296,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
                     <button
                       type="button"
                       onClick={onUpgrade}
-                      className="mt-3 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-accent transition-colors hover:bg-accent/20"
+                      className="mt-3 rounded-sm border border-accent/30 bg-accent/10 px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-accent transition-colors hover:bg-accent/20"
                     >
                       Upgrade to Pro
                     </button>
@@ -316,11 +316,16 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
           ),
         )}
         {messages.length === 0 && (
-          <div className="mt-6">
-            <p className="text-center text-sm text-parchment/45">
+          <div className="mt-5">
+            <p className="font-display text-[1.35rem] font-medium leading-tight text-parchment">
               {ready
-                ? "Tell the builder what to change: copy, sections, style."
-                : "Describe the site you want, and the builder does the rest."}
+                ? "Tell the builder what should change."
+                : "Start with a useful sentence."}
+            </p>
+            <p className="mt-2 text-[0.8rem] leading-relaxed text-parchment/45">
+              {ready
+                ? "Change the writing, structure, imagery, or visual direction."
+                : "Name the business, what it does, and who it serves."}
             </p>
 
             {/* Empty-state starters. Landing on /builder directly used to be a
@@ -329,15 +334,18 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
                 same openers the home hero offers, so arriving by either door
                 puts the same first move in reach. */}
             {!ready && (
-              <div className="mt-5 flex flex-col gap-1.5">
-                {STARTERS.map((o) => (
+              <div className="mt-5 flex flex-col border-b border-white/[0.08]">
+                {STARTERS.map((o, index) => (
                   <button
                     key={o.prompt}
                     onClick={() => send(o.prompt)}
                     disabled={busy}
-                    className="crowe-lift rounded-lg border border-line bg-graphite-soft px-3.5 py-2.5 text-left text-[0.82rem] leading-snug text-parchment/70 hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 disabled:opacity-40"
+                    className="group grid grid-cols-[1.5rem_1fr] gap-2 border-t border-white/[0.08] py-3 text-left text-[0.8rem] leading-snug text-parchment/60 transition-colors hover:text-parchment focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 disabled:opacity-40"
                   >
-                    {o.prompt}
+                    <span className="font-mono text-[0.55rem] text-accent/75">
+                      0{index + 1}
+                    </span>
+                    <span>{o.prompt}</span>
                   </button>
                 ))}
               </div>
@@ -346,8 +354,8 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
         )}
       </div>
 
-      <div className="border-t border-accent/10 p-3">
-        <div className="flex items-end gap-2 rounded-xl border border-accent/30 bg-black/35 p-2 pl-3">
+      <div className="border-t border-white/[0.08] p-3">
+        <div className="flex items-end gap-2 rounded-md border border-white/[0.12] bg-graphite p-2 pl-3 transition-colors focus-within:border-accent/55">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -357,7 +365,7 @@ export function ChatPanel({ projectId, ready, onFirstMessage, onDocUpdate, onQuo
             className="max-h-[120px] min-h-[36px] w-full resize-none border-none bg-transparent py-1.5 text-[13.5px] placeholder:text-parchment/45 focus:outline-none"
           />
           <button onClick={() => send()} disabled={busy || !input.trim()}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-graphite disabled:opacity-40">
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-sm bg-accent text-on-accent disabled:opacity-40">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
           </button>
         </div>
