@@ -35,6 +35,10 @@ export function requirePayment(priceFor: (req: Request) => number, verifier: Pay
           // real X402Verifier supplies challenge.maxAmountRequired in atomic units (micro-USDC); String(price) is only a dev/test fallback.
           maxAmountRequired: challenge.maxAmountRequired ?? String(price),
           resource: challenge.resource,
+          ...(challenge.description !== undefined && { description: challenge.description }),
+          ...(challenge.mimeType !== undefined && { mimeType: challenge.mimeType }),
+          ...(challenge.maxTimeoutSeconds !== undefined && { maxTimeoutSeconds: challenge.maxTimeoutSeconds }),
+          ...(challenge.extra !== undefined && { extra: challenge.extra }),
         }],
       });
     }
